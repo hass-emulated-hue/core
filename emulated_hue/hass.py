@@ -153,8 +153,8 @@ class HomeAssistant():
                             raise Exception("error in websocket")
             except asyncio.CancelledError:
                 raise asyncio.CancelledError()
-            except Exception as exc:
-                _LOGGER.exception(exc)
+            except (aiohttp.client_exceptions.ClientConnectorError, ConnectionRefusedError) as exc:
+                _LOGGER.error(exc)
                 await asyncio.sleep(10)
 
     async def __state_changed(self, msg):

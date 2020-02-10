@@ -13,7 +13,7 @@ NUM_LIGHTS = 3
 
 COLOR_TYPE_RGB = "RGB"
 COLOR_TYPE_XY_BR = "XY Brightness"
-DEFAULT_THROTTLE = 250
+TIME_THROTTLE = 300
 
 
 if os.path.isfile("/usr/local/opt/openssl@1.1/bin/openssl"):
@@ -31,11 +31,12 @@ def chunked(size, source):
 class EntertainmentThread(threading.Thread):
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
-    def __init__(self, hass, config, group_details):
+    def __init__(self, hue, group_details):
         """Initialize the class."""
         threading.Thread.__init__(self)
-        self.hass = hass
-        self.config = config
+        self.hue = hue
+        self.hass = hue.hass
+        self.config = hue.config
         self.group_details = group_details
         self._interrupted = False
         self._socket_daemon = None
@@ -89,7 +90,7 @@ class EntertainmentThread(threading.Thread):
             else:
                 cached_state = {}
                 entity_id = asyncio.run_coroutine_threadsafe(
-                    self.config.light_id_to_entity_id(light_id), self.hass.loop).result()
+                    self.config.light_id_to_entity_id(light_id), self.hue.event_loop).result()
                 cached_state["entity_id"] = entity_id
                 self._states[light_id] = cached_state
             svc_data = {"entity_id": entity_id}
@@ -105,31 +106,26 @@ class EntertainmentThread(threading.Thread):
                     svc_data["rgb_color"] = rgb_color
                     cached_state["rgb_color"] = rgb_color
             else:
-                x_color = int((light_data[3] * 256 + light_data[4]) / 65535)
-                y_color = int((light_data[5] * 256 + light_data[6]) / 65535)
+                xy_color = [float((light_data[3] * 256 + light_data[4]) / 65535),
+                            float((light_data[5] * 256 + light_data[6]) / 65535)]
                 brightness = int((light_data[7] * 256 + light_data[8]) / 256)
-                prev_x = cached_state.get("x_color", 0)
-                prev_y = cached_state.get("y_color", 0)
-                prev_b = cached_state.get("brightness", 0)
+                prev_xy = cached_state.get("xy_color", [0,0])
+                prev_brightness = cached_state.get("brightness", 0)
                 if self.__update_allowed(
-                        x_color*100, prev_x*100, cur_timestamp, prev_timestamp):
-                    svc_data["xy_color"] = [x_color, y_color]
-                    cached_state["x_color"] = x_color
-                elif self.__update_allowed(
-                        y_color*100, prev_y*100, cur_timestamp, prev_timestamp):
-                    svc_data["xy_color"] = [x_color, y_color]
-                    cached_state["y_color"] = y_color
-                elif self.__update_allowed(
-                        brightness, prev_b, cur_timestamp, prev_timestamp):
+                        xy_color, prev_xy, cur_timestamp, prev_timestamp):
+                    svc_data["xy_color"] = xy_color
+                    cached_state["xy_color"] = xy_color
+                if self.__update_allowed(
+                        brightness, prev_brightness, cur_timestamp, prev_timestamp):
                     svc_data["brightness"] = brightness
                     cached_state["brightness"] = brightness
 
             if len(svc_data.keys()) > 1:
                 # some details changed, push to light
                 cached_state["timestamp"] = cur_timestamp
-                # svc_data["transition"] = 1/DEFAULT_THROTTLE
-                self.hass.async_create_task(
-                    self.hass.services.async_call("light", "turn_on", svc_data))
+                svc_data["transition"] = TIME_THROTTLE/1000
+                self.hue.event_loop.create_task(self.hass.call_service("light", "turn_on", svc_data))
+                self.hass._states[entity_id]["attributes"].update(svc_data)
 
     def __update_allowed(self, cur_val, prev_val, cur_timestamp, prev_timestamp):
         """Minimalistic form of throttling, only allow significant changes within a timespan."""
@@ -137,15 +133,7 @@ class EntertainmentThread(threading.Thread):
         if cur_val == prev_val:
             # value did not change at all, no update needed here
             return False
-        if isinstance(cur_val, list):
-            # list with values (rgb_volor, xy_color)
-            if abs(sum(cur_val) - sum(prev_val)) > 10 and time_diff >= DEFAULT_THROTTLE:
-                # significant change allowed every X milliseconds
-                return True
-        elif abs(cur_val - prev_val) > 10 and time_diff >= DEFAULT_THROTTLE:
-            # significant change allowed every X milliseconds
-            return True
-        elif cur_val != prev_val and time_diff >= DEFAULT_THROTTLE * 2:
-            # significant change allowed every X milliseconds
+        elif cur_val != prev_val and time_diff >= TIME_THROTTLE:
+            # change allowed only if within throttle limit
             return True
         return False

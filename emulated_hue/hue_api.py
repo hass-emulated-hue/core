@@ -44,7 +44,7 @@ def check_request(func):
     """Decorator: Some common logic to determine we got a valid request."""
     @functools.wraps(func)
     async def func_wrapper(cls, request):
-        _LOGGER.debug("%s", request)
+        # _LOGGER.debug("%s", request)
         # check username
         # if "username" in request.match_info and request.match_info["username"] != const.HUE_USERNAME:
         #     return web.json_response(const.HUE_UNAUTHORIZED_USER)
@@ -54,7 +54,7 @@ def check_request(func):
                 request_data = await request.json()
             except ValueError:
                 return web.Response(body="Received invalid json!", status=404)
-            _LOGGER.debug("%s --> %s", request, request_data)
+            # _LOGGER.debug("%s --> %s", request, request_data)
             return await func(cls, request, request_data)
         return await func(cls, request)
     return func_wrapper
@@ -117,8 +117,8 @@ class HueApi():
         """Handle requests to find the emulated hue bridge."""
         return web.json_response(const.HUE_UNAUTHORIZED_USER)
 
-    @routes.post('/api/')
     @routes.post('/api')
+    @routes.post('/api/')
     @check_request
     async def post_auth(self, request, request_data):
         """Handle requests to create a username for the emulated hue bridge."""
