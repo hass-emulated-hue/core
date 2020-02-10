@@ -1,4 +1,4 @@
-ARG BUILD_FROM=hassioaddons/base:6.0.1
+ARG BUILD_FROM=hassioaddons/base-python:latest
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
@@ -29,10 +29,11 @@ RUN \
         /tmp/*
 
 # Copy app
-COPY emulated_hue /usr/local/app/
+COPY /emulated_hue /usr/local/app/emulated_hue
 COPY emulated_hue.py /usr/local/app/
 
 # Default volume (hassio compatible)
 VOLUME /data
 
-ENTRYPOINT /usr/local/app/emulated_hue.py
+WORKDIR /usr/local/app
+ENTRYPOINT python3 /usr/local/app/emulated_hue.py

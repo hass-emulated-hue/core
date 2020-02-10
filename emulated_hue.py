@@ -4,6 +4,7 @@ import asyncio
 import sys
 from aiorun import run
 import argparse
+import os
 
 if __name__ == "__main__":
 
@@ -27,6 +28,16 @@ if __name__ == "__main__":
     except ImportError:
         # uvloop is not available on Windows so safe to ignore this
         logger.warning("uvloop support is disabled")
-    args = parser.parse_args()
-    hue = HueEmulator(event_loop, args.data, args.url, args.token)
+    # auto detect hassio
+    if os.path.isfile('/data/options.json') and os.environ.get('HASSIO_TOKEN'):
+        token = os.environ['HASSIO_TOKEN']
+        datapath = "/data"
+        url = 'http://hassio/homeassistant'
+    else:
+        args = parser.parse_args()
+        datapath = args.data
+        url = args.url
+        token = args.token
+
+    hue = HueEmulator(event_loop, datapath, url, token)
     run(hue.start(), loop=event_loop)
