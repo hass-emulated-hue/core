@@ -4,9 +4,7 @@ import select
 import socket
 import threading
 
-
 _LOGGER = logging.getLogger(__name__)
-
 
 
 class UPNPResponderThread(threading.Thread):

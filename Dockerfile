@@ -1,4 +1,4 @@
-ARG BUILD_FROM=hassioaddons/base-python:latest
+ARG BUILD_FROM=alpine:3.10
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
@@ -7,14 +7,15 @@ COPY requirements.txt /tmp/
 
 RUN \
     apk add --no-cache --virtual .build-dependencies \
-        build-base=0.5-r1 \
-        cmake=3.15.5-r0 \
-        libuv-dev=1.34.0-r0 \
-        openssl-dev=1.1.1d-r3 \
+        build-base \
+        cmake \
+        libuv-dev \
         libffi-dev \
         python3-dev \
+        openssl-dev \
     && apk add --no-cache \
-        openssl=1.1.1d-r3 \
+        python3 \
+        openssl \
     && pip3 install \
         --no-cache-dir \
         -r /tmp/requirements.txt \
@@ -30,10 +31,10 @@ RUN \
 
 # Copy app
 COPY /emulated_hue /usr/local/app/emulated_hue
-COPY emulated_hue.py /usr/local/app/
+COPY run.py /usr/local/app/
 
 # Default volume (hassio compatible)
 VOLUME /data
 
 WORKDIR /usr/local/app
-ENTRYPOINT python3 /usr/local/app/emulated_hue.py
+ENTRYPOINT /usr/local/app/run.py

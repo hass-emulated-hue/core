@@ -1,12 +1,12 @@
-
+"""Emulated HUE Bridge for HomeAssistant - Helper utils."""
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
-from typing import Union
-import socket
-import slugify as unicode_slug
 import json
-import os
 import logging
-import tempfile
+import os
+import socket
+from typing import Union
+
+import slugify as unicode_slug
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def slugify(text: str) -> str:
 
 
 def update_dict(dict1, dict2):
-    """Helper to update dict1 with values of dict2."""
+    """Helpermethod to update dict1 with values of dict2."""
     for key, value in dict2.items():
         if key in dict1 and isinstance(value, dict):
             update_dict(dict1[key], value)
@@ -71,24 +71,12 @@ def load_json(filename: str):
 
 def save_json(filename: str, data: dict):
     """Save JSON data to a file."""
-    tmp_filename = ""
-    tmp_path = os.path.split(filename)[0]
+    safe_copy = filename + ".backup"
+    if os.path.isfile(filename):
+        os.replace(filename, safe_copy)
     try:
         json_data = json.dumps(data, sort_keys=True, indent=4)
-        # Modern versions of Python tempfile create this file with mode 0o600
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=tmp_path, delete=False
-        ) as fdesc:
-            fdesc.write(json_data)
-            tmp_filename = fdesc.name
-        os.replace(tmp_filename, filename)
-    except (TypeError, OSError):
+        with open(filename, "w") as file_obj:
+            file_obj.write(json_data)
+    except IOError:
         _LOGGER.exception("Failed to serialize to JSON: %s", filename)
-    finally:
-        if os.path.exists(tmp_filename):
-            try:
-                os.remove(tmp_filename)
-            except OSError as err:
-                # If we are cleaning up then something else went wrong, so
-                # we should suppress likely follow-on errors in the cleanup
-                _LOGGER.error("JSON replacement cleanup failed: %s", err)

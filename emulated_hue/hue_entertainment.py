@@ -1,11 +1,11 @@
 """Experimental support for Hue Entertainment API."""
 # https://developers.meethue.com/develop/hue-entertainment/philips-hue-entertainment-api/
+import asyncio
+import logging
+import os
 import subprocess
 import threading
-import logging
-import asyncio
 import time
-import os
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,15 +23,15 @@ else:
 
 
 def chunked(size, source):
-    """Helper to get chunks of size x from a bytes source."""
+    """Helpermethod to get chunks of size x from a bytes source."""
     for i in range(0, len(source), size):
-        yield source[i:i+size]
+        yield source[i : i + size]
 
 
 class EntertainmentThread(threading.Thread):
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
-    def __init__(self, hue, group_details):
+    def __init__(self, hue, group_details, user_details):
         """Initialize the class."""
         threading.Thread.__init__(self)
         self.hue = hue
@@ -41,6 +41,7 @@ class EntertainmentThread(threading.Thread):
         self._interrupted = False
         self._socket_daemon = None
         self._states = {}
+        self._user_details = user_details
 
     def run(self):
         """Run the server."""
@@ -51,11 +52,22 @@ class EntertainmentThread(threading.Thread):
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
-        self._socket_daemon = subprocess.Popen([
-            OPENSSL_BIN, 's_server', '-dtls', '-accept', '2100', '-nocert',
-            '-psk_identity', '12345678901234567890',
-            '-psk', '321c0c2ebfa7361e55491095b2f5f9db', '-quiet'],
-            stdout=subprocess.PIPE)
+        self._socket_daemon = subprocess.Popen(
+            [
+                OPENSSL_BIN,
+                "s_server",
+                "-dtls",
+                "-accept",
+                "2100",
+                "-nocert",
+                "-psk_identity",
+                self._user_details["username"],
+                "-psk",
+                self._user_details["clientkey"],
+                "-quiet",
+            ],
+            stdout=subprocess.PIPE,
+        )
         while not self._interrupted:
             data = self._socket_daemon.stdout.read(pktsize)
             if data:
@@ -90,7 +102,8 @@ class EntertainmentThread(threading.Thread):
             else:
                 cached_state = {}
                 entity_id = asyncio.run_coroutine_threadsafe(
-                    self.config.light_id_to_entity_id(light_id), self.hue.event_loop).result()
+                    self.config.light_id_to_entity_id(light_id), self.hue.event_loop
+                ).result()
                 cached_state["entity_id"] = entity_id
                 self._states[light_id] = cached_state
             svc_data = {"entity_id": entity_id}
@@ -99,33 +112,41 @@ class EntertainmentThread(threading.Thread):
                 rgb_color = [
                     int((light_data[3] * 256 + light_data[4]) / 256),
                     int((light_data[5] * 256 + light_data[6]) / 256),
-                    int((light_data[7] * 256 + light_data[8]) / 256)]
+                    int((light_data[7] * 256 + light_data[8]) / 256),
+                ]
                 prev_rgb = cached_state.get("rgb_color", [0, 0, 0])
                 if self.__update_allowed(
-                        rgb_color, prev_rgb, cur_timestamp, prev_timestamp):
+                    rgb_color, prev_rgb, cur_timestamp, prev_timestamp
+                ):
                     svc_data["rgb_color"] = rgb_color
                     cached_state["rgb_color"] = rgb_color
             else:
-                xy_color = [float((light_data[3] * 256 + light_data[4]) / 65535),
-                            float((light_data[5] * 256 + light_data[6]) / 65535)]
+                xy_color = [
+                    float((light_data[3] * 256 + light_data[4]) / 65535),
+                    float((light_data[5] * 256 + light_data[6]) / 65535),
+                ]
                 brightness = int((light_data[7] * 256 + light_data[8]) / 256)
-                prev_xy = cached_state.get("xy_color", [0,0])
+                prev_xy = cached_state.get("xy_color", [0, 0])
                 prev_brightness = cached_state.get("brightness", 0)
                 if self.__update_allowed(
-                        xy_color, prev_xy, cur_timestamp, prev_timestamp):
+                    xy_color, prev_xy, cur_timestamp, prev_timestamp
+                ):
                     svc_data["xy_color"] = xy_color
                     cached_state["xy_color"] = xy_color
                 if self.__update_allowed(
-                        brightness, prev_brightness, cur_timestamp, prev_timestamp):
+                    brightness, prev_brightness, cur_timestamp, prev_timestamp
+                ):
                     svc_data["brightness"] = brightness
                     cached_state["brightness"] = brightness
 
             if len(svc_data.keys()) > 1:
                 # some details changed, push to light
                 cached_state["timestamp"] = cur_timestamp
-                svc_data["transition"] = TIME_THROTTLE/1000
-                self.hue.event_loop.create_task(self.hass.call_service("light", "turn_on", svc_data))
-                self.hass._states[entity_id]["attributes"].update(svc_data)
+                svc_data["transition"] = TIME_THROTTLE / 1000
+                self.hue.event_loop.create_task(
+                    self.hass.call_service("light", "turn_on", svc_data)
+                )
+                self.hass.states[entity_id]["attributes"].update(svc_data)
 
     def __update_allowed(self, cur_val, prev_val, cur_timestamp, prev_timestamp):
         """Minimalistic form of throttling, only allow significant changes within a timespan."""

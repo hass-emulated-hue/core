@@ -1,3 +1,4 @@
+"""Emulated HUE Bridge for HomeAssistant - constants."""
 HASS_ATTR_BRIGHTNESS = "brightness"
 HASS_ATTR_COLOR_TEMP = "color_temp"
 HASS_ATTR_XY_COLOR = "xy_color"
@@ -46,10 +47,6 @@ HUE_ATTR_SAT_MAX = 254
 HUE_ATTR_CT_MIN = 153  # Color temp
 HUE_ATTR_CT_MAX = 500
 
-HUE_USERNAME = "12345678901234567890"
-HUE_CLIENT_KEY = "321c0c2ebfa7361e55491095b2f5f9db"
 HUE_UNAUTHORIZED_USER = [
     {"error": {"address": "/", "description": "unauthorized user", "type": "1"}}
 ]
-
-
