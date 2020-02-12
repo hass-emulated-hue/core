@@ -1,6 +1,4 @@
-ARG BUILD_FROM=alpine:3.10
-# hadolint ignore=DL3006
-FROM ${BUILD_FROM}
+FROM alpine:3.10
 
 # Copy Python requirements file
 COPY requirements.txt /tmp/
@@ -16,6 +14,7 @@ RUN \
     && apk add --no-cache \
         python3 \
         openssl \
+        supervisor \
     && pip3 install \
         --no-cache-dir \
         -r /tmp/requirements.txt \
@@ -33,8 +32,19 @@ RUN \
 COPY /emulated_hue /usr/local/app/emulated_hue
 COPY run.py /usr/local/app/
 
+# supervisord config
+RUN echo $'[supervisord] \n\
+nodaemon=true \n\
+user=root \n\
+[program:hue] \n\
+command=python3 /usr/local/app/run.py \n\
+autorestart=true \n\
+stdout_logfile=/dev/fd/1 \n\
+stdout_logfile_maxbytes=0 \n\
+redirect_stderr=true' >> /usr/local/supervisord.conf
+
 # Default volume (hassio compatible)
 VOLUME /data
 
 WORKDIR /usr/local/app
-ENTRYPOINT /usr/local/app/run.py
+CMD ["supervisord", "-c", "/usr/local/supervisord.conf"]

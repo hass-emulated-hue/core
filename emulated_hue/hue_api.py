@@ -260,7 +260,7 @@ class HueApi:
         if "stream" in local_group:
             if local_group["stream"].get("active"):
                 # Requested streaming start
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Start Entertainment mode for group %s - params: %s",
                     group_id,
                     request_data,
