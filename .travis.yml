@@ -6,9 +6,9 @@ before_install:
   - pip install -U pip
 install:
   - pip3 install -r requirements.txt
+  - pip3 install pre-commit black flake8 isort
 script:
   - pre-commit install-hooks
   - pre-commit run flake8 --all-files
   - pre-commit run isort --all-files
   - pre-commit run black --all-files
-  - pytest tests
