@@ -364,6 +364,18 @@ class HueApi:
         result = await self.__get_bridge_config(True)
         return web.json_response(result)
 
+    @routes.put("/api/{username}/config")
+    @check_request
+    async def change_config(self, request, request_data):
+        """Process a request to change a config value."""
+        username = request.match_info["username"]
+        # just log this request and return succes
+        _LOGGER.debug("Change config called with params: %s", request_data)
+        response = await self.__create_hue_response(
+            request.path, request_data, username
+        )
+        return web.json_response(response)
+
     @routes.get("/api/{username}{tail:/?}")
     @check_request
     async def get_full_state(self, request):
@@ -787,6 +799,7 @@ class HueApi:
                     "timezone": "Europe/Amsterdam",
                     "whitelist": await self.config.get_storage_value("users"),
                     "zigbeechannel": 25,
+                    "linkbutton": self.config.enable_link_mode,
                 }
             )
         return result
