@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     logger = logging.getLogger()
     logformat = logging.Formatter(
-        "%(asctime)-15s %(levelname)-5s %(name)s.%(module)s -- %(message)s"
+        "%(asctime)-15s %(levelname)-5s %(name)s -- %(message)s"
     )
     consolehandler = logging.StreamHandler()
     consolehandler.setFormatter(logformat)

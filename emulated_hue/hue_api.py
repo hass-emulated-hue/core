@@ -799,7 +799,7 @@ class HueApi:
                     "timezone": "Europe/Amsterdam",
                     "whitelist": await self.config.get_storage_value("users"),
                     "zigbeechannel": 25,
-                    "linkbutton": self.config.enable_link_mode,
+                    "linkbutton": self.config.link_mode_enabled,
                 }
             )
         return result
