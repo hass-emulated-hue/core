@@ -381,15 +381,31 @@ class HueApi:
     async def get_full_state(self, request):
         """Return full state view of emulated hue."""
         json_response = {
-            "config": await self.__get_bridge_config(True),
+            "config": await self.__get_bridge_config(False),
             "schedules": await self.config.get_storage_value("schedules"),
             "rules": await self.config.get_storage_value("rules"),
             "scenes": await self.config.get_storage_value("scenes"),
             "resourcelinks": await self.config.get_storage_value("resourcelinks"),
             "lights": await self.__get_all_lights(),
             "groups": await self.__get_all_groups(),
-            "sensors": {},  # Not supported for now
+            "sensors": {
+                "1": {
+                    "state": {"daylight": None, "lastupdated": "none"},
+                    "config": {
+                        "on": True,
+                        "configured": False,
+                        "sunriseoffset": 30,
+                        "sunsetoffset": -30,
+                    },
+                    "name": "Daylight",
+                    "type": "Daylight",
+                    "modelid": "PHDL00",
+                    "manufacturername": "Philips",
+                    "swversion": "1.0",
+                }
+            },
         }
+
         return web.json_response(json_response)
 
     @routes.get("/api/{username}/sensors")
@@ -441,7 +457,7 @@ class HueApi:
 
     @routes.get("/link")
     @check_request
-    async def index(self, request):
+    async def link(self, request):
         """Enable link mode on the bridge."""
         token = request.rel_url.query.get("token")
         # token needs to match the discovery token
@@ -465,7 +481,7 @@ class HueApi:
     async def get_capabilities(self, request):
         """Return an overview of the capabilities."""
         json_response = {
-            "lights": {"available": 100},
+            "lights": {"available": 50},
             "sensors": {
                 "available": 60,
                 "clip": {"available": 60},
@@ -481,6 +497,7 @@ class HueApi:
             "timezones": {"values": []},
             "streaming": {"available": 1, "total": 10, "channels": 10},
         }
+
         return web.json_response(json_response)
 
     async def unknown_request(self, request):
@@ -696,7 +713,8 @@ class HueApi:
         # Hass areas/rooms
         for area in self.hass.area_registry.values():
             area_id = area["area_id"]
-            group_conf = result[area_id] = {
+            group_id = await self.config.entity_id_to_light_id(area_id)
+            group_conf = result[group_id] = {
                 "class": "Other",
                 "type": "Room",
                 "name": area["name"],
@@ -707,7 +725,7 @@ class HueApi:
             }
             lights_on = 0
             # get all entities for this device
-            async for entity in self.__get_group_lights(area_id):
+            async for entity in self.__get_group_lights(group_id):
                 entity = await self.hass.get_state(entity["entity_id"])
                 light_id = await self.config.entity_id_to_light_id(entity["entity_id"])
                 group_conf["lights"].append(light_id)
@@ -736,8 +754,9 @@ class HueApi:
 
         # fall back to hass groups (areas)
         else:
+            area_id = await self.config.light_id_to_entity_id(group_id)
             for device in self.hass.device_registry.values():
-                if device["area_id"] != group_id:
+                if device["area_id"] != area_id:
                     continue
                 # get all entities for this device
                 for entity in self.hass.entity_registry.values():
@@ -748,27 +767,93 @@ class HueApi:
                     entity = await self.hass.get_state(entity["entity_id"])
                     yield entity
 
+    async def __get_bridge_config_ttt(self, full_details=False):
+        return {
+            "name": "Philips hue",
+            "zigbeechannel": 25,
+            "mac": self.config.mac_addr,
+            "bridgeid": self.config.bridge_id,
+            "dhcp": True,
+            "ipaddress": "192.168.1.1",
+            "netmask": "255.255.255.0",
+            "gateway": "192.168.1.1",
+            "proxyaddress": "none",
+            "proxyport": 0,
+            "UTC": "2020-02-13T21:45:42",
+            "localtime": "2020-02-13T21:45:42",
+            "timezone": "Europe/Bucharest",
+            "modelid": "BSB002",
+            "datastoreversion": "70",
+            "swversion": "1935074050",
+            "apiversion": "1.35.0",
+            "swupdate": {
+                "updatestate": 0,
+                "checkforupdate": False,
+                "devicetypes": {"bridge": False, "lights": [], "sensors": []},
+                "url": "",
+                "text": "",
+                "notify": True,
+            },
+            "swupdate2": {
+                "checkforupdate": False,
+                "lastchange": "2018-06-09T10:11:08",
+                "bridge": {"state": "noupdates", "lastinstall": "2018-06-08T19:09:45"},
+                "state": "noupdates",
+                "autoinstall": {"updatetime": "T14:00:00", "on": False},
+            },
+            "linkbutton": self.config.link_mode_enabled,
+            "portalservices": True,
+            "portalconnection": "connected",
+            "portalstate": {
+                "signedon": True,
+                "incoming": False,
+                "outgoing": True,
+                "communication": "disconnected",
+            },
+            "internetservices": {
+                "internet": "connected",
+                "remoteaccess": "connected",
+                "time": "connected",
+                "swupdate": "connected",
+            },
+            "factorynew": False,
+            "replacesbridgeid": None,
+            "backup": {"status": "idle", "errorcode": 0},
+            "starterkitid": "",
+            # "whitelist": {
+            #     "web-ui-5045": {
+            #         "create date": "2020-02-13T21:39:36",
+            #         "last use date": "2020-02-13T21:40:47",
+            #         "name": "WebGui User",
+            #     },
+            #     "88335dd04ea911ea82f394c69117abcd": {
+            #         "last use date": "2020-02-13T21:45:42",
+            #         "create date": "2020-02-13T21:41:02",
+            #         "name": "Hue 3#Samsung SM-J320FN",
+            #     },
+            # },
+            "whitelist": await self.config.get_storage_value("users"),
+            "Hue Essentials key": "51bccd184ea911ea8a3794c69117abcd",
+            "Remote API enabled": False,
+        }
+
     async def __get_bridge_config(self, full_details=False):
         """Return the (virtual) bridge configuration."""
         result = {
-            "bridgeid": self.config.bridge_id,
-            "datastoreversion": "70",
-            "factorynew": False,
-            "ipaddress": self.config.host_ip_addr,
-            "linkbutton": False,
-            "mac": self.config.mac_addr,
-            "modelid": "BSB002",
-            "name": "Home Assistant",
-            "replacesbridgeid": None,
-            "starterkitid": "",
+            "name": "Philips hue",
+            "datastoreversion": 70,
             "swversion": "1935074050",
             "apiversion": "1.35.0",
+            "mac": self.config.mac_addr,
+            "bridgeid": self.config.bridge_id,
+            "factorynew": False,
+            "replacesbridgeid": None,
+            "modelid": "BSB002",
+            "starterkitid": "",
         }
         if full_details:
             result.update(
                 {
-                    "Remote API enabled": False,
-                    "UTC": datetime.datetime.now().strftime("%Y-%M-%DT%H:%M:%S"),
                     "backup": {"errorcode": 0, "status": "idle"},
                     "datastoreversion": "70",
                     "dhcp": True,
@@ -779,6 +864,10 @@ class HueApi:
                         "time": "connected",
                     },
                     "netmask": "255.255.255.0",
+                    "gateway": self.config.host_ip_addr,
+                    "proxyport": 0,
+                    "UTC": datetime.datetime.now().isoformat().split(".")[0],
+                    "timezone": "Europe/Amsterdam",
                     "portalconnection": "connected",
                     "portalservices": True,
                     "portalstate": {
@@ -795,8 +884,16 @@ class HueApi:
                         "updatestate": 0,
                         "url": "",
                     },
-                    "swupdate2": {"autoinstall": {"on": True}},
-                    "timezone": "Europe/Amsterdam",
+                    "swupdate2": {
+                        "checkforupdate": False,
+                        "lastchange": "2018-06-09T10:11:08",
+                        "bridge": {
+                            "state": "noupdates",
+                            "lastinstall": "2018-06-08T19:09:45",
+                        },
+                        "state": "noupdates",
+                        "autoinstall": {"updatetime": "T14:00:00", "on": False},
+                    },
                     "whitelist": await self.config.get_storage_value("users"),
                     "zigbeechannel": 25,
                     "linkbutton": self.config.link_mode_enabled,

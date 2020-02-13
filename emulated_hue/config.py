@@ -163,13 +163,15 @@ class Config:
 
     async def enable_link_mode(self):
         """Enable link mode for the duration of 30 seconds."""
+        if self._link_mode_enabled:
+            return  # already enabled
         self._link_mode_enabled = True
 
         def auto_disable():
             self.hue.event_loop.create_task(self.disable_link_mode())
 
-        self.hue.event_loop.call_later(30, auto_disable)
-        _LOGGER.info("Link mode is enabled for the next 30 seconds.")
+        self.hue.event_loop.call_later(60, auto_disable)
+        _LOGGER.info("Link mode is enabled for the next 60 seconds.")
 
     async def disable_link_mode(self):
         """Disable link mode on the virtual bridge."""
@@ -177,9 +179,11 @@ class Config:
         _LOGGER.info("Link mode is disabled.")
 
     async def enable_link_mode_discovery(self):
-        """Enable link mode discovery for the duration of 90 seconds."""
-        if not self._link_mode_discovery_key:
-            self._link_mode_discovery_key = str(uuid.uuid4())
+        """Enable link mode discovery for the duration of 120 seconds."""
+        if self._link_mode_discovery_key:
+            return  # already active
+
+        self._link_mode_discovery_key = str(uuid.uuid4())
         # create persistent notification in hass
         # user can click the link in the notification to enable linking
 
@@ -209,4 +213,4 @@ class Config:
                 )
             )
 
-        self.hue.event_loop.call_later(90, auto_disable)
+        self.hue.event_loop.call_later(120, auto_disable)
