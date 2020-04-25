@@ -772,7 +772,7 @@ class HueApi:
         result = {
             "name": "Home Assistant",
             "datastoreversion": 70,
-            "swversion": "1935074050",
+            "swversion": "1937113020",
             "apiversion": "1.35.0",
             "mac": self.config.mac_addr,
             "bridgeid": self.config.bridge_id,
