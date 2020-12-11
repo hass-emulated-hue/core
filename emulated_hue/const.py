@@ -1,4 +1,10 @@
 """Emulated HUE Bridge for HomeAssistant - constants."""
+
+# version number to return in api,
+# should be kept up to date with official Hue bridge updates
+HUE_BRIDGE_SW_VERSION = "1939070020"
+HUE_BRIDGE_API_VERSION = "1.35.0"
+
 HASS_ATTR_BRIGHTNESS = "brightness"
 HASS_ATTR_COLOR_TEMP = "color_temp"
 HASS_ATTR_XY_COLOR = "xy_color"

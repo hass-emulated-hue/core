@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Emulated Hue quick start."""
 import argparse
-import asyncio
 import logging
 import os
 
 from aiorun import run
 from emulated_hue import HueEmulator
+
+IS_SUPERVISOR = os.path.isfile("/data/options.json") and os.environ.get("HASSIO_TOKEN")
 
 # pylint: disable=invalid-name
 if __name__ == "__main__":
@@ -20,29 +21,34 @@ if __name__ == "__main__":
     logger.addHandler(consolehandler)
     logger.setLevel(logging.INFO)
 
+    default_data_dir = (
+        os.getenv("APPDATA") if os.name == "nt" else os.path.expanduser("~")
+    )
+    default_data_dir = os.path.join(default_data_dir, ".emulated_hue")
+
     parser = argparse.ArgumentParser(description="Home Assistant HUE Emulation.")
-    parser.add_argument(
-        "--data", type=str, help="path to store config files", required=True
-    )
-    parser.add_argument("--url", type=str, help="url to HomeAssistant", required=True)
-    parser.add_argument(
-        "--token", type=str, help="Long Lived Token for HomeAssistant", required=True
-    )
+    if not IS_SUPERVISOR:
+        parser.add_argument(
+            "--data",
+            type=str,
+            help="path to store config files",
+            default=default_data_dir,
+        )
+        parser.add_argument(
+            "--url", type=str, help="url to HomeAssistant", required=True
+        )
+        parser.add_argument(
+            "--token",
+            type=str,
+            help="Long Lived Token for HomeAssistant",
+            required=True,
+        )
     parser.add_argument(
         "--verbose", type=bool, help="Enable more verbose logging", default=False
     )
 
-    # create event_loop with uvloop
-    event_loop = asyncio.get_event_loop()
-    try:
-        import uvloop
-
-        uvloop.install()
-    except ImportError:
-        # uvloop is not available on Windows so safe to ignore this
-        logger.warning("uvloop support is disabled")
     # auto detect hassio
-    if os.path.isfile("/data/options.json") and os.environ.get("HASSIO_TOKEN"):
+    if IS_SUPERVISOR:
         token = os.environ["HASSIO_TOKEN"]
         datapath = "/data"
         url = "http://hassio/homeassistant"
@@ -54,5 +60,5 @@ if __name__ == "__main__":
         if args.verbose:
             logger.setLevel(logging.DEBUG)
 
-    hue = HueEmulator(event_loop, datapath, url, token)
-    run(hue.start(), loop=event_loop)
+    hue = HueEmulator(datapath, url, token)
+    run(hue.start(), use_uvloop=True)

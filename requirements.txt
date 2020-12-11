@@ -1,7 +1,8 @@
-aiohttp[speedups]
-uvloop
-python-slugify
-netaddr
-aiorun
-getmac
-cryptography
+aiohttp[speedups]==3.7.3
+uvloop==0.14.0
+python-slugify==4.0.1
+netaddr==0.8.0
+aiorun==2020.11.1
+getmac==0.8.2
+cryptography==3.2.1
+hass-client==0.0.7

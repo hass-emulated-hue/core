@@ -22,6 +22,8 @@ class Config:
         self.hass_url = hass_url
         self.hass_token = hass_token
         self.data_path = data_path
+        if not os.path.isdir(data_path):
+            os.mkdir(data_path)
         self._config = load_json(self.get_path(CONFIG_FILE))
         self._link_mode_enabled = False
         self._link_mode_discovery_key = None
@@ -65,33 +67,33 @@ class Config:
         """Get path to file at data location."""
         return os.path.join(self.data_path, filename)
 
-    async def entity_id_to_light_id(self, entity_id):
+    async def async_entity_id_to_light_id(self, entity_id):
         """Get a unique light_id number for the hass entity id."""
-        numbers = await self.get_storage_value("light_ids")
+        numbers = await self.async_get_storage_value("light_ids")
         for number, ent_id in numbers.items():
             if entity_id == ent_id:
                 return number
         number = "1"
         if numbers:
             number = str(max(int(k) for k in numbers) + 1)
-        await self.set_storage_value("light_ids", number, entity_id)
+        await self.async_set_storage_value("light_ids", number, entity_id)
         return number
 
-    async def light_id_to_entity_id(self, number):
+    async def async_light_id_to_entity_id(self, number):
         """Convert unique light_id number to entity id."""
-        return await self.get_storage_value("light_ids", number)
+        return await self.async_get_storage_value("light_ids", number)
 
-    async def entity_by_light_id(self, light_id):
+    async def async_entity_by_light_id(self, light_id):
         """Return the hass entity by supplying a light id."""
-        entity_id = await self.light_id_to_entity_id(light_id)
+        entity_id = await self.async_light_id_to_entity_id(light_id)
         if not entity_id:
             raise Exception("Invalid light_id provided!")
-        entity = await self.hue.hass.get_state(entity_id)
+        entity = self.hue.hass.get_state(entity_id, attribute=None)
         if not entity:
             raise Exception(f"Entity {entity_id} not found!")
         return entity
 
-    async def get_storage_value(self, key, subkey=None):
+    async def async_get_storage_value(self, key, subkey=None):
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
         if main_val is None:
@@ -100,7 +102,7 @@ class Config:
             return main_val.get(subkey, None)
         return main_val
 
-    async def set_storage_value(self, key, subkey, value):
+    async def async_set_storage_value(self, key, subkey, value):
         """Set a value in persistent storage."""
         needs_save = False
         if subkey is None and self._config.get(key) != value:
@@ -119,7 +121,7 @@ class Config:
         if needs_save:
             save_json(self.get_path(CONFIG_FILE), self._config)
 
-    async def delete_storage_value(self, key, subkey=None):
+    async def async_delete_storage_value(self, key, subkey=None):
         """Delete a value in persistent storage."""
         if subkey:
             self._config[key].pop(subkey, None)
@@ -129,13 +131,13 @@ class Config:
 
     async def get_users(self):
         """Get all registered users as dict."""
-        return await self.get_storage_value("users")
+        return await self.async_get_storage_value("users")
 
-    async def get_user(self, username):
+    async def async_get_user(self, username):
         """Get details for given username."""
-        return await self.get_storage_value("users", username)
+        return await self.async_get_storage_value("users", username)
 
-    async def create_user(self, devicetype):
+    async def async_create_user(self, devicetype):
         """Create a new user for the api access."""
         if not self._link_mode_enabled:
             raise Exception("Link mode not enabled!")
@@ -154,14 +156,14 @@ class Config:
             "create date": datetime.datetime.now().strftime("%Y-%M-%DT%H:%M:%S"),
             "username": username,
         }
-        await self.set_storage_value("users", username, user_obj)
+        await self.async_set_storage_value("users", username, user_obj)
         return user_obj
 
     async def delete_user(self, username):
         """Delete a user."""
-        await self.delete_storage_value("users", username)
+        await self.async_delete_storage_value("users", username)
 
-    async def enable_link_mode(self):
+    async def async_enable_link_mode(self):
         """Enable link mode for the duration of 30 seconds."""
         if self._link_mode_enabled:
             return  # already enabled
@@ -178,7 +180,7 @@ class Config:
         self._link_mode_enabled = False
         _LOGGER.info("Link mode is disabled.")
 
-    async def enable_link_mode_discovery(self):
+    async def async_enable_link_mode_discovery(self):
         """Enable link mode discovery for the duration of 120 seconds."""
         if self._link_mode_discovery_key:
             return  # already active
@@ -195,7 +197,7 @@ class Config:
             "title": "Emulated HUE Bridge",
             "message": msg,
         }
-        await self.hue.hass.call_service(
+        await self.hue.hass.async_call_service(
             "persistent_notification", "create", msg_details
         )
         _LOGGER.info(
@@ -206,7 +208,7 @@ class Config:
         def auto_disable():
             self._link_mode_discovery_key = None
             self.hue.event_loop.create_task(
-                self.hue.hass.call_service(
+                self.hue.hass.async_call_service(
                     "persistent_notification",
                     "dismiss",
                     {"notification_id": "hue_bridge_link_requested"},
