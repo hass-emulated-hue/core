@@ -13,7 +13,7 @@
 				"type": "python",
 				"request": "launch",
 				"module": "emulated_hue",
-				"args": ["--url", "http://192.168.1.1:8123", "--token", "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiI4OTQ4MzgzMzYwY2Y0NzVmYjJlZjBmNDY1NTNhYTMxNSIsImlhdCI6MTYwNzM2NzMxMSwiZXhwIjoxOTIyNzI3MzExfQ.QneXzfSO0nnMRsb1zIzkIIprKRxvvfyDFI0j1yhP1rU"]
+				"args": ["--url", "http://192.168.1.1:8123", "--token", "[yourtokenhere]"]
 			}
 		]
 	},
