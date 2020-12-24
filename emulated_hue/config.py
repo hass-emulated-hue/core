@@ -16,7 +16,7 @@ CONFIG_FILE = "emulated_hue.json"
 class Config:
     """Hold configuration variables for the emulated hue bridge."""
 
-    def __init__(self, hue, data_path, hass_url, hass_token, ip_address):
+    def __init__(self, hue, data_path, hass_url, hass_token, ip_address, mac_address):
         """Initialize the instance."""
         self.hue = hue
         self.hass_url = hass_url
@@ -30,10 +30,11 @@ class Config:
 
         # Get the IP address that will be passed to during discovery
         self.host_ip_addr = ip_address if ip_address else get_local_ip()
-        _LOGGER.info(
-            "Listen IP address not specified, auto-detected address is %s",
-            self.host_ip_addr,
-        )
+        if not ip_address:
+            _LOGGER.info(
+                "Listen IP address not specified, auto-detected address is %s",
+                self.host_ip_addr,
+            )
 
         # Get the ports that the Hue bridge will listen on
         # ports are currently hardcoded as Hue apps expect these ports
@@ -44,7 +45,7 @@ class Config:
         # or to the unicast address (host_ip_addr)
         self.upnp_bind_multicast = True
 
-        mac_addr = str(get_mac_address(ip=self.host_ip_addr))
+        mac_addr = mac_address if mac_address else str(get_mac_address(ip=self.host_ip_addr))
         if not mac_addr or len(mac_addr) < 16:
             # fall back to dummy mac
             mac_addr = "b6:82:d3:45:ac:29"

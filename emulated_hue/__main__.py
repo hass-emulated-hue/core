@@ -59,14 +59,21 @@ if __name__ == "__main__":
         help="IP Address of hue_emulator instance (for development environments)",
         default=os.getenv("IP", None)
     )
+    parser.add_argument(
+        "--mac",
+        type=str,
+        help="MAC Address of hue_emulator instance (for development environments)",
+        default=os.getenv("MAC", None)
+    )
 
     args = parser.parse_args()
     datapath = args.data
     url = args.url
     token = args.token
     ip = args.ip
+    mac = args.mac
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    hue = HueEmulator(datapath, url, token, ip)
+    hue = HueEmulator(datapath, url, token, ip, mac)
     run(hue.start(), use_uvloop=True)

@@ -14,10 +14,10 @@ _LOGGER = logging.getLogger(__name__)
 class HueEmulator:
     """Support for local control of entities by emulating a Philips Hue bridge."""
 
-    def __init__(self, data_path, hass_url, hass_token, ip_address):
+    def __init__(self, data_path, hass_url, hass_token, ip_address, mac_address):
         """Create an instance of HueEmulator."""
         self.event_loop = None
-        self.config = Config(self, data_path, hass_url, hass_token, ip_address)
+        self.config = Config(self, data_path, hass_url, hass_token, ip_address, mac_address)
         self.hass = HomeAssistant(url=hass_url, token=hass_token)
         self.api = HueApi(self)
         self.upnp_listener = UPNPResponderThread(self.config)

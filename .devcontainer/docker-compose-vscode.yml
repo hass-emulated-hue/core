@@ -9,8 +9,8 @@ services:
     restart: "no"
     environment:
       - DATA_DIR=/config
-      - IP=127.0.0.1
-      - HASS_TOKEN=yourtokenhere
+      # - IP=127.0.0.1
+      # - MAC=00:00:00:00:00:00
       - VERBOSE=True
     volumes:
       - ..:/workspace
