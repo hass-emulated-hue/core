@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch hue_emulator",
+            "type": "python",
+            "request": "launch",
+            "module": "emulated_hue",
+            "args": [],
+            "python": "/usr/local/bin/python3",
+            "console": "integratedTerminal"
+        }
+    ]
+}
