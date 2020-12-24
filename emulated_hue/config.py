@@ -16,7 +16,7 @@ CONFIG_FILE = "emulated_hue.json"
 class Config:
     """Hold configuration variables for the emulated hue bridge."""
 
-    def __init__(self, hue, data_path, hass_url, hass_token):
+    def __init__(self, hue, data_path, hass_url, hass_token, ip_address):
         """Initialize the instance."""
         self.hue = hue
         self.hass_url = hass_url
@@ -29,7 +29,7 @@ class Config:
         self._link_mode_discovery_key = None
 
         # Get the IP address that will be passed to during discovery
-        self.host_ip_addr = get_local_ip()
+        self.host_ip_addr = ip_address if ip_address else get_local_ip()
         _LOGGER.info(
             "Listen IP address not specified, auto-detected address is %s",
             self.host_ip_addr,

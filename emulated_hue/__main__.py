@@ -53,13 +53,20 @@ if __name__ == "__main__":
         help="Enable more verbose logging",
         default=os.getenv("VERBOSE", False),
     )
+    parser.add_argument(
+        "--ip",
+        type=str,
+        help="IP Address of hue_emulator instance (for development environments)",
+        default=os.getenv("IP", None)
+    )
 
     args = parser.parse_args()
     datapath = args.data
     url = args.url
     token = args.token
+    ip = args.ip
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
-    hue = HueEmulator(datapath, url, token)
+    hue = HueEmulator(datapath, url, token, ip)
     run(hue.start(), use_uvloop=True)
