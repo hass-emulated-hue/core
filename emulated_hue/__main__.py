@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Emulated Hue quick start."""
 import argparse
 import logging
@@ -60,4 +59,9 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
 
     hue = HueEmulator(datapath, url, token)
-    run(hue.start(), use_uvloop=True)
+
+    def on_shutdown(loop):
+        """Call on loop shutdown."""
+        loop.run_until_complete(hue.async_stop())
+
+    run(hue.async_start(), use_uvloop=True, shutdown_callback=on_shutdown)

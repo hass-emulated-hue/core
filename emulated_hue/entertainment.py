@@ -5,7 +5,7 @@ import logging
 import os
 import time
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 COLOR_TYPE_RGB = "RGB"
@@ -38,14 +38,14 @@ class EntertainmentAPI:
         self._socket_daemon = None
         self._states = {}
         self._user_details = user_details
-        self.hue.event_loop.create_task(self.async_run())
+        self.hue.loop.create_task(self.async_run())
 
     async def async_run(self):
         """Run the server."""
         # MDTLS + PSK is not supported very well in native python
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
-        _LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
+        LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
@@ -71,7 +71,7 @@ class EntertainmentAPI:
                 # Once the client starts streaming, it will pass in packets
                 # at a rate between 25 and 50 packets per second !
                 await self.__async_process_packet(data)
-        _LOGGER.info("HUE Entertainment Service stopped.")
+        LOGGER.info("HUE Entertainment Service stopped.")
 
     def stop(self):
         """Stop the Entertainment service."""
@@ -141,7 +141,7 @@ class EntertainmentAPI:
                 # some details changed, push to light
                 cached_state["timestamp"] = cur_timestamp
                 svc_data["transition"] = TIME_THROTTLE / 1000
-                self.hue.event_loop.create_task(
+                self.hue.loop.create_task(
                     self.hass.async_call_service("light", "turn_on", svc_data)
                 )
                 self.hass.states[entity_id]["attributes"].update(svc_data)

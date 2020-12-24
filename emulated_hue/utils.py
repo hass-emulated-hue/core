@@ -1,14 +1,14 @@
 """Emulated HUE Bridge for HomeAssistant - Helper utils."""
-from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 import json
 import logging
 import os
 import socket
+from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
 
 import slugify as unicode_slug
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 # IP addresses of loopback interfaces
 LOCAL_IPS = (ip_address("127.0.0.1"), ip_address("::1"))
@@ -65,7 +65,7 @@ def load_json(filename: str):
         with open(filename, encoding="utf-8") as fdesc:
             return json.loads(fdesc.read())  # type: ignore
     except (FileNotFoundError, ValueError, OSError) as error:
-        _LOGGER.debug("Loading %s failed: %s", filename, error)
+        LOGGER.debug("Loading %s failed: %s", filename, error)
         return {}
 
 
@@ -79,4 +79,4 @@ def save_json(filename: str, data: dict):
         with open(filename, "w") as file_obj:
             file_obj.write(json_data)
     except IOError:
-        _LOGGER.exception("Failed to serialize to JSON: %s", filename)
+        LOGGER.exception("Failed to serialize to JSON: %s", filename)
