@@ -17,3 +17,6 @@ services:
       - ../config:/config
     network_mode: "host"
     command: /bin/sh -c "while sleep 1000; do :; done"
+
+# Don't use on Windows or MacOS since Docker only supports host networking on Linux
+# Switch to Linux to be able to use devcontainers properly

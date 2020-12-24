@@ -14,10 +14,7 @@ services:
       - VERBOSE=True
     volumes:
       - ../config:/config
-#   network_mode: "host"
-#   Host networking seems to freeze pycharm's debugger
-    ports:
-      - '80:80'
-      - '443:443'
-      - '1900:1900/udp'
-      - '2100:2100/udp'
+   network_mode: "host"
+
+# Don't use on Windows or MacOS since Docker only supports host networking on Linux
+# Switch to Linux to be able to use devcontainers properly
