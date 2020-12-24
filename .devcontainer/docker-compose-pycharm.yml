@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  emulated_hue:
+    build:
+      context: ../
+      dockerfile: ./.devcontainer/Dockerfile
+      target: dev_pycharm
+    restart: "no"
+    environment:
+      - DATA_DIR=/config
+      - HASS_URL=http://192.168.1.1:8123
+      - HASS_TOKEN=yourtokenhere
+      - VERBOSE=True
+    volumes:
+      - ../config:/config
+#   network_mode: "host"
+#   Host networking seems to freeze pycharm's debugger
+    ports:
+      - '80:80'
+      - '443:443'
+      - '1900:1900/udp'
+      - '2100:2100/udp'
