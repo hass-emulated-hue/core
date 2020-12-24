@@ -1,6 +1,10 @@
 .DS_Store
 __pycache__
-.vscode
 .venv/
 *.code-workspace
+.idea
 hass_emulated_hue.code-workspace
+
+config
+.devcontainer/docker-compose-pycharm.yml
+.devcontainer/docker-compose-vscode.yml

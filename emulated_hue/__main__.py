@@ -32,24 +32,26 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Home Assistant HUE Emulation.")
 
     parser.add_argument(
-        "--data", type=str, help="path to store config files", default=default_data_dir
+        "--data", type=str, help="path to store config files",
+        default=os.getenv("DATA_DIR", default_data_dir)
     )
     parser.add_argument(
         "--url",
         type=str,
         help="url to HomeAssistant",
-        required=True,
         default=os.getenv("HASS_URL", "http://hassio/homeassistant"),
     )
     parser.add_argument(
         "--token",
         type=str,
         help="Long Lived Token for HomeAssistant",
-        required=True,
         default=os.getenv("HASS_TOKEN", os.getenv("HASSIO_TOKEN")),
     )
     parser.add_argument(
-        "--verbose", type=bool, help="Enable more verbose logging", default=False
+        "--verbose",
+        type=bool,
+        help="Enable more verbose logging",
+        default=os.getenv("VERBOSE", False),
     )
 
     args = parser.parse_args()

@@ -1,0 +1,8 @@
+{
+    "python.autoComplete.extraPaths": [
+        "./emulated_hue"
+    ],
+    "python.analysis.extraPaths": [
+        "./emulated_hue"
+    ]
+}
