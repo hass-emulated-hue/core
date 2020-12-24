@@ -2,35 +2,50 @@
 import asyncio
 import logging
 
+from hass_client import HomeAssistant
+
+from .api import HueApi
 from .config import Config
-from .hass import HomeAssistant
-from .hue_api import HueApi
 from .upnp import UPNPResponderThread
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class HueEmulator:
-    """Support for local control of entitiesby emulating a Philips Hue bridge."""
+    """Support for local control of entities by emulating a Philips Hue bridge."""
 
-    def __init__(self, event_loop, data_path, hass_url, hass_token):
+    def __init__(self, data_path: str, hass_url: str, hass_token: str):
         """Create an instance of HueEmulator."""
-        self.event_loop = event_loop
-        self.config = Config(self, data_path, hass_url, hass_token)
-        self.hass = HomeAssistant(self)
-        self.hue_api = HueApi(self)
-        self.upnp_listener = UPNPResponderThread(self.config)
+        self._loop = None
+        self._config = Config(self, data_path)
+        self._hass = HomeAssistant(url=hass_url, token=hass_token)
+        self._api = HueApi(self)
+        self._upnp_listener = UPNPResponderThread(self.config)
 
-    async def start(self):
+    @property
+    def config(self) -> Config:
+        """Return the Config instance."""
+        return self._config
+
+    @property
+    def hass(self) -> HomeAssistant:
+        """Return the Home Assistant instance."""
+        return self._hass
+
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop:
+        """Return the running event loop."""
+        return self._loop
+
+    async def async_start(self):
         """Start running the Hue emulation."""
-        await self.hass.async_setup()
-        await self.hue_api.async_setup()
-        self.upnp_listener.start()
-        # wait for exit
-        try:
-            while True:
-                await asyncio.sleep(3600)
-        except asyncio.CancelledError:
-            _LOGGER.info("Application shutdown")
-            self.upnp_listener.stop()
-            await self.hue_api.stop()
+        self._loop = asyncio.get_running_loop()
+        await self._hass.async_connect()
+        await self._api.async_setup()
+        self._upnp_listener.start()
+
+    async def async_stop(self):
+        """Stop running the Hue emulation."""
+        LOGGER.info("Application shutdown")
+        self._upnp_listener.stop()
+        await self._api.async_stop()

@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"sudo": true,
+				"name": "Python: Module",
+				"type": "python",
+				"request": "launch",
+				"module": "emulated_hue",
+				"args": ["--url", "http://192.168.1.1:8123", "--token", "[yourtokenhere]"]
+			}
+		]
+	},
+	"settings": {
+		"python.pythonPath": ".venv/bin/python"
+	}
+}

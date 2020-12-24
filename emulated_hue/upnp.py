@@ -4,11 +4,13 @@ import select
 import socket
 import threading
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class UPNPResponderThread(threading.Thread):
     """Handle responding to UPNP/SSDP discovery requests."""
+
+    # TODO: Convert to asyncio socket instead of thread
 
     _interrupted = False
 
@@ -81,9 +83,7 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
                     clean_socket_close(ssdp_socket)
                     return
 
-                _LOGGER.error(
-                    "UPNP Responder socket exception occurred: %s", ex.__str__
-                )
+                LOGGER.error("UPNP Responder socket exception occurred: %s", ex.__str__)
                 # without the following continue, a second exception occurs
                 # because the data object has not been initialized
                 continue
@@ -104,6 +104,6 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
 
 def clean_socket_close(sock):
     """Close a socket connection and logs its closure."""
-    _LOGGER.info("UPNP responder shutting down.")
+    LOGGER.info("UPNP responder shutting down.")
 
     sock.close()

@@ -1,17 +1,29 @@
 """Emulated HUE Bridge for HomeAssistant - Certificate utils."""
-from datetime import datetime, timedelta
+import asyncio
 import logging
+from datetime import datetime, timedelta
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
+from emulated_hue.config import Config
 
-_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
-def generate_selfsigned_cert(cert_file, key_file, config):
+async def async_generate_selfsigned_cert(
+    cert_file: str, key_file: str, config: Config
+) -> None:
+    """Generate self signed certificate compatible with Philips HUE."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        None, generate_selfsigned_cert, cert_file, key_file, config
+    )
+
+
+def generate_selfsigned_cert(cert_file: str, key_file: str, config: Config) -> None:
     """Generate self signed certificate compatible with Philips HUE."""
 
     dec_serial = int(config.bridge_id, 16)
@@ -75,4 +87,4 @@ def generate_selfsigned_cert(cert_file, key_file, config):
         fileobj.write(cert_pem.decode("utf-8"))
     with open(key_file, "w") as fileobj:
         fileobj.write(key_pem.decode("utf-8"))
-    _LOGGER.debug("Certificate generated")
+    LOGGER.debug("Certificate generated")
