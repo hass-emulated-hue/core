@@ -37,14 +37,12 @@ if __name__ == "__main__":
         "--url",
         type=str,
         help="url to HomeAssistant",
-        required=True,
         default=os.getenv("HASS_URL", "http://hassio/homeassistant"),
     )
     parser.add_argument(
         "--token",
         type=str,
         help="Long Lived Token for HomeAssistant",
-        required=True,
         default=os.getenv("HASS_TOKEN", os.getenv("HASSIO_TOKEN")),
     )
     parser.add_argument(
