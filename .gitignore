@@ -4,3 +4,4 @@ __pycache__
 .venv/
 *.code-workspace
 hass_emulated_hue.code-workspace
+hass_emulated_hue.code-workspace
