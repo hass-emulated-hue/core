@@ -4,7 +4,7 @@ __pycache__
 *.code-workspace
 .idea
 hass_emulated_hue.code-workspace
-
 config
 .devcontainer/docker-compose-pycharm.yml
 .devcontainer/docker-compose-vscode.yml
+

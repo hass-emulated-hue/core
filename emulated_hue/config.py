@@ -165,7 +165,7 @@ class Config:
         await self.async_delete_storage_value("users", username)
 
     async def async_enable_link_mode(self):
-        """Enable link mode for the duration of 30 seconds."""
+        """Enable link mode for the duration of 60 seconds."""
         if self._link_mode_enabled:
             return  # already enabled
         self._link_mode_enabled = True
@@ -204,7 +204,7 @@ class Config:
         _LOGGER.info(
             "Link request detected - Use the Homeassistant frontend to confirm this link request."
         )
-        # make sure that the notification and link request are dismissed after 90 seconds
+        # make sure that the notification and link request are dismissed after 120 seconds
 
         def auto_disable():
             self._link_mode_discovery_key = None
