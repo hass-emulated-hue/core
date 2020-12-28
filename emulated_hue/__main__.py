@@ -31,8 +31,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Home Assistant HUE Emulation.")
 
     parser.add_argument(
-        "--data", type=str, help="path to store config files",
-        default=os.getenv("DATA_DIR", default_data_dir)
+        "--data",
+        type=str,
+        help="path to store config files",
+        default=os.getenv("DATA_DIR", default_data_dir),
     )
     parser.add_argument(
         "--url",
