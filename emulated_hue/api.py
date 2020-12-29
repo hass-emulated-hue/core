@@ -102,9 +102,7 @@ class HueApi:
 
         # Create and start the HTTP API on port 80
         # Port MUST be 80 to maintain compatability with Hue apps
-        self.http_site = web.TCPSite(
-            self.runner, self.config.host_ip_addr, self.config.http_port
-        )
+        self.http_site = web.TCPSite(self.runner, port=self.config.http_port)
         try:
             await self.http_site.start()
             LOGGER.info("Started HTTP webserver on port %s", self.config.http_port)
@@ -126,10 +124,7 @@ class HueApi:
         # Create and start the HTTPS API on port 443
         # Port MUST be 443 to maintain compatability with Hue apps
         self.https_site = web.TCPSite(
-            self.runner,
-            self.config.host_ip_addr,
-            self.config.https_port,
-            ssl_context=ssl_context,
+            self.runner, port=self.config.https_port, ssl_context=ssl_context
         )
         try:
             await self.https_site.start()
