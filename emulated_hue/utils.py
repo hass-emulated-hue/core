@@ -5,6 +5,7 @@ import os
 import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
+from aiohttp import web
 
 import slugify as unicode_slug
 
@@ -59,6 +60,10 @@ def update_dict(dict1, dict2):
             dict1[key] = value
 
 
+def json_response_nonunicode(data):
+    return web.Response(text=json.dumps(data, ensure_ascii=False), content_type='application/json')
+
+
 def load_json(filename: str):
     """Load JSON from file."""
     try:
@@ -75,7 +80,7 @@ def save_json(filename: str, data: dict):
     if os.path.isfile(filename):
         os.replace(filename, safe_copy)
     try:
-        json_data = json.dumps(data, sort_keys=True, indent=4)
+        json_data = json.dumps(data, sort_keys=True, indent=4, ensure_ascii=False)
         with open(filename, "w") as file_obj:
             file_obj.write(json_data)
     except IOError:
