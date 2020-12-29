@@ -61,7 +61,7 @@ def update_dict(dict1, dict2):
 
 
 def json_response_nonunicode(data):
-    """Sends json response in raw format instead of converting to ascii / unicode."""
+    """Send json response in raw format instead of converting to ascii / unicode."""
     return web.Response(text=json.dumps(data, ensure_ascii=False), content_type='application/json')
 
 
