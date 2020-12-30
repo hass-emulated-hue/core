@@ -1,4 +1,5 @@
 """Support for a Hue API to control Home Assistant."""
+import asyncio
 import datetime
 import functools
 import inspect
@@ -74,6 +75,7 @@ def check_request(check_user=True, log_request=True):
                     request_data = await request.json()
                 except ValueError:
                     request_data = await request.text()
+                LOGGER.debug(request_data)
                 return await func(cls, request, request_data)
             return await func(cls, request)
 
@@ -161,9 +163,14 @@ class HueApi:
             LOGGER.warning("devicetype not specified")
             return web.json_response(("Devicetype not specified", 302))
         if not self.config.link_mode_enabled:
-            LOGGER.warning("Link mode is not enabled!")
             await self.config.async_enable_link_mode_discovery()
-            return web.Response(status=101, text="Link mode not enabled")
+            # wait max 30 seconds for link mode to be enabled
+            count = 0
+            while not self.config.link_mode_enabled and count < 60:
+                count += 1
+                await asyncio.sleep(0.5)
+        if not self.config.link_mode_enabled:
+            return web.Response(status=101, text="Link mode not enabled!")
 
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
