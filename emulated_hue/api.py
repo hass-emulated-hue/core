@@ -170,7 +170,15 @@ class HueApi:
                 count += 1
                 await asyncio.sleep(0.5)
         if not self.config.link_mode_enabled:
-            return web.Response(status=101, text="Link mode not enabled!")
+            return send_json_response(
+                {
+                    "error": {
+                        "address": "/",
+                        "description": "link button not pressed",
+                        "type": 101,
+                    }
+                }
+            )
 
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
