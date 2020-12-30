@@ -37,6 +37,7 @@ class EntertainmentAPI:
         self._interrupted = False
         self._socket_daemon = None
         self._timestamps = {}
+        self._prev_data = {}
         self._user_details = user_details
         self.hue.loop.create_task(self.async_run())
 
@@ -83,9 +84,6 @@ class EntertainmentAPI:
         """Process an incoming stream message."""
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
-        # TODO: can we pass the raw entertainment message as unicast message on ZHA ?
-        # protocol = pkt[:9].decode()
-        # api_version = "%s.%s" % (pkt[9], pkt[10])
         color_space = COLOR_TYPE_RGB if pkt[14] == 0 else COLOR_TYPE_XY_BR
         lights_data = pkt[16:]
 
@@ -93,6 +91,14 @@ class EntertainmentAPI:
         for light_data in chunked(9, lights_data):
             light_id = str(light_data[1] + light_data[2])
             light_conf = await self.config.async_get_light_config(light_id)
+            supports_udp = light_conf["entertainment"].get("supports_udp")
+            # throttle command to light
+            # TODO: can we pass the raw entertainment message as unicast message on ZHA ?
+            # TODO: can we send udp messages to supported lights such as esphome ?
+            if not supports_udp and not self.__update_allowed(
+                light_id, light_conf, light_data
+            ):
+                continue
             entity_id = light_conf["entity_id"]
             svc_data = {"entity_id": entity_id}
             if color_space == COLOR_TYPE_RGB:
@@ -110,20 +116,29 @@ class EntertainmentAPI:
                     (light_data[7] * 256 + light_data[8]) / 256
                 )
 
-            if self.__update_allowed(light_id, light_conf):
-                # update allowed within throttling, push to light
-                if light_conf["entertainment"]["transition"]:
-                    svc_data["transition"] = (
-                        light_conf["entertainment"]["transition"] / 1000
-                    )
-                await self.hass.async_call_service("light", "turn_on", svc_data)
-                self.hass.states[entity_id]["attributes"].update(svc_data)
+            # update allowed within throttling, push to light
+            if light_conf["entertainment"]["transition"]:
+                svc_data["transition"] = (
+                    light_conf["entertainment"]["transition"] / 1000
+                )
+            await self.hass.async_call_service("light", "turn_on", svc_data)
+            self.hass.states[entity_id]["attributes"].update(svc_data)
 
-    def __update_allowed(self, light_id: str, light_conf: dict) -> bool:
+    def __update_allowed(
+        self, light_id: str, light_conf: dict, light_data: bytes
+    ) -> bool:
         """Minimalistic form of throttling, only allow updates to a light within a timespan."""
         throttle_ms = light_conf["entertainment"]["throttle"]
         if not throttle_ms:
             return True
+        # check if data changed
+        # when not using udp no need to send same light command again
+        prev_data = self._prev_data.get(light_id, b"")
+        if prev_data == light_data:
+            return False
+        self._prev_data[light_id] = light_data
+        # check throttle timestamp so light commands are only sent once every X milliseconds
+        # this is to not overload a light implementation in Home Assistant
         prev_timestamp = self._timestamps.get(light_id, 0)
         cur_timestamp = int(time.time() * 1000)
         time_diff = abs(cur_timestamp - prev_timestamp)
