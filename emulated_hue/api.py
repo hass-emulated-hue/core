@@ -228,7 +228,7 @@ class HueApi:
                 self._new_lights[light_id] = await self.__async_entity_to_hue(
                     entity, light_config
                 )
-        groups = await self.config.async_get_storage_value("groups")
+        groups = await self.config.async_get_storage_value("groups", default={})
         for group_id, group_conf in groups.items():
             if "enabled" in group_conf and not group_conf["enabled"]:
                 group_conf["enabled"] = True
@@ -289,7 +289,7 @@ class HueApi:
         if group_id == "0" and "scene" in request_data:
             # scene request
             scene = await self.config.async_get_storage_value(
-                "scenes", request_data["scene"]
+                "scenes", request_data["scene"], default={}
             )
             for light_id, light_state in scene["lightstates"].items():
                 entity = await self.config.async_entity_by_light_id(light_id)
@@ -380,7 +380,7 @@ class HueApi:
     async def async_get_localitems(self, request: web.Request):
         """Handle requests to retrieve localitems (e.g. scenes)."""
         itemtype = request.match_info["itemtype"]
-        result = await self.config.async_get_storage_value(itemtype)
+        result = await self.config.async_get_storage_value(itemtype, default={})
         return send_json_response(result)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
@@ -463,10 +463,14 @@ class HueApi:
         """Return full state view of emulated hue."""
         json_response = {
             "config": await self.__async_get_bridge_config(True),
-            "schedules": await self.config.async_get_storage_value("schedules"),
-            "rules": await self.config.async_get_storage_value("rules"),
-            "scenes": await self.config.async_get_storage_value("scenes"),
-            "resourcelinks": await self.config.async_get_storage_value("resourcelinks"),
+            "schedules": await self.config.async_get_storage_value(
+                "schedules", default={}
+            ),
+            "rules": await self.config.async_get_storage_value("rules", default={}),
+            "scenes": await self.config.async_get_storage_value("scenes", default={}),
+            "resourcelinks": await self.config.async_get_storage_value(
+                "resourcelinks", default={}
+            ),
             "lights": await self.__async_get_all_lights(),
             "groups": await self.__async_get_all_groups(),
             "sensors": {
@@ -768,7 +772,7 @@ class HueApi:
         self, data: Any, itemtype: str = "scenes"
     ) -> str:
         """Create item in storage of given type (scenes etc.)."""
-        local_items = await self.config.async_get_storage_value(itemtype)
+        local_items = await self.config.async_get_storage_value(itemtype, default={})
         # get first available id
         for i in range(1, 1000):
             item_id = str(i)
@@ -782,7 +786,7 @@ class HueApi:
         result = {}
 
         # local groups first
-        groups = await self.config.async_get_storage_value("groups")
+        groups = await self.config.async_get_storage_value("groups", default={})
         for group_id, group_conf in groups.items():
             if "area_id" not in group_conf:
                 result[group_id] = group_conf
@@ -907,7 +911,9 @@ class HueApi:
                         "state": "noupdates",
                         "autoinstall": {"updatetime": "T14:00:00", "on": False},
                     },
-                    "whitelist": await self.config.async_get_storage_value("users"),
+                    "whitelist": await self.config.async_get_storage_value(
+                        "users", default={}
+                    ),
                     "zigbeechannel": self.config.get_storage_value(
                         "bridge_config", "zigbeechannel", 25
                     ),

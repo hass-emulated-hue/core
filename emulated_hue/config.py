@@ -103,7 +103,7 @@ class Config:
 
     async def async_entity_id_to_light_id(self, entity_id: str) -> str:
         """Get a unique light_id number for the hass entity id."""
-        lights = await self.async_get_storage_value("lights")
+        lights = await self.async_get_storage_value("lights", default={})
         for key, value in lights.items():
             if entity_id == value["entity_id"]:
                 return key
@@ -160,7 +160,7 @@ class Config:
 
     async def async_area_id_to_group_id(self, area_id: str) -> str:
         """Get a unique group_id number for the hass area_id."""
-        groups = await self.async_get_storage_value("groups")
+        groups = await self.async_get_storage_value("groups", default={})
         for key, value in groups.items():
             if area_id == value.get("area_id"):
                 return key
@@ -247,9 +247,9 @@ class Config:
             self._config.pop(key)
         await async_save_json(self.get_path(CONFIG_FILE), self._config)
 
-    async def get_users(self) -> dict:
+    async def async_get_users(self) -> dict:
         """Get all registered users as dict."""
-        return await self.async_get_storage_value("users")
+        return await self.async_get_storage_value("users", default={})
 
     async def async_get_user(self, username: str) -> dict:
         """Get details for given username."""
@@ -259,7 +259,7 @@ class Config:
         """Create a new user for the api access."""
         if not self._link_mode_enabled:
             raise Exception("Link mode not enabled!")
-        all_users = await self.get_users()
+        all_users = await self.async_get_users()
         # devicetype is used as deviceid: <application_name>#<devicename>
         # return existing user if already registered
         for item in all_users.values():
