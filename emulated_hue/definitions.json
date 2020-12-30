@@ -1,125 +1,110 @@
 {
-    "bridge": {
-        "datastoreversion": 70,
-        "swversion": "1941132080",
-        "apiversion": "1.41.0",
-        "modelid": "BSB002"
+  "bridge": {
+    "datastoreversion": 70,
+    "swversion": "1941132080",
+    "apiversion": "1.41.0",
+    "modelid": "BSB002",
+    "factorynew": false,
+    "replacesbridgeid": null,
+    "starterkitid": ""
+  },
+  "lights": {
+    "Extended color light": {
+      "config": {
+        "archetype": "huelightstrip",
+        "function": "mixed",
+        "direction": "omnidirectional"
+      },
+      "capabilities": {
+        "certified": true,
+        "control": {
+          "colorgamut": [
+            [0.704, 0.296],
+            [0.2151, 0.7106],
+            [0.138, 0.08]
+          ],
+          "ct": {
+            "max": 500,
+            "min": 153
+          },
+          "colorgamuttype": "A",
+          "maxlumen": 840,
+          "mindimlevel": 10000
+        },
+        "streaming": {
+          "proxy": false,
+          "renderer": true
+        }
+      }
     },
-    "lights": {
-        "Extended color light": {
-            "config": {
-                "archetype": "huelightstrip",
-                "function": "mixed",
-                "direction": "omnidirectional"
-            },
-            "capabilities": {
-                "certified": true,
-                "control": {
-                    "colorgamut": [
-                        [
-                            0.704,
-                            0.296
-                        ],
-                        [
-                            0.2151,
-                            0.7106
-                        ],
-                        [
-                            0.138,
-                            0.08
-                        ]
-                    ],
-                    "ct": {
-                        "max": 500,
-                        "min": 153
-                    },
-                    "colorgamuttype": "A",
-                    "maxlumen": 840,
-                    "mindimlevel": 10000
-                },
-                "streaming": {
-                    "proxy": false,
-                    "renderer": true
-                }
-            }
-        },
-        "swversion": "5.127.1.26581"
+    "swversion": "5.127.1.26581"
+  },
+  "Color light": {
+    "config": {
+      "archetype": "sultanbulb",
+      "function": "mixed",
+      "direction": "omnidirectional"
     },
-    "Color light": {
-        "config": {
-            "archetype": "sultanbulb",
-            "function": "mixed",
-            "direction": "omnidirectional"
-        },
-        "capabilities": {
-            "certified": true,
-            "control": {
-                "colorgamut": [
-                    [
-                        0.6915,
-                        0.3083
-                    ],
-                    [
-                        0.17,
-                        0.7
-                    ],
-                    [
-                        0.1532,
-                        0.0475
-                    ]
-                ],
-                "colorgamuttype": "C",
-                "ct": {},
-                "maxlumen": 800,
-                "mindimlevel": 1000
-            },
-            "streaming": {
-                "proxy": true,
-                "renderer": true
-            }
-        },
-        "swversion": "5.127.1.26581"
+    "capabilities": {
+      "certified": true,
+      "control": {
+        "colorgamut": [
+          [0.6915, 0.3083],
+          [0.17, 0.7],
+          [0.1532, 0.0475]
+        ],
+        "colorgamuttype": "C",
+        "ct": {},
+        "maxlumen": 800,
+        "mindimlevel": 1000
+      },
+      "streaming": {
+        "proxy": true,
+        "renderer": true
+      }
     },
-    "Color temperature light": {
-        "config": {
-            "archetype": "sultanbulb",
-            "function": "mixed",
-            "direction": "omnidirectional"
-        },
-        "capabilities": {
-            "certified": true,
-            "control": {
-                "ct": {
-                    "max": 500,
-                    "min": 153
-                },
-                "maxlumen": 800,
-                "mindimlevel": 1000
-            },
-            "streaming": {
-                "proxy": false,
-                "renderer": false
-            }
-        },
-        "swversion": "5.127.1.26581"
+    "swversion": "5.127.1.26581"
+  },
+  "Color temperature light": {
+    "config": {
+      "archetype": "sultanbulb",
+      "function": "mixed",
+      "direction": "omnidirectional"
     },
-    "Dimmable light": {
-        "config": {
-            "archetype": "classicbulb",
-            "function": "mixed",
-            "direction": "omnidirectional"
+    "capabilities": {
+      "certified": true,
+      "control": {
+        "ct": {
+          "max": 500,
+          "min": 153
         },
-        "capabilities": {
-            "certified": true,
-            "control": {
-                "maxlumen": 840,
-                "mindimlevel": 5000
-            },
-            "streaming": {
-                "proxy": false,
-                "renderer": false
-            }
-        },
-        "swversion": "5.127.1.26581"
-    }
+        "maxlumen": 800,
+        "mindimlevel": 1000
+      },
+      "streaming": {
+        "proxy": false,
+        "renderer": false
+      }
+    },
+    "swversion": "5.127.1.26581"
+  },
+  "Dimmable light": {
+    "config": {
+      "archetype": "classicbulb",
+      "function": "mixed",
+      "direction": "omnidirectional"
+    },
+    "capabilities": {
+      "certified": true,
+      "control": {
+        "maxlumen": 840,
+        "mindimlevel": 5000
+      },
+      "streaming": {
+        "proxy": false,
+        "renderer": false
+      }
+    },
+    "swversion": "5.127.1.26581"
+  }
 }

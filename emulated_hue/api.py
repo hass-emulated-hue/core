@@ -55,27 +55,31 @@ routes = ClassRouteTableDef()
 # pylint: enable=invalid-name
 
 
-def check_request(func):
-    """Decorator: Some common logic to determine we got a valid request."""
+def check_request(check_user=True, log_request=True):
+    """Decorator: Some common logic to log and validate all requests."""
 
-    @functools.wraps(func)
-    async def func_wrapper(cls, request: web.Request):
-        LOGGER.debug("%s %s", request.method, request.path)
-        # check username
-        if "username" in request.match_info:
-            username = request.match_info["username"]
-            if not await cls.config.async_get_user(username):
-                return web.json_response(const.HUE_UNAUTHORIZED_USER)
-        # check and unpack json body if needed
-        if request.method in ["PUT", "POST"]:
-            try:
-                request_data = await request.json()
-            except ValueError:
-                request_data = await request.text()
-            return await func(cls, request, request_data)
-        return await func(cls, request)
+    def decorator(func):
+        @functools.wraps(func)
+        async def func_wrapper(cls, request: web.Request):
+            if log_request:
+                LOGGER.debug("%s %s", request.method, request.path)
+            # check username
+            if check_user:
+                username = request.match_info.get("username")
+                if not username or not await cls.config.async_get_user(username):
+                    return web.json_response(const.HUE_UNAUTHORIZED_USER)
+            # check and unpack (json) body if needed
+            if request.method in ["PUT", "POST"]:
+                try:
+                    request_data = await request.json()
+                except ValueError:
+                    request_data = await request.text()
+                return await func(cls, request, request_data)
+            return await func(cls, request)
 
-    return func_wrapper
+        return func_wrapper
+
+    return decorator
 
 
 class HueApi:
@@ -99,9 +103,6 @@ class HueApi:
     async def async_setup(self):
         """Async set-up of the webserver."""
         app = web.Application()
-        # Add routes for discovery info
-        app.router.add_get("/api/config", self.async_get_discovery_config)
-        app.router.add_get("/api/nouser/config", self.async_get_discovery_config)
         # add all routes defined with decorator
         app.add_routes(routes)
         # Add catch-all handler for unkown requests
@@ -152,14 +153,8 @@ class HueApi:
         if self.streaming_api:
             self.streaming_api.stop()
 
-    @routes.get("/api{tail:/?}")
-    @check_request
-    async def async_get_auth(self, request: web.Request):
-        """Handle requests to find the emulated hue bridge."""
-        return web.json_response(const.HUE_UNAUTHORIZED_USER)
-
     @routes.post("/api{tail:/?}")
-    @check_request
+    @check_request(False)
     async def async_post_auth(self, request: web.Request, request_data: dict):
         """Handle requests to create a username for the emulated hue bridge."""
         if "devicetype" not in request_data:
@@ -431,18 +426,15 @@ class HueApi:
         result = [{"success": f"/{itemtype}/{item_id} deleted."}]
         return web.json_response(result)
 
-    @check_request
-    async def async_get_discovery_config(self, request: web.Request):
-        """Process a request to get the (basic) config of this emulated bridge."""
-        await self.config.async_enable_link_mode_discovery()
-        result = await self.__async_get_bridge_config(False)
-        return web.json_response(result)
-
-    @routes.get("/api/{username}/config")
-    @check_request
-    async def async_get_config(self, request: web.Request):
+    @routes.get("/api/{username:.*}config")
+    @check_request(False)
+    async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get the (full) config of this emulated bridge."""
-        result = await self.__async_get_bridge_config(True)
+        username = request.match_info["username"].replace("/", "")
+        valid_user = True
+        if not username or not await self.config.async_get_user(username):
+            valid_user = False
+        result = await self.__async_get_bridge_config(full_details=valid_user)
         return web.json_response(result)
 
     @routes.put("/api/{username}/config")
@@ -567,9 +559,9 @@ class HueApi:
                 request_data = await request.json()
             except json.decoder.JSONDecodeError:
                 request_data = await request.text()
-            LOGGER.warning("Invalid request: %s --> %s", request, request_data)
+            LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
         else:
-            LOGGER.warning("Invalid request: %s", request)
+            LOGGER.warning("Invalid/unknown request: %s", request)
         return web.Response(status=404)
 
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
@@ -847,16 +839,12 @@ class HueApi:
 
     async def __async_get_bridge_config(self, full_details: bool = False) -> dict:
         """Return the (virtual) bridge configuration."""
-        result = self.hue.config.definitions["bridge"]
+        result = self.hue.config.definitions["bridge"].copy()
         result.update(
             {
                 "name": "Home Assistant",
                 "mac": self.config.mac_addr,
                 "bridgeid": self.config.bridge_id,
-                "factorynew": False,
-                "replacesbridgeid": None,
-                "modelid": "BSB002",
-                "starterkitid": "",
             }
         )
         if full_details:
