@@ -43,6 +43,10 @@ class HueEmulator:
         await self._hass.async_connect()
         await self._api.async_setup()
         self._upnp_listener.start()
+        # remove legacy light_ids config
+        if await self.config.async_get_storage_value("light_ids"):
+            await self.config.async_delete_storage_value("light_ids")
+        # TODO: periodic search for renamed/deleted entities/areas
 
     async def async_stop(self):
         """Stop running the Hue emulation."""
