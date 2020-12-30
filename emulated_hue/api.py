@@ -1,5 +1,4 @@
 """Support for a Hue API to control Home Assistant."""
-import asyncio
 import datetime
 import functools
 import inspect
@@ -16,6 +15,10 @@ from emulated_hue.ssl_cert import async_generate_selfsigned_cert
 from emulated_hue.utils import update_dict
 
 LOGGER = logging.getLogger(__name__)
+
+DESCRIPTION_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "description.xml"
+)
 
 
 class ClassRouteTableDef(web.RouteTableDef):
@@ -90,6 +93,8 @@ class HueApi:
         self.https_site = None
         self._new_lights = {}
         routes.add_class_routes(self)
+        with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
+            self._description_xml = fdesc.read()
 
     async def async_setup(self):
         """Async set-up of the webserver."""
@@ -172,7 +177,7 @@ class HueApi:
                 "error": {
                     "type": 101,
                     "address": request.path,
-                    "description": "link button not pressed"
+                    "description": "link button not pressed",
                 }
             }
             return web.json_response(response)
@@ -502,44 +507,7 @@ class HueApi:
     @check_request
     async def async_get_description(self, request: web.Request):
         """Serve the service description file."""
-        xml_template = """<?xml version="1.0" encoding="UTF-8" ?>
-                <root xmlns="urn:schemas-upnp-org:device-1-0">
-                    <specVersion>
-                        <major>1</major>
-                        <minor>0</minor>
-                    </specVersion>
-                    <URLBase>http://{0}:{1}/</URLBase>
-                    <device>
-                        <deviceType>urn:schemas-upnp-org:device:Basic:1</deviceType>
-                        <friendlyName>Home Assistant Bridge ({0})</friendlyName>
-                        <manufacturer>Signify</manufacturer>
-                        <manufacturerURL>http://www.philips.com</manufacturerURL>
-                        <modelDescription>Philips hue Personal Wireless Lighting</modelDescription>
-                        <modelName>Philips hue bridge 2015</modelName>
-                        <modelNumber>BSB002</modelNumber>
-                        <modelURL>http://www.meethue.com</modelURL>
-                        <serialNumber>{2}</serialNumber>
-                        <UDN>uuid:{3}</UDN>
-                        <presentationURL>index.html</presentationURL>
-                        <iconList>
-                            <icon>
-                                <mimetype>image/png</mimetype>
-                                <height>48</height>
-                                <width>48</width>
-                                <depth>24</depth>
-                                <url>hue_logo_0.png</url>
-                            </icon>
-                            <icon>
-                                <mimetype>image/png</mimetype>
-                                <height>120</height>
-                                <width>120</width>
-                                <depth>24</depth>
-                                <url>hue_logo_3.png</url>
-                            </icon>
-                        </iconList>
-                    </device>
-                </root>"""
-        resp_text = xml_template.format(
+        resp_text = self._description_xml.format(
             self.config.host_ip_addr,
             self.config.http_port,
             self.config.bridge_id,
