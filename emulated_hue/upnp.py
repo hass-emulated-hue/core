@@ -93,6 +93,7 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
                 resp_socket.sendto(self.upnp_response, addr)
+                LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):

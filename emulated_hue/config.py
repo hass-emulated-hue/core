@@ -257,6 +257,8 @@ class Config:
 
         self.hue.loop.call_later(60, auto_disable)
         LOGGER.info("Link mode is enabled for the next 60 seconds.")
+        # when link mode is enabled, disovery can be turned off
+        await self.async_disable_link_mode_discovery()
 
     async def disable_link_mode(self) -> None:
         """Disable link mode on the virtual bridge."""
@@ -265,6 +267,9 @@ class Config:
 
     async def async_enable_link_mode_discovery(self) -> None:
         """Enable link mode discovery for the duration of 120 seconds."""
+        LOGGER.info(
+            "Link request detected - Use the Homeassistant frontend to confirm this link request."
+        )
         if self._link_mode_discovery_key:
             return  # already active
 
@@ -272,7 +277,7 @@ class Config:
         # create persistent notification in hass
         # user can click the link in the notification to enable linking
 
-        url = f"http://{self.host_ip_addr}/link?token={self._link_mode_discovery_key}"
+        url = f"http://{self.host_ip_addr}/link/{self._link_mode_discovery_key}"
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
         msg_details = {
@@ -283,19 +288,18 @@ class Config:
         await self.hue.hass.async_call_service(
             "persistent_notification", "create", msg_details
         )
-        LOGGER.info(
-            "Link request detected - Use the Homeassistant frontend to confirm this link request."
-        )
         # make sure that the notification and link request are dismissed after 120 seconds
 
         def auto_disable():
-            self._link_mode_discovery_key = None
-            self.hue.loop.create_task(
-                self.hue.hass.async_call_service(
-                    "persistent_notification",
-                    "dismiss",
-                    {"notification_id": "hue_bridge_link_requested"},
-                )
-            )
+            self.hue.loop.create_task(self.async_disable_link_mode_discovery())
 
         self.hue.loop.call_later(120, auto_disable)
+
+    async def async_disable_link_mode_discovery(self) -> None:
+        """Disable link mode discovery (remove notification in hass)."""
+        self._link_mode_discovery_key = None
+        await self.hue.hass.async_call_service(
+            "persistent_notification",
+            "dismiss",
+            {"notification_id": "hue_bridge_link_requested"},
+        )
