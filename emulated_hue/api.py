@@ -13,6 +13,7 @@ from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert
 from emulated_hue.utils import update_dict
+from emulated_hue.utils import json_response_nonunicode
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ def check_request(func):
         if "username" in request.match_info:
             username = request.match_info["username"]
             if not await cls.config.async_get_user(username):
-                return web.json_response(const.HUE_UNAUTHORIZED_USER)
+                return json_response_nonunicode(const.HUE_UNAUTHORIZED_USER)
         # check and unpack json body if needed
         if request.method in ["PUT", "POST"]:
             try:
@@ -149,7 +150,7 @@ class HueApi:
     @check_request
     async def async_get_auth(self, request: web.Request):
         """Handle requests to find the emulated hue bridge."""
-        return web.json_response(const.HUE_UNAUTHORIZED_USER)
+        return json_response_nonunicode(const.HUE_UNAUTHORIZED_USER)
 
     @routes.post("/api{tail:/?}")
     @check_request
@@ -157,29 +158,29 @@ class HueApi:
         """Handle requests to create a username for the emulated hue bridge."""
         if "devicetype" not in request_data:
             LOGGER.warning("devicetype not specified")
-            return web.json_response(("Devicetype not specified", 302))
+            return json_response_nonunicode(("Devicetype not specified", 302))
         if not self.config.link_mode_enabled:
             LOGGER.warning("Link mode is not enabled!")
             await self.config.async_enable_link_mode_discovery()
-            return web.json_response(("Link mode is not enabled!", 302))
+            return json_response_nonunicode(("Link mode is not enabled!", 302))
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
         if request_data.get("generateclientkey"):
             response[0]["success"]["clientkey"] = userdetails["clientkey"]
         LOGGER.info("Client %s registered", userdetails["name"])
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.get("/api/{username}/lights")
     @check_request
     async def async_get_lights(self, request: web.Request):
         """Handle requests to retrieve the info all lights."""
-        return web.json_response(await self.__async_get_all_lights())
+        return json_response_nonunicode(await self.__async_get_all_lights())
 
     @routes.get("/api/{username}/lights/new")
     @check_request
     async def async_get_new_lights(self, request: web.Request):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
-        return web.json_response(self._new_lights)
+        return json_response_nonunicode(self._new_lights)
 
     @routes.post("/api/{username}/lights")
     @check_request
@@ -219,7 +220,7 @@ class HueApi:
                 )
 
         response = await self.__async_create_hue_response(request.path, {}, username)
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.get("/api/{username}/lights/{light_id}")
     @check_request
@@ -230,7 +231,7 @@ class HueApi:
             return await self.async_get_new_lights(request)
         entity = await self.config.async_entity_by_light_id(light_id)
         result = await self.__async_entity_to_hue(entity)
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @routes.put("/api/{username}/lights/{light_id}/state")
     @check_request
@@ -244,14 +245,14 @@ class HueApi:
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.get("/api/{username}/groups")
     @check_request
     async def async_get_groups(self, request: web.Request):
         """Handle requests to retrieve all rooms/groups."""
         groups = await self.__async_get_all_groups()
-        return web.json_response(groups)
+        return json_response_nonunicode(groups)
 
     @routes.get("/api/{username}/groups/{group_id}")
     @check_request
@@ -260,7 +261,7 @@ class HueApi:
         group_id = request.match_info["group_id"]
         groups = await self.__async_get_all_groups()
         result = groups.get(group_id, {})
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @routes.put("/api/{username}/groups/{group_id}/action")
     @check_request
@@ -284,14 +285,14 @@ class HueApi:
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.post("/api/{username}/groups")
     @check_request
     async def async_create_group(self, request: web.Request, request_data: dict):
         """Handle requests to create a new group."""
         item_id = await self.__async_create_local_item(request_data, "groups")
-        return web.json_response([{"success": {"id": item_id}}])
+        return json_response_nonunicode([{"success": {"id": item_id}}])
 
     @routes.put("/api/{username}/groups/{group_id}")
     @check_request
@@ -340,7 +341,7 @@ class HueApi:
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.put("/api/{username}/lights/{light_id}")
     @check_request
@@ -355,7 +356,7 @@ class HueApi:
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
     @check_request
@@ -363,7 +364,7 @@ class HueApi:
         """Handle requests to retrieve localitems (e.g. scenes)."""
         itemtype = request.match_info["itemtype"]
         result = await self.config.async_get_storage_value(itemtype)
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
     @check_request
@@ -373,7 +374,7 @@ class HueApi:
         itemtype = request.match_info["itemtype"]
         items = await self.config.async_get_storage_value(itemtype)
         result = items.get(item_id, {})
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @routes.post("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
     @check_request
@@ -381,7 +382,7 @@ class HueApi:
         """Handle requests to create a new localitem."""
         itemtype = request.match_info["itemtype"]
         item_id = await self.__async_create_local_item(request_data, itemtype)
-        return web.json_response([{"success": {"id": item_id}}])
+        return json_response_nonunicode([{"success": {"id": item_id}}])
 
     @routes.put("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
     @check_request
@@ -398,7 +399,7 @@ class HueApi:
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.delete(
         "/api/{username}/{itemtype:(?:scenes|rules|resourcelinks|groups|lights)}/{item_id}"
@@ -410,21 +411,21 @@ class HueApi:
         itemtype = request.match_info["itemtype"]
         await self.config.async_delete_storage_value(itemtype, item_id)
         result = [{"success": f"/{itemtype}/{item_id} deleted."}]
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @check_request
     async def async_get_discovery_config(self, request: web.Request):
         """Process a request to get the (basic) config of this emulated bridge."""
         await self.config.async_enable_link_mode_discovery()
         result = await self.__async_get_bridge_config(False)
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @routes.get("/api/{username}/config")
     @check_request
     async def async_get_config(self, request: web.Request):
         """Process a request to get the (full) config of this emulated bridge."""
         result = await self.__async_get_bridge_config(True)
-        return web.json_response(result)
+        return json_response_nonunicode(result)
 
     @routes.put("/api/{username}/config")
     @check_request
@@ -436,7 +437,7 @@ class HueApi:
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
-        return web.json_response(response)
+        return json_response_nonunicode(response)
 
     @routes.get("/api/{username}{tail:/?}")
     @check_request
@@ -468,21 +469,21 @@ class HueApi:
             },
         }
 
-        return web.json_response(json_response)
+        return json_response_nonunicode(json_response)
 
     @routes.get("/api/{username}/sensors")
     @check_request
     async def async_get_sensors(self, request: web.Request):
         """Return sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
-        return web.json_response({})
+        return json_response_nonunicode({})
 
     @routes.get("/api/{username}/sensors/new")
     @check_request
     async def async_get_new_sensors(self, request: web.Request):
         """Return all new discovered sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
-        return web.json_response({})
+        return json_response_nonunicode({})
 
     @routes.get("/description.xml")
     @check_request
@@ -560,7 +561,7 @@ class HueApi:
             "streaming": {"available": 1, "total": 10, "channels": 10},
         }
 
-        return web.json_response(json_response)
+        return json_response_nonunicode(json_response)
 
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
