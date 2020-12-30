@@ -10,11 +10,6 @@
   },
   "lights": {
     "Extended color light": {
-      "config": {
-        "archetype": "huelightstrip",
-        "function": "mixed",
-        "direction": "omnidirectional"
-      },
       "capabilities": {
         "certified": true,
         "control": {
@@ -39,11 +34,6 @@
       "swversion": "5.127.1.26581"
     },
     "Color light": {
-      "config": {
-        "archetype": "sultanbulb",
-        "function": "mixed",
-        "direction": "omnidirectional"
-      },
       "capabilities": {
         "certified": true,
         "control": {
@@ -65,11 +55,6 @@
       "swversion": "5.127.1.26581"
     },
     "Color temperature light": {
-      "config": {
-        "archetype": "sultanbulb",
-        "function": "mixed",
-        "direction": "omnidirectional"
-      },
       "capabilities": {
         "certified": true,
         "control": {
@@ -88,11 +73,6 @@
       "swversion": "5.127.1.26581"
     },
     "Dimmable light": {
-      "config": {
-        "archetype": "classicbulb",
-        "function": "mixed",
-        "direction": "omnidirectional"
-      },
       "capabilities": {
         "certified": true,
         "control": {

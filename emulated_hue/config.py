@@ -123,17 +123,19 @@ class Config:
             unique_id[12:14],
             unique_id[14:16],
         )
+        # create default light config
         light_config = {
             "entity_id": entity_id,
             "enabled": True,
             "name": "",
             "uniqueid": unique_id,
-            # TODO: set some sane throttle values based on the light model
-            "entertainment": {
-                "throttle": 250,
-                "transition": 500,
-                "supports_udp": False,
+            # TODO: detect type of light from hass device config ?
+            "config": {
+                "archetype": "sultanbulb",
+                "function": "mixed",
+                "direction": "omnidirectional",
             },
+            "entertainment_throttle": 0,
         }
         await self.async_set_storage_value("lights", next_light_id, light_config)
         return next_light_id
@@ -199,7 +201,7 @@ class Config:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
         if main_val is None:
-            return default or {}
+            return default
         if subkey:
             return main_val.get(subkey, default)
         return main_val
