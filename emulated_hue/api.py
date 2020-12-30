@@ -1,4 +1,5 @@
 """Support for a Hue API to control Home Assistant."""
+import asyncio
 import datetime
 import functools
 import inspect
@@ -93,7 +94,8 @@ class HueApi:
     async def async_setup(self):
         """Async set-up of the webserver."""
         app = web.Application()
-        # Add route for discovery info
+        # Add routes for discovery info
+        app.router.add_get("/api/config", self.async_get_discovery_config)
         app.router.add_get("/api/nouser/config", self.async_get_discovery_config)
         # add all routes defined with decorator
         app.add_routes(routes)
@@ -161,7 +163,17 @@ class HueApi:
         if not self.config.link_mode_enabled:
             LOGGER.warning("Link mode is not enabled!")
             await self.config.async_enable_link_mode_discovery()
-            return web.json_response(("Link mode is not enabled!", 302))
+            counter = 0
+            while not self.config.link_mode_enabled and counter < 3000:
+                await asyncio.sleep(10)
+                counter += 1
+            if counter > 3000:
+                response = {
+                        "type": 101,
+                        "address": request.path,
+                        "description": "link button not pressed"
+                }
+                return web.json_response(response)
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
         if request_data.get("generateclientkey"):
@@ -488,8 +500,7 @@ class HueApi:
     @check_request
     async def async_get_description(self, request: web.Request):
         """Serve the service description file."""
-        xml_template = """
-            <?xml version="1.0" encoding="UTF-8" ?>
+        xml_template = """<?xml version="1.0" encoding="UTF-8" ?>
                 <root xmlns="urn:schemas-upnp-org:device-1-0">
                     <specVersion>
                     <major>1</major>
