@@ -163,17 +163,19 @@ class HueApi:
         if not self.config.link_mode_enabled:
             LOGGER.warning("Link mode is not enabled!")
             await self.config.async_enable_link_mode_discovery()
-            counter = 0
-            while not self.config.link_mode_enabled and counter < 3000:
-                await asyncio.sleep(10)
-                counter += 1
-            if counter > 3000:
-                response = {
-                        "type": 101,
-                        "address": request.path,
-                        "description": "link button not pressed"
+            # counter = 0
+            # while not self.config.link_mode_enabled and counter < 3000:
+            #     await asyncio.sleep(10)
+            #     counter += 1
+            # if counter > 3000:
+            response = {
+                "error": {
+                    "type": 101,
+                    "address": request.path,
+                    "description": "link button not pressed"
                 }
-                return web.json_response(response)
+            }
+            return web.json_response(response)
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
         if request_data.get("generateclientkey"):
