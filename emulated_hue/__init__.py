@@ -59,6 +59,7 @@ class HueEmulator:
 
     async def _async_setup_discovery(self) -> None:
         """Make this Emulated bridge discoverable on the network."""
+        # https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
         zeroconf = Zeroconf(interfaces=InterfaceChoice.All)
         self._upnp_listener = UPNPResponderThread(self.config)
         LOGGER.debug("Starting mDNS/uPNP discovery broadcast...")
