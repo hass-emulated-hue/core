@@ -282,31 +282,33 @@ class Config:
         await self.async_delete_storage_value("users", username)
 
     async def async_enable_link_mode(self) -> None:
-        """Enable link mode for the duration of 60 seconds."""
+        """Enable link mode for the duration of 5 minutes."""
         if self._link_mode_enabled:
             return  # already enabled
         self._link_mode_enabled = True
 
         def auto_disable():
-            self.hue.loop.create_task(self.disable_link_mode())
+            self.hue.loop.create_task(self.async_disable_link_mode())
 
-        self.hue.loop.call_later(60, auto_disable)
-        LOGGER.info("Link mode is enabled for the next 60 seconds.")
+        self.hue.loop.call_later(300, auto_disable)
+        LOGGER.info("Link mode is enabled for the next 5 minutes.")
         # when link mode is enabled, disovery can be turned off
         await self.async_disable_link_mode_discovery()
 
-    async def disable_link_mode(self) -> None:
+    async def async_disable_link_mode(self) -> None:
         """Disable link mode on the virtual bridge."""
         self._link_mode_enabled = False
         LOGGER.info("Link mode is disabled.")
 
     async def async_enable_link_mode_discovery(self) -> None:
-        """Enable link mode discovery for the duration of 120 seconds."""
+        """Enable link mode discovery for the duration of 5 minutes."""
+
+        if self._link_mode_discovery_key:
+            return  # already active
+
         LOGGER.info(
             "Link request detected - Use the Homeassistant frontend to confirm this link request."
         )
-        if self._link_mode_discovery_key:
-            return  # already active
 
         self._link_mode_discovery_key = str(uuid.uuid4())
         # create persistent notification in hass
@@ -323,12 +325,12 @@ class Config:
         await self.hue.hass.async_call_service(
             "persistent_notification", "create", msg_details
         )
-        # make sure that the notification and link request are dismissed after 120 seconds
+        # make sure that the notification and link request are dismissed after 5 minutes
 
         def auto_disable():
             self.hue.loop.create_task(self.async_disable_link_mode_discovery())
 
-        self.hue.loop.call_later(120, auto_disable)
+        self.hue.loop.call_later(300, auto_disable)
 
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""

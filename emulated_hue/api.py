@@ -462,7 +462,7 @@ class HueApi:
     async def get_full_state(self, request: web.Request):
         """Return full state view of emulated hue."""
         json_response = {
-            "config": await self.__async_get_bridge_config(False),
+            "config": await self.__async_get_bridge_config(True),
             "schedules": await self.config.async_get_storage_value("schedules"),
             "rules": await self.config.async_get_storage_value("rules"),
             "scenes": await self.config.async_get_storage_value("scenes"),
@@ -531,7 +531,7 @@ class HueApi:
         html_template = """
             <html>
                 <body>
-                    <h2>Link mode is enabled for 60 seconds.</h2>
+                    <h2>Link mode is enabled for 5 minutes.</h2>
                 </body>
             </html>"""
         await self.config.async_enable_link_mode()
