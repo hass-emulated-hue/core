@@ -49,6 +49,9 @@ class ClassRouteTableDef(web.RouteTableDef):
         for _, handler in inspect.getmembers(instance, predicate):
             method, path, kwargs = handler.route_info
             super().route(method, path, **kwargs)(handler)
+            # also add the route with trailing slash,
+            # the hue apps seem to be a bit inconsistent about that
+            super().route(method, path + "/", **kwargs)(handler)
 
 
 # pylint: disable=invalid-name
@@ -104,6 +107,15 @@ class HueApi:
     async def async_setup(self):
         """Async set-up of the webserver."""
         app = web.Application()
+        # add config routes
+        app.router.add_route(
+            "GET", "/api/{username}/config", self.async_get_bridge_config
+        )
+        app.router.add_route("GET", "/api/config", self.async_get_bridge_config)
+        app.router.add_route(
+            "GET", "/api/{username}/config/", self.async_get_bridge_config
+        )
+        app.router.add_route("GET", "/api/config/", self.async_get_bridge_config)
         # add all routes defined with decorator
         routes.add_class_routes(self)
         app.add_routes(routes)
@@ -155,7 +167,7 @@ class HueApi:
         if self.streaming_api:
             self.streaming_api.stop()
 
-    @routes.post("/api{tail:/?}")
+    @routes.post("/api")
     @check_request(False)
     async def async_post_auth(self, request: web.Request, request_data: dict):
         """Handle requests to create a username for the emulated hue bridge."""
@@ -430,7 +442,6 @@ class HueApi:
         result = [{"success": f"/{itemtype}/{item_id} deleted."}]
         return send_json_response(result)
 
-    @routes.get("/api/{username:.*}config")
     @check_request(False)
     async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get the (full) config of this emulated bridge."""
