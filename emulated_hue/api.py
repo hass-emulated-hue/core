@@ -1,12 +1,12 @@
 """Support for a Hue API to control Home Assistant."""
 import datetime
 import functools
-import hashlib
 import inspect
+import json
 import logging
 import os
 import ssl
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
 
 import emulated_hue.const as const
 from aiohttp import web
@@ -56,7 +56,8 @@ def check_request(func):
     """Decorator: Some common logic to determine we got a valid request."""
 
     @functools.wraps(func)
-    async def func_wrapper(cls, request):
+    async def func_wrapper(cls, request: web.Request):
+        LOGGER.debug("%s %s", request.method, request.path)
         # check username
         if "username" in request.match_info:
             username = request.match_info["username"]
@@ -67,7 +68,7 @@ def check_request(func):
             try:
                 request_data = await request.json()
             except ValueError:
-                return web.Response(body="Received invalid json!", status=404)
+                request_data = await request.text()
             return await func(cls, request, request_data)
         return await func(cls, request)
 
@@ -87,6 +88,7 @@ class HueApi:
         self.hue = hue
         self.http_site = None
         self.https_site = None
+        self._new_lights = {}
         routes.add_class_routes(self)
 
     async def async_setup(self):
@@ -103,9 +105,7 @@ class HueApi:
 
         # Create and start the HTTP API on port 80
         # Port MUST be 80 to maintain compatability with Hue apps
-        self.http_site = web.TCPSite(
-            self.runner, self.config.host_ip_addr, self.config.http_port
-        )
+        self.http_site = web.TCPSite(self.runner, port=self.config.http_port)
         try:
             await self.http_site.start()
             LOGGER.info("Started HTTP webserver on port %s", self.config.http_port)
@@ -127,10 +127,7 @@ class HueApi:
         # Create and start the HTTPS API on port 443
         # Port MUST be 443 to maintain compatability with Hue apps
         self.https_site = web.TCPSite(
-            self.runner,
-            self.config.host_ip_addr,
-            self.config.https_port,
-            ssl_context=ssl_context,
+            self.runner, port=self.config.https_port, ssl_context=ssl_context
         )
         try:
             await self.https_site.start()
@@ -183,13 +180,55 @@ class HueApi:
     @check_request
     async def async_get_new_lights(self, request: web.Request):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
-        return json_response_nonunicode({})
+        return json_response_nonunicode(self._new_lights)
+
+    @routes.post("/api/{username}/lights")
+    @check_request
+    async def async_search_new_lights(self, request: web.Request, request_data):
+        """Handle requests to retrieve new added lights to the (virtual) bridge."""
+        username = request.match_info["username"]
+        self._search_enabled = True
+        LOGGER.info(
+            "Search mode activated. Any deleted/disabled lights will be reactivated."
+        )
+
+        def auto_disable():
+            self._new_lights = {}
+
+        self.hue.loop.call_later(60, auto_disable)
+
+        # enable all disabled lights and groups
+        for entity in self.hass.lights:
+            entity_id = entity["entity_id"]
+            light_id = await self.config.async_entity_id_to_light_id(entity_id)
+            light_config = await self.config.async_get_light_config(light_id)
+            if not light_config["enabled"]:
+                light_config["enabled"] = True
+                await self.config.async_set_storage_value(
+                    "lights", light_id, light_config
+                )
+                # add to new_lights for the app to show a special badge
+                self._new_lights[light_id] = await self.__async_entity_to_hue(
+                    entity, light_config
+                )
+        groups = await self.config.async_get_storage_value("groups")
+        for group_id, group_conf in groups.items():
+            if "enabled" in group_conf and not group_conf["enabled"]:
+                group_conf["enabled"] = True
+                await self.config.async_set_storage_value(
+                    "groups", group_id, group_conf
+                )
+
+        response = await self.__async_create_hue_response(request.path, {}, username)
+        return json_response_nonunicode(response)
 
     @routes.get("/api/{username}/lights/{light_id}")
     @check_request
     async def async_get_light(self, request: web.Request):
         """Handle requests to retrieve the info for a single light."""
         light_id = request.match_info["light_id"]
+        if light_id == "new":
+            return await self.async_get_new_lights(request)
         entity = await self.config.async_entity_by_light_id(light_id)
         result = await self.__async_entity_to_hue(entity)
         return json_response_nonunicode(result)
@@ -230,9 +269,18 @@ class HueApi:
         """Handle requests to perform action on a group of lights/room."""
         group_id = request.match_info["group_id"]
         username = request.match_info["username"]
-        # forward request to all group lights
-        async for entity in self.__async_get_group_lights(group_id):
-            await self.__async_light_action(entity, request_data)
+        if group_id == "0" and "scene" in request_data:
+            # scene request
+            scene = await self.config.async_get_storage_value(
+                "scenes", request_data["scene"]
+            )
+            for light_id, light_state in scene["lightstates"].items():
+                entity = await self.config.async_entity_by_light_id(light_id)
+                await self.__async_light_action(entity, light_state)
+        else:
+            # forward request to all group lights
+            async for entity in self.__async_get_group_lights(group_id):
+                await self.__async_light_action(entity, request_data)
         # Create success responses for all received keys
         response = await self.__async_create_hue_response(
             request.path, request_data, username
@@ -252,14 +300,14 @@ class HueApi:
         """Handle requests to update a group."""
         group_id = request.match_info["group_id"]
         username = request.match_info["username"]
-        local_group = await self.config.async_get_storage_value("groups", group_id)
-        if not local_group:
+        group_conf = await self.config.async_get_storage_value("groups", group_id)
+        if not group_conf:
             return web.Response(status=404)
-        update_dict(local_group, request_data)
+        update_dict(group_conf, request_data)
 
         # Hue entertainment support (experimental)
-        if "stream" in local_group:
-            if local_group["stream"].get("active"):
+        if "stream" in group_conf:
+            if group_conf["stream"].get("active"):
                 # Requested streaming start
                 LOGGER.debug(
                     "Start Entertainment mode for group %s - params: %s",
@@ -269,13 +317,13 @@ class HueApi:
                 if not self.streaming_api:
                     user_data = await self.config.async_get_user(username)
                     self.streaming_api = EntertainmentAPI(
-                        self.hue, local_group, user_data
+                        self.hue, group_conf, user_data
                     )
-                local_group["stream"]["owner"] = username
-                if not local_group["stream"].get("proxymode"):
-                    local_group["stream"]["proxymode"] = "auto"
-                if not local_group["stream"].get("proxynode"):
-                    local_group["stream"]["proxynode"] = "/bridge"
+                group_conf["stream"]["owner"] = username
+                if not group_conf["stream"].get("proxymode"):
+                    group_conf["stream"]["proxymode"] = "auto"
+                if not group_conf["stream"].get("proxynode"):
+                    group_conf["stream"]["proxynode"] = "/bridge"
             else:
                 # Request streaming stop
                 LOGGER.info(
@@ -283,13 +331,28 @@ class HueApi:
                     group_id,
                     request_data,
                 )
-                local_group["stream"] = {"active": False}
+                group_conf["stream"] = {"active": False}
                 if self.streaming_api:
                     # stop service if needed
                     self.streaming_api.stop()
                     self.streaming_api = None
 
-        await self.config.async_set_storage_value("groups", group_id, local_group)
+        await self.config.async_set_storage_value("groups", group_id, group_conf)
+        response = await self.__async_create_hue_response(
+            request.path, request_data, username
+        )
+        return json_response_nonunicode(response)
+
+    @routes.put("/api/{username}/lights/{light_id}")
+    @check_request
+    async def async_update_light(self, request: web.Request, request_data: dict):
+        """Handle requests to update a light."""
+        light_id = request.match_info["light_id"]
+        username = request.match_info["username"]
+        light_conf = await self.config.async_get_storage_value("lights", light_id)
+        if not light_conf:
+            return web.Response(status=404)
+        update_dict(light_conf, request_data)
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
@@ -339,7 +402,7 @@ class HueApi:
         return json_response_nonunicode(response)
 
     @routes.delete(
-        "/api/{username}/{itemtype:(?:scenes|rules|resourcelinks|groups)}/{item_id}"
+        "/api/{username}/{itemtype:(?:scenes|rules|resourcelinks|groups|lights)}/{item_id}"
     )
     @check_request
     async def async_delete_localitem(self, request: web.Request):
@@ -503,7 +566,10 @@ class HueApi:
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
         if request.method in ["PUT", "POST"]:
-            request_data = await request.json()
+            try:
+                request_data = await request.json()
+            except json.decoder.JSONDecodeError:
+                request_data = await request.text()
             LOGGER.warning("Invalid request: %s --> %s", request, request_data)
         else:
             LOGGER.warning("Invalid request: %s", request)
@@ -553,26 +619,24 @@ class HueApi:
             # is given as a multiple of 100ms and defaults to 4 (400ms).
             transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 100
             data[const.HASS_ATTR_TRANSITION] = transitiontime
+        else:
+            data[const.HASS_ATTR_TRANSITION] = 0.4
 
         # execute service
         await self.hass.async_call_service(const.HASS_DOMAIN_LIGHT, service, data)
 
-    async def __async_entity_to_hue(self, entity: dict) -> dict:
+    async def __async_entity_to_hue(
+        self, entity: dict, light_config: Optional[dict] = None
+    ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
         entity_features = entity["attributes"].get(
             const.HASS_ATTR_SUPPORTED_FEATURES, 0
         )
-        unique_id = hashlib.md5(entity["entity_id"].encode()).hexdigest()
-        unique_id = "00:{}:{}:{}:{}:{}:{}:{}-{}".format(
-            unique_id[0:2],
-            unique_id[2:4],
-            unique_id[4:6],
-            unique_id[6:8],
-            unique_id[8:10],
-            unique_id[10:12],
-            unique_id[12:14],
-            unique_id[14:16],
-        )
+        if not light_config:
+            light_id = await self.config.async_entity_id_to_light_id(
+                entity["entity_id"]
+            )
+            light_config = await self.config.async_get_light_config(light_id)
 
         retval = {
             "state": {
@@ -580,8 +644,9 @@ class HueApi:
                 "reachable": entity["state"] != const.HASS_STATE_UNAVAILABLE,
                 "mode": "homeautomation",
             },
-            "name": entity["attributes"].get("friendly_name", ""),
-            "uniqueid": unique_id,
+            "name": light_config["name"]
+            or entity["attributes"].get("friendly_name", ""),
+            "uniqueid": light_config["uniqueid"],
             "manufacturername": "Home Assistant",
             "productname": "Emulated Hue",
             "modelid": entity["entity_id"],
@@ -689,7 +754,10 @@ class HueApi:
         for entity in self.hass.lights:
             entity_id = entity["entity_id"]
             light_id = await self.config.async_entity_id_to_light_id(entity_id)
-            result[light_id] = await self.__async_entity_to_hue(entity)
+            light_config = await self.config.async_get_light_config(light_id)
+            if not light_config["enabled"]:
+                continue
+            result[light_id] = await self.__async_entity_to_hue(entity, light_config)
         return result
 
     async def __async_create_local_item(
@@ -710,22 +778,21 @@ class HueApi:
         result = {}
 
         # local groups first
-        local_groups = await self.config.async_get_storage_value("groups")
-        result.update(local_groups)
+        groups = await self.config.async_get_storage_value("groups")
+        for group_id, group_conf in groups.items():
+            if "area_id" not in group_conf:
+                result[group_id] = group_conf
 
         # Hass areas/rooms
         for area in self.hass.area_registry.values():
             area_id = area["area_id"]
-            group_id = await self.config.async_entity_id_to_light_id(area_id)
-            group_conf = result[group_id] = {
-                "class": "Other",
-                "type": "Room",
-                "name": area["name"],
-                "lights": [],
-                "sensors": [],
-                "action": {"on": False},
-                "state": {"any_on": False, "all_on": False},
-            }
+            group_id = await self.config.async_area_id_to_group_id(area_id)
+            group_conf = await self.config.async_get_group_config(group_id)
+            if not group_conf["enabled"]:
+                continue
+            result[group_id] = group_conf.copy()
+            result[group_id]["lights"] = []
+            result[group_id]["name"] = group_conf["name"] or area["name"]
             lights_on = 0
             # get all entities for this device
             async for entity in self.__async_get_group_lights(group_id):
@@ -733,17 +800,17 @@ class HueApi:
                 light_id = await self.config.async_entity_id_to_light_id(
                     entity["entity_id"]
                 )
-                group_conf["lights"].append(light_id)
+                result[group_id]["lights"].append(light_id)
                 if entity["state"] == const.HASS_STATE_ON:
                     lights_on += 1
                     if lights_on == 1:
                         # set state of first light as group state
                         entity_obj = await self.__async_entity_to_hue(entity)
-                        group_conf["action"] = entity_obj["state"]
+                        result[group_id]["action"] = entity_obj["state"]
             if lights_on > 0:
-                group_conf["state"]["any_on"] = True
-            if lights_on == len(group_conf["lights"]):
-                group_conf["state"]["all_on"] = True
+                result[group_id]["state"]["any_on"] = True
+            if lights_on == len(result[group_id]["lights"]):
+                result[group_id]["state"]["all_on"] = True
 
         return result
 
@@ -751,19 +818,14 @@ class HueApi:
         self, group_id: str
     ) -> AsyncGenerator[dict, None]:
         """Get all light entities for a group."""
-        # try local groups first
-        local_groups = await self.config.async_get_storage_value("groups")
-        if group_id in local_groups:
-            local_group = local_groups[group_id]
-            for light_id in local_group["lights"]:
-                entity = await self.config.async_entity_by_light_id(light_id)
-                yield entity
+        group_conf = await self.config.async_get_storage_value("groups", group_id)
+        if not group_conf:
+            raise RuntimeError("Invalid group id: %s" % group_id)
 
-        # fall back to hass groups (areas)
-        else:
-            area_id = await self.config.async_light_id_to_entity_id(group_id)
+        # Hass group (area)
+        if "area_id" in group_conf:
             for device in self.hass.device_registry.values():
-                if device["area_id"] != area_id:
+                if device["area_id"] != group_conf["area_id"]:
                     continue
                 # get all entities for this device
                 for entity in self.hass.entity_registry.values():
@@ -771,32 +833,39 @@ class HueApi:
                         continue
                     if not entity["entity_id"].startswith("light."):
                         continue
+                    light_id = await self.config.async_entity_id_to_light_id(
+                        entity["entity_id"]
+                    )
+                    light_conf = await self.config.async_get_light_config(light_id)
+                    if not light_conf["enabled"]:
+                        continue
                     entity = self.hass.get_state(entity["entity_id"], attribute=None)
                     yield entity
 
+        # Local group
+        else:
+            for light_id in group_conf["lights"]:
+                entity = await self.config.async_entity_by_light_id(light_id)
+                yield entity
+
     async def __async_get_bridge_config(self, full_details: bool = False) -> dict:
         """Return the (virtual) bridge configuration."""
-        result = {
-            "name": "Home Assistant",
-            "datastoreversion": self.hue.config.definitions["bridge"][
-                "datastoreversion"
-            ],
-            "swversion": self.hue.config.definitions["bridge"]["swversion"],
-            "apiversion": self.hue.config.definitions["bridge"]["apiversion"],
-            "mac": self.config.mac_addr,
-            "bridgeid": self.config.bridge_id,
-            "factorynew": False,
-            "replacesbridgeid": None,
-            "modelid": "BSB002",
-            "starterkitid": "",
-        }
+        result = self.hue.config.definitions["bridge"]
+        result.update(
+            {
+                "name": "Home Assistant",
+                "mac": self.config.mac_addr,
+                "bridgeid": self.config.bridge_id,
+                "factorynew": False,
+                "replacesbridgeid": None,
+                "modelid": "BSB002",
+                "starterkitid": "",
+            }
+        )
         if full_details:
             result.update(
                 {
                     "backup": {"errorcode": 0, "status": "idle"},
-                    "datastoreversion": self.hue.config.definitions["bridge"][
-                        "datastoreversion"
-                    ],
                     "dhcp": True,
                     "internetservices": {
                         "internet": "connected",
@@ -807,7 +876,7 @@ class HueApi:
                     "netmask": "255.255.255.0",
                     "gateway": self.config.host_ip_addr,
                     "proxyport": 0,
-                    "UTC": datetime.datetime.now().isoformat().split(".")[0],
+                    "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
                     "timezone": "Europe/Amsterdam",
                     "portalconnection": "connected",
                     "portalservices": True,

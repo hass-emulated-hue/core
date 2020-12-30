@@ -31,8 +31,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Home Assistant HUE Emulation.")
 
     parser.add_argument(
-        "--data", type=str, help="path to store config files",
-        default=os.getenv("DATA_DIR", default_data_dir)
+        "--data",
+        type=str,
+        help="path to store config files",
+        default=os.getenv("DATA_DIR", default_data_dir),
     )
     parser.add_argument(
         "--url",
@@ -47,17 +49,14 @@ if __name__ == "__main__":
         default=os.getenv("HASS_TOKEN", os.getenv("HASSIO_TOKEN")),
     )
     parser.add_argument(
-        "--verbose",
-        type=bool,
-        help="Enable more verbose logging",
-        default=os.getenv("VERBOSE", False),
+        "--verbose", action="store_true", help="Enable more verbose logging"
     )
 
     args = parser.parse_args()
     datapath = args.data
     url = args.url
     token = args.token
-    if args.verbose:
+    if args.verbose or os.getenv("VERBOSE"):
         logger.setLevel(logging.DEBUG)
 
     hue = HueEmulator(datapath, url, token)
@@ -66,4 +65,7 @@ if __name__ == "__main__":
         """Call on loop shutdown."""
         loop.run_until_complete(hue.async_stop())
 
-    run(hue.async_start(), use_uvloop=True, shutdown_callback=on_shutdown)
+    if os.name != "nt":
+        run(hue.async_start(), use_uvloop=True, shutdown_callback=on_shutdown)
+    else:
+        run(hue.async_start(), use_uvloop=False, shutdown_callback=on_shutdown)

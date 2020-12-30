@@ -10,7 +10,7 @@ LOGGER = logging.getLogger(__name__)
 
 COLOR_TYPE_RGB = "RGB"
 COLOR_TYPE_XY_BR = "XY Brightness"
-TIME_THROTTLE = 250
+TIME_THROTTLE = 500
 
 
 if os.path.isfile("/usr/local/opt/openssl@1.1/bin/openssl"):
@@ -36,7 +36,7 @@ class EntertainmentAPI:
         self.group_details = group_details
         self._interrupted = False
         self._socket_daemon = None
-        self._states = {}
+        self._timestamps = {}
         self._user_details = user_details
         self.hue.loop.create_task(self.async_run())
 
@@ -88,71 +88,47 @@ class EntertainmentAPI:
         # api_version = "%s.%s" % (pkt[9], pkt[10])
         color_space = COLOR_TYPE_RGB if pkt[14] == 0 else COLOR_TYPE_XY_BR
         lights_data = pkt[16:]
-        cur_timestamp = int(time.time() * 1000)
+
         # enumerate light state
         for light_data in chunked(9, lights_data):
             light_id = str(light_data[1] + light_data[2])
-            if light_id in self._states:
-                cached_state = self._states[light_id]
-                entity_id = cached_state["entity_id"]
-            else:
-                cached_state = {}
-                entity_id = await self.config.async_light_id_to_entity_id(light_id)
-                cached_state["entity_id"] = entity_id
-                self._states[light_id] = cached_state
+            light_conf = await self.config.async_get_light_config(light_id)
+            entity_id = light_conf["entity_id"]
             svc_data = {"entity_id": entity_id}
-            update_allowed = False
-            prev_timestamp = cached_state.get("timestamp", 0)
             if color_space == COLOR_TYPE_RGB:
-                rgb_color = [
+                svc_data["rgb_color"] = [
                     int((light_data[3] * 256 + light_data[4]) / 256),
                     int((light_data[5] * 256 + light_data[6]) / 256),
                     int((light_data[7] * 256 + light_data[8]) / 256),
                 ]
-                prev_rgb = cached_state.get("rgb_color", [0, 0, 0])
-                if self.__update_allowed(
-                    rgb_color, prev_rgb, cur_timestamp, prev_timestamp
-                ):
-                    update_allowed = True
-                    svc_data["rgb_color"] = rgb_color
-                cached_state["rgb_color"] = rgb_color
             else:
-                xy_color = [
+                svc_data["xy_color"] = [
                     float((light_data[3] * 256 + light_data[4]) / 65535),
                     float((light_data[5] * 256 + light_data[6]) / 65535),
                 ]
-                brightness = int((light_data[7] * 256 + light_data[8]) / 256)
-                prev_xy = cached_state.get("xy_color", [0, 0])
-                prev_brightness = cached_state.get("brightness", 0)
-                if self.__update_allowed(
-                    xy_color, prev_xy, cur_timestamp, prev_timestamp
-                ):
-                    update_allowed = True
-                    svc_data["xy_color"] = xy_color
-                cached_state["xy_color"] = xy_color
-                if self.__update_allowed(
-                    brightness, prev_brightness, cur_timestamp, prev_timestamp
-                ):
-                    update_allowed = True
-                    svc_data["brightness"] = brightness
-                cached_state["brightness"] = brightness
-
-            if update_allowed:
-                # some details changed, push to light
-                cached_state["timestamp"] = cur_timestamp
-                svc_data["transition"] = TIME_THROTTLE / 1000
-                self.hue.loop.create_task(
-                    self.hass.async_call_service("light", "turn_on", svc_data)
+                svc_data["brightness"] = int(
+                    (light_data[7] * 256 + light_data[8]) / 256
                 )
+
+            if self.__update_allowed(light_id, light_conf):
+                # update allowed within throttling, push to light
+                if light_conf["entertainment"]["transition"]:
+                    svc_data["transition"] = (
+                        light_conf["entertainment"]["transition"] / 1000
+                    )
+                await self.hass.async_call_service("light", "turn_on", svc_data)
                 self.hass.states[entity_id]["attributes"].update(svc_data)
 
-    def __update_allowed(self, cur_val, prev_val, cur_timestamp, prev_timestamp):
-        """Minimalistic form of throttling, only allow significant changes within a timespan."""
+    def __update_allowed(self, light_id: str, light_conf: dict) -> bool:
+        """Minimalistic form of throttling, only allow updates to a light within a timespan."""
+        throttle_ms = light_conf["entertainment"]["throttle"]
+        if not throttle_ms:
+            return True
+        prev_timestamp = self._timestamps.get(light_id, 0)
+        cur_timestamp = int(time.time() * 1000)
         time_diff = abs(cur_timestamp - prev_timestamp)
-        if cur_val == prev_val:
-            # value did not change at all, no update needed here
-            return False
-        if time_diff >= TIME_THROTTLE:
+        if time_diff >= throttle_ms:
             # change allowed only if within throttle limit
+            self._timestamps[light_id] = cur_timestamp
             return True
         return False
