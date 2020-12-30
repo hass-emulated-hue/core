@@ -173,13 +173,13 @@ class HueApi:
         return web.json_response(response)
 
     @routes.get("/api/{username}/lights")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_lights(self, request: web.Request):
         """Handle requests to retrieve the info all lights."""
         return web.json_response(await self.__async_get_all_lights())
 
     @routes.get("/api/{username}/lights/new")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_new_lights(self, request: web.Request):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
         return web.json_response(self._new_lights)
@@ -225,7 +225,7 @@ class HueApi:
         return web.json_response(response)
 
     @routes.get("/api/{username}/lights/{light_id}")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_light(self, request: web.Request):
         """Handle requests to retrieve the info for a single light."""
         light_id = request.match_info["light_id"]
@@ -250,7 +250,7 @@ class HueApi:
         return web.json_response(response)
 
     @routes.get("/api/{username}/groups")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_groups(self, request: web.Request):
         """Handle requests to retrieve all rooms/groups."""
         groups = await self.__async_get_all_groups()
@@ -423,8 +423,9 @@ class HueApi:
         valid_user = True
         if not username or not await self.config.async_get_user(username):
             valid_user = False
-            # config requested by anonymous or unknown user, enable discovery request
-            await self.config.async_enable_link_mode_discovery()
+            # api/nouser/config requested, enable discovery request
+            if username == "nouser":
+                await self.config.async_enable_link_mode_discovery()
         result = await self.__async_get_bridge_config(full_details=valid_user)
         return web.json_response(result)
 
@@ -435,6 +436,8 @@ class HueApi:
         username = request.match_info["username"]
         # just log this request and return succes
         LOGGER.debug("Change config called with params: %s", request_data)
+        for key, value in request_data.items():
+            await self.config.async_set_storage_value("bridge_config", key, value)
         response = await self.__async_create_hue_response(
             request.path, request_data, username
         )
@@ -473,14 +476,14 @@ class HueApi:
         return web.json_response(json_response)
 
     @routes.get("/api/{username}/sensors")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_sensors(self, request: web.Request):
         """Return sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
         return web.json_response({})
 
     @routes.get("/api/{username}/sensors/new")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_new_sensors(self, request: web.Request):
         """Return all new discovered sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
@@ -491,8 +494,9 @@ class HueApi:
     async def async_get_description(self, request: web.Request):
         """Serve the service description file."""
         resp_text = self._description_xml.format(
-            self.config.host_ip_addr,
+            self.config.ip_addr,
             self.config.http_port,
+            self.config.bridge_name,
             self.config.bridge_id,
             self.config.bridge_uid,
         )
@@ -537,11 +541,17 @@ class HueApi:
             "schedules": {"available": 100},
             "resourcelinks": {"available": 100},
             "whitelists": {"available": 100},
-            "timezones": {"values": []},
+            "timezones": {"value": self.config.definitions["timezones"]},
             "streaming": {"available": 1, "total": 10, "channels": 10},
         }
 
         return web.json_response(json_response)
+
+    @routes.get("/api/{username}/info/timezones")
+    @check_request()
+    async def async_get_timezones(self, request: web.Request):
+        """Return all timezones."""
+        return web.json_response(self.config.definitions["timezones"])
 
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
@@ -833,7 +843,7 @@ class HueApi:
         result = self.hue.config.definitions["bridge"].copy()
         result.update(
             {
-                "name": f"Home Assistant Bridge ({self.config.host_ip_addr})",
+                "name": self.config.bridge_name,
                 "mac": self.config.mac_addr,
                 "bridgeid": self.config.bridge_id,
                 "linkbutton": self.config.link_mode_enabled,
@@ -851,10 +861,12 @@ class HueApi:
                         "time": "connected",
                     },
                     "netmask": "255.255.255.0",
-                    "gateway": self.config.host_ip_addr,
+                    "gateway": self.config.ip_addr,
                     "proxyport": 0,
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
-                    "timezone": "Europe/Amsterdam",
+                    "timezone": self.config.get_storage_value(
+                        "bridge_config", "timezone", "Europe/Amsterdam"
+                    ),
                     "portalconnection": "connected",
                     "portalservices": True,
                     "portalstate": {
@@ -882,7 +894,9 @@ class HueApi:
                         "autoinstall": {"updatetime": "T14:00:00", "on": False},
                     },
                     "whitelist": await self.config.async_get_storage_value("users"),
-                    "zigbeechannel": 25,
+                    "zigbeechannel": self.config.get_storage_value(
+                        "bridge_config", "zigbeechannel", 25
+                    ),
                 }
             )
         return result

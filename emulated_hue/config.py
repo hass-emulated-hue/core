@@ -39,26 +39,42 @@ class Config:
         self._link_mode_discovery_key = None
 
         # Get the IP address that will be passed to during discovery
-        self.host_ip_addr = get_local_ip()
-        LOGGER.info("Auto detected listen IP address is %s", self.host_ip_addr)
+        self._ip_addr = get_local_ip()
+        LOGGER.info("Auto detected listen IP address is %s", self.ip_addr)
 
         # Get the ports that the Hue bridge will listen on
         # ports are currently hardcoded as Hue apps expect these ports
         self.http_port = 80
         self.https_port = 443
 
-        # Get whether or not UPNP binds to multicast address (239.255.255.250)
-        # or to the unicast address (host_ip_addr)
-        self.upnp_bind_multicast = True
-
-        mac_addr = str(get_mac_address(ip=self.host_ip_addr))
+        mac_addr = str(get_mac_address(ip=self.ip_addr))
         if not mac_addr or len(mac_addr) < 16:
             # fall back to dummy mac
             mac_addr = "b6:82:d3:45:ac:29"
-        self.mac_addr = mac_addr
-        self.mac_str = mac_addr.replace(":", "")
-        self.bridge_id = (self.mac_str[:6] + "FFFE" + self.mac_str[6:]).upper()
-        self.bridge_uid = f"2f402f80-da50-11e1-9b23-{self.mac_str}"
+        self._mac_addr = mac_addr
+        mac_str = mac_addr.replace(":", "")
+        self._bridge_id = (mac_str[:6] + "FFFE" + mac_str[6:]).upper()
+        self._bridge_uid = f"2f402f80-da50-11e1-9b23-{mac_str}"
+
+    @property
+    def ip_addr(self) -> str:
+        """Return ip address of the emulated bridge."""
+        return self._ip_addr
+
+    @property
+    def mac_addr(self) -> str:
+        """Return mac address of the emulated bridge."""
+        return self._mac_addr
+
+    @property
+    def bridge_id(self) -> str:
+        """Return the bridge id of the emulated bridge."""
+        return self._bridge_id
+
+    @property
+    def bridge_uid(self) -> str:
+        """Return the bridge UID of the emulated bridge."""
+        return self._bridge_uid
 
     @property
     def link_mode_enabled(self) -> bool:
@@ -69,6 +85,11 @@ class Config:
     def link_mode_discovery_key(self) -> Optional[str]:
         """Return the temporary token which enables linking."""
         return self._link_mode_discovery_key
+
+    @property
+    def bridge_name(self) -> str:
+        """Return the friendly name for the emulated bridge."""
+        return self.get_storage_value("bridge_config", "name", "Home Assistant")
 
     @property
     def definitions(self) -> dict:
@@ -162,13 +183,21 @@ class Config:
             raise Exception(f"Group {group_id} not found!")
         return conf
 
-    async def async_get_storage_value(self, key: str, subkey: str = None) -> Any:
+    async def async_get_storage_value(
+        self, key: str, subkey: str = None, default: Optional[Any] = None
+    ) -> Any:
+        """Get a value from persistent storage."""
+        return self.get_storage_value(key, subkey, default)
+
+    def get_storage_value(
+        self, key: str, subkey: str = None, default: Optional[Any] = None
+    ) -> Any:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
         if main_val is None:
-            return {}
+            return default or {}
         if subkey:
-            return main_val.get(subkey, None)
+            return main_val.get(subkey, default)
         return main_val
 
     async def async_set_storage_value(self, key: str, subkey: str, value: str) -> None:
@@ -277,7 +306,7 @@ class Config:
         # create persistent notification in hass
         # user can click the link in the notification to enable linking
 
-        url = f"http://{self.host_ip_addr}/link/{self._link_mode_discovery_key}"
+        url = f"http://{self.ip_addr}/link/{self._link_mode_discovery_key}"
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
         msg_details = {

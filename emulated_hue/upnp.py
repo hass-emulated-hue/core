@@ -18,7 +18,7 @@ class UPNPResponderThread(threading.Thread):
         """Initialize the class."""
         threading.Thread.__init__(self)
 
-        self.host_ip_addr = config.host_ip_addr
+        self.ip_addr = config.ip_addr
         self.listen_port = config.http_port
         self.upnp_bind_multicast = True
 
@@ -36,7 +36,7 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
 """
 
         self.upnp_response = (
-            resp_template.format(config.host_ip_addr, config.http_port)
+            resp_template.format(config.ip_addr, config.http_port)
             .replace("\n", "\r\n")
             .encode("utf-8")
         )
@@ -51,19 +51,19 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
         ssdp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         ssdp_socket.setsockopt(
-            socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.host_ip_addr)
+            socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.ip_addr)
         )
 
         ssdp_socket.setsockopt(
             socket.SOL_IP,
             socket.IP_ADD_MEMBERSHIP,
-            socket.inet_aton("239.255.255.250") + socket.inet_aton(self.host_ip_addr),
+            socket.inet_aton("239.255.255.250") + socket.inet_aton(self.ip_addr),
         )
 
         if self.upnp_bind_multicast:
             ssdp_socket.bind(("", 1900))
         else:
-            ssdp_socket.bind((self.host_ip_addr, 1900))
+            ssdp_socket.bind((self.ip_addr, 1900))
 
         while True:
             if self._interrupted:
@@ -93,7 +93,7 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
                 resp_socket.sendto(self.upnp_response, addr)
-                LOGGER.debug("Serving SSDP discovery info to %s", addr)
+                # LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):
