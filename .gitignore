@@ -3,3 +3,8 @@ __pycache__
 .vscode
 .venv/
 *.code-workspace
+.idea
+
+config
+.devcontainer/docker-compose-pycharm.yml
+.devcontainer/docker-compose-vscode.yml
