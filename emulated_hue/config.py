@@ -107,6 +107,8 @@ class Config:
             "enabled": True,
             "name": "",
             "uniqueid": unique_id,
+            # TODO: set some sane throttle values based on the light model
+            "entertainment": {"throttle": 250, "transition": 500},
         }
         await self.async_set_storage_value("lights", next_light_id, light_config)
         return next_light_id
