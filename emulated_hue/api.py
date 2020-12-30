@@ -430,9 +430,8 @@ class HueApi:
         valid_user = True
         if not username or not await self.config.async_get_user(username):
             valid_user = False
-            # api/nouser/config requested, enable discovery request
-            if username == "nouser":
-                await self.config.async_enable_link_mode_discovery()
+            # discovery config requested, enable discovery request
+            await self.config.async_enable_link_mode_discovery()
         result = await self.__async_get_bridge_config(full_details=valid_user)
         return web.json_response(result)
 
