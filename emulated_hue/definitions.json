@@ -1,8 +1,8 @@
 {
     "bridge": {
         "datastoreversion": 70,
-        "swversion": "1939070020",
-        "apiversion": "1.35.0",
+        "swversion": "1941132070",
+        "apiversion": "1.41.0",
         "modelid": "BSB002"
     },
     "lights": {
@@ -34,17 +34,13 @@
                         "min": 153
                     },
                     "colorgamuttype": "A",
-                    "maxlumen": 200,
+                    "maxlumen": 840,
                     "mindimlevel": 10000
                 },
                 "streaming": {
                     "proxy": false,
                     "renderer": true
                 }
-            },
-            "streaming": {
-                "renderer": true,
-                "proxy": true
             }
         },
         "swversion": "5.127.1.26581"
