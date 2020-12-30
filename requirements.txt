@@ -4,5 +4,5 @@ netaddr==0.8.0
 aiorun==2020.11.1
 getmac==0.8.2
 cryptography==3.3.1
-hass-client==0.0.7
+hass-client==0.0.9
 uvloop==0.14.0; sys_platform != 'win32'

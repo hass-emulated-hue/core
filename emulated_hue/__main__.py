@@ -65,4 +65,7 @@ if __name__ == "__main__":
         """Call on loop shutdown."""
         loop.run_until_complete(hue.async_stop())
 
-    run(hue.async_start(), use_uvloop=True, shutdown_callback=on_shutdown)
+    if os.name != "nt":
+        run(hue.async_start(), use_uvloop=True, shutdown_callback=on_shutdown)
+    else:
+        run(hue.async_start(), use_uvloop=False, shutdown_callback=on_shutdown)
