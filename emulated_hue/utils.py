@@ -6,9 +6,9 @@ import os
 import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
-from aiohttp import web
 
 import slugify as unicode_slug
+from aiohttp import web
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,9 +61,11 @@ def update_dict(dict1, dict2):
             dict1[key] = value
 
 
-def json_response_nonunicode(data):
-    """Send json response in raw format instead of converting to ascii / unicode."""
-    return web.Response(text=json.dumps(data, ensure_ascii=False), content_type='application/json')
+def send_json_response(data):
+    """Send json response in unicode format instead of converting to ascii."""
+    return web.Response(
+        text=json.dumps(data, ensure_ascii=False), content_type="application/json"
+    )
 
 
 def load_json(filename: str) -> dict:
