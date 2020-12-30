@@ -47,6 +47,14 @@ def get_local_ip() -> str:
         sock.close()
 
 
+def get_ip_pton():
+    """Return socket pton for local ip."""
+    try:
+        return socket.inet_pton(socket.AF_INET, get_local_ip())
+    except OSError:
+        return socket.inet_pton(socket.AF_INET6, get_local_ip())
+
+
 def slugify(text: str) -> str:
     """Slugify a given text."""
     return unicode_slug.slugify(text, separator="_")  # type: ignore

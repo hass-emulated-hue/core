@@ -3,10 +3,12 @@ import asyncio
 import logging
 
 from hass_client import HomeAssistant
+from zeroconf import InterfaceChoice, ServiceInfo, Zeroconf
 
 from .api import HueApi
 from .config import Config
 from .upnp import UPNPResponderThread
+from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ class HueEmulator:
         self._config = Config(self, data_path)
         self._hass = HomeAssistant(url=hass_url, token=hass_token)
         self._api = HueApi(self)
-        self._upnp_listener = UPNPResponderThread(self.config)
+        self._upnp_listener = None
 
     @property
     def config(self) -> Config:
@@ -42,7 +44,7 @@ class HueEmulator:
         self._loop = asyncio.get_running_loop()
         await self._hass.async_connect()
         await self._api.async_setup()
-        self._upnp_listener.start()
+        await self._async_setup_discovery()
         # remove legacy light_ids config
         if await self.config.async_get_storage_value("light_ids"):
             await self.config.async_delete_storage_value("light_ids")
@@ -51,5 +53,30 @@ class HueEmulator:
     async def async_stop(self):
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
-        self._upnp_listener.stop()
+        if self._upnp_listener:
+            self._upnp_listener.stop()
         await self._api.async_stop()
+
+    async def _async_setup_discovery(self) -> None:
+        """Make this Emulated bridge discoverable on the network."""
+        zeroconf = Zeroconf(interfaces=InterfaceChoice.All)
+        self._upnp_listener = UPNPResponderThread(self.config)
+        LOGGER.debug("Starting mDNS/uPNP discovery broadcast...")
+
+        def setup_discovery():
+            zeroconf_type = "_hue._tcp.local."
+
+            info = ServiceInfo(
+                zeroconf_type,
+                name=f"Philips Hue - {self.config.bridge_id[-6:]}.{zeroconf_type}",
+                addresses=[get_ip_pton()],
+                port=80,
+                properties={
+                    "bridgeid": self.config.bridge_id,
+                    "modelid": self.config.definitions["bridge"]["modelid"],
+                },
+            )
+            zeroconf.register_service(info)
+
+        self.loop.run_in_executor(None, setup_discovery)
+        self._upnp_listener.start()

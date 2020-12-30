@@ -292,8 +292,6 @@ class Config:
 
         self.hue.loop.call_later(300, auto_disable)
         LOGGER.info("Link mode is enabled for the next 5 minutes.")
-        # when link mode is enabled, disovery can be turned off
-        await self.async_disable_link_mode_discovery()
 
     async def async_disable_link_mode(self) -> None:
         """Disable link mode on the virtual bridge."""
