@@ -54,6 +54,7 @@ class Config:
         self._mac_addr = mac_addr
         mac_str = mac_addr.replace(":", "")
         self._bridge_id = (mac_str[:6] + "FFFE" + mac_str[6:]).upper()
+        self._bridge_serial = mac_str.lower()
         self._bridge_uid = f"2f402f80-da50-11e1-9b23-{mac_str}"
 
     @property
@@ -70,6 +71,11 @@ class Config:
     def bridge_id(self) -> str:
         """Return the bridge id of the emulated bridge."""
         return self._bridge_id
+
+    @property
+    def bridge_serial(self) -> str:
+        """Return the bridge id of the emulated bridge."""
+        return self._bridge_serial
 
     @property
     def bridge_uid(self) -> str:

@@ -119,7 +119,7 @@ class HueApi:
         # add all routes defined with decorator
         routes.add_class_routes(self)
         app.add_routes(routes)
-        # Add catch-all handler for unkown requests
+        # Add catch-all handler for unknown requests
         app.router.add_route("*", "/{tail:.*}", self.async_unknown_request)
         self.runner = web.AppRunner(app, access_log=None)
         await self.runner.setup()
@@ -444,7 +444,7 @@ class HueApi:
 
     @check_request(False)
     async def async_get_bridge_config(self, request: web.Request):
-        """Process a request to get the (full) config of this emulated bridge."""
+        """Process a request to get (full or partial) config of this emulated bridge."""
         username = request.match_info.get("username")
         valid_user = True
         if not username or not await self.config.async_get_user(username):
@@ -526,7 +526,7 @@ class HueApi:
             self.config.ip_addr,
             self.config.http_port,
             self.config.bridge_name,
-            self.config.bridge_id,
+            self.config.bridge_serial,
             self.config.bridge_uid,
         )
         return web.Response(text=resp_text, content_type="text/xml")
