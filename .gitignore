@@ -5,7 +5,7 @@ __pycache__
 *.code-workspace
 .idea
 
-.run/Launch emulated_hue.run.xml
+.run
 
 config
 .devcontainer/docker-compose-pycharm.yml
