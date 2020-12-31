@@ -12,7 +12,7 @@ import emulated_hue.const as const
 from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert
-from emulated_hue.utils import send_json_response, send_error_response, update_dict
+from emulated_hue.utils import send_success_response, send_json_response, send_error_response, update_dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -179,7 +179,8 @@ class HueApi:
         """Handle requests to create a username for the emulated hue bridge."""
         if "devicetype" not in request_data:
             LOGGER.warning("devicetype not specified")
-            return send_json_response(("Devicetype not specified", 302))
+            # custom error message
+            return send_error_response(request.path, "devicetype not specified", 302)
         if not self.config.link_mode_enabled:
             await self.config.async_enable_link_mode_discovery()
             return send_error_response(request.path, "link button not pressed", 101)
@@ -239,9 +240,7 @@ class HueApi:
                 await self.config.async_set_storage_value(
                     "groups", group_id, group_conf
                 )
-
-        response = await self.__async_create_hue_response(request.path, {}, username)
-        return send_json_response(response)
+        return send_success_response(request.path, {}, username)
 
     @routes.get("/api/{username}/lights/{light_id}")
     @check_request()
@@ -263,10 +262,7 @@ class HueApi:
         entity = await self.config.async_entity_by_light_id(light_id)
         await self.__async_light_action(entity, request_data)
         # Create success responses for all received keys
-        response = await self.__async_create_hue_response(
-            request.path, request_data, username
-        )
-        return send_json_response(response)
+        return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}/groups")
     @check_request(log_request=False)
@@ -303,10 +299,7 @@ class HueApi:
             async for entity in self.__async_get_group_lights(group_id):
                 await self.__async_light_action(entity, request_data)
         # Create success responses for all received keys
-        response = await self.__async_create_hue_response(
-            request.path, request_data, username
-        )
-        return send_json_response(response)
+        return send_success_response(request.path, request_data, username)
 
     @routes.post("/api/{username}/groups")
     @check_request()
@@ -359,10 +352,7 @@ class HueApi:
                     self.streaming_api = None
 
         await self.config.async_set_storage_value("groups", group_id, group_conf)
-        response = await self.__async_create_hue_response(
-            request.path, request_data, username
-        )
-        return send_json_response(response)
+        return send_success_response(request.path, request_data, username)
 
     @routes.put("/api/{username}/lights/{light_id}")
     @check_request()
@@ -374,10 +364,7 @@ class HueApi:
         if not light_conf:
             return web.Response(status=404)
         update_dict(light_conf, request_data)
-        response = await self.__async_create_hue_response(
-            request.path, request_data, username
-        )
-        return send_json_response(response)
+        return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
     @check_request()
@@ -417,10 +404,7 @@ class HueApi:
             return web.Response(status=404)
         update_dict(local_item, request_data)
         await self.config.async_set_storage_value(itemtype, item_id, local_item)
-        response = await self.__async_create_hue_response(
-            request.path, request_data, username
-        )
-        return send_json_response(response)
+        return send_success_response(request.path, request_data, username)
 
     @routes.delete(
         "/api/{username}/{itemtype:(?:scenes|rules|resourcelinks|groups|lights)}/{item_id}"
@@ -455,10 +439,7 @@ class HueApi:
         LOGGER.debug("Change config called with params: %s", request_data)
         for key, value in request_data.items():
             await self.config.async_set_storage_value("bridge_config", key, value)
-        response = await self.__async_create_hue_response(
-            request.path, request_data, username
-        )
-        return send_json_response(response)
+        return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}")
     @check_request()
@@ -762,21 +743,6 @@ class HueApi:
             retval.update(adv_info)
 
         return retval
-
-    async def __async_create_hue_response(
-        self, request_path: str, request_data: dict, username: str
-    ) -> dict:
-        """Create success responses for all received keys."""
-        request_path = request_path.replace(f"/api/{username}", "")
-        json_response = []
-        for key, val in request_data.items():
-            obj_path = f"{request_path}/{key}"
-            if "/groups" in obj_path:
-                item = {"success": {"address": obj_path, "value": val}}
-            else:
-                item = {"success": {obj_path: val}}
-            json_response.append(item)
-        return json_response
 
     async def __async_get_all_lights(self) -> dict:
         """Create a dict of all lights."""
