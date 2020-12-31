@@ -77,19 +77,17 @@ def send_json_response(data):
 
 def send_error_response(address: str, description: str, type: int):
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
-    response = json.dumps(
-        {
-            "error": {
-                "address": address,
-                "description": description,
-                "type": type,
+    response = \
+        [
+            {
+                "error": {
+                    "address": address,
+                    "description": description,
+                    "type": type,
+                }
             }
-        }
-        , ensure_ascii=False)
-    response = f"[\n{response}\n]"
-    return web.Response(
-        text=response, content_type="application/json"
-    )
+        ]
+    return send_json_response(response)
 
 def load_json(filename: str) -> dict:
     """Load JSON from file."""

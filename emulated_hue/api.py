@@ -69,7 +69,7 @@ def check_request(check_user=True, log_request=True):
         @functools.wraps(func)
         async def wrapped_func(cls, request: web.Request):
             if log_request:
-                LOGGER.debug("%s %s", request.method, request.path)
+                LOGGER.debug("[%s] %s %s", request.remote, request.method, request.path)
             # check username
             if check_user:
                 username = request.match_info.get("username")
@@ -198,7 +198,7 @@ class HueApi:
         return send_json_response(await self.__async_get_all_lights())
 
     @routes.get("/api/{username}/lights/new")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_new_lights(self, request: web.Request):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
         return send_json_response(self._new_lights)
@@ -244,7 +244,7 @@ class HueApi:
         return send_json_response(response)
 
     @routes.get("/api/{username}/lights/{light_id}")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_light(self, request: web.Request):
         """Handle requests to retrieve the info for a single light."""
         light_id = request.match_info["light_id"]
@@ -388,7 +388,7 @@ class HueApi:
         return send_json_response(result)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
-    @check_request()
+    @check_request(log_request=False)
     async def async_get_localitem(self, request: web.Request):
         """Handle requests to retrieve info for a single localitem."""
         item_id = request.match_info["item_id"]
@@ -434,7 +434,7 @@ class HueApi:
         result = [{"success": f"/{itemtype}/{item_id} deleted."}]
         return send_json_response(result)
 
-    @check_request(False)
+    @check_request(check_user=False, log_request=False)
     async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get (full or partial) config of this emulated bridge."""
         username = request.match_info.get("username")
@@ -504,7 +504,7 @@ class HueApi:
         return send_json_response({})
 
     @routes.get("/api/{username}/sensors/new")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_new_sensors(self, request: web.Request):
         """Return all new discovered sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
@@ -666,16 +666,20 @@ class HueApi:
         retval = {
             "state": {
                 const.HUE_ATTR_ON: entity["state"] == const.HASS_STATE_ON,
+                "alert": "none",
                 "reachable": entity["state"] != const.HASS_STATE_UNAVAILABLE,
                 "mode": "homeautomation",
             },
             "name": light_config["name"]
             or entity["attributes"].get("friendly_name", ""),
             "uniqueid": light_config["uniqueid"],
-            "manufacturername": "Home Assistant",
-            "productname": "Emulated Hue",
-            "modelid": entity["entity_id"],
-            "swversion": "5.127.1.26581",
+            "manufacturername": "Signify Netherlands B.V.",
+            # TODO: replace productname/modelid with equivalent hue
+            #  productname/modelid for device
+            "productname": "Emulated Hue",  # Hue ambiance lamp
+            "modelid": entity["entity_id"],  # LTW001
+            # replace swversion with unique version per device type
+            "swversion": "5.130.1.30000"
         }
 
         # get device type, model etc. from the Hass device registry
@@ -703,6 +707,7 @@ class HueApi:
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     # TODO: remember last command to set colormode
                     const.HUE_ATTR_COLORMODE: const.HUE_ATTR_XY,
+                    # TODO: add hue/sat
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
@@ -736,6 +741,7 @@ class HueApi:
             retval["type"] = "Color temperature light"
             retval["state"].update(
                 {
+                    const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     const.HUE_ATTR_COLORMODE: "ct",
                     const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
                 }

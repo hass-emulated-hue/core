@@ -13,12 +13,21 @@
       "capabilities": {
         "certified": true,
         "control": {
-          "mindimlevel": 5000,
-          "maxlumen": 600,
+          "mindimlevel": 1000,
+          "maxlumen": 800,
           "colorgamut": [
-            [0.6915, 0.3083],
-            [0.17, 0.7],
-            [0.1532, 0.0475]
+            [
+              0.6915,
+              0.3083
+            ],
+            [
+              0.17,
+              0.7
+            ],
+            [
+              0.1532,
+              0.0475
+            ]
           ],
           "colorgamuttype": "C",
           "ct": {
@@ -27,11 +36,14 @@
           }
         },
         "streaming": {
-          "proxy": false,
+          "proxy": true,
           "renderer": true
         }
       },
-      "swversion": "5.127.1.26581"
+      "modelid": "LCT016",
+      "productname": "Hue color lamp",
+      "swversion": "1.50.2_r30933",
+      "productid": "Philips-LCT016-1-A19ECLv5"
     },
     "Color light": {
       "capabilities": {
@@ -39,9 +51,18 @@
         "control": {
           "colorgamuttype": "B",
           "colorgamut": [
-            [0.675, 0.322],
-            [0.409, 0.518],
-            [0.167, 0.04]
+            [
+              0.675,
+              0.322
+            ],
+            [
+              0.409,
+              0.518
+            ],
+            [
+              0.167,
+              0.04
+            ]
           ],
           "ct": {},
           "maxlumen": 800,
@@ -58,18 +79,19 @@
       "capabilities": {
         "certified": true,
         "control": {
-          "ct": {
-            "max": 500,
-            "min": 153
-          },
+          "mindimlevel": 1000,
           "maxlumen": 800,
-          "mindimlevel": 1000
+          "ct": {
+            "min": 153,
+            "max": 454
+          }
         },
         "streaming": {
-          "proxy": false,
-          "renderer": false
+          "renderer": false,
+          "proxy": false
         }
       },
+      "modelid": "LTW015",
       "swversion": "5.127.1.26581"
     },
     "Dimmable light": {

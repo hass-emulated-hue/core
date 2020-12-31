@@ -1,6 +1,5 @@
 """Hold configuration variables for the emulated hue bridge."""
 import datetime
-import hashlib
 import logging
 import os
 import uuid
@@ -118,7 +117,11 @@ class Config:
         if lights:
             next_light_id = str(max(int(k) for k in lights) + 1)
         # generate unique id (fake zigbee address) from entity id
-        unique_id = hashlib.md5(entity_id.encode()).hexdigest()
+        unique_id = entity_id\
+            .replace(".", "")\
+            .replace("_", "")\
+            .replace("-", "")
+        unique_id = f"{unique_id:0<16}"
         unique_id = "00:{}:{}:{}:{}:{}:{}:{}-{}".format(
             unique_id[0:2],
             unique_id[2:4],
