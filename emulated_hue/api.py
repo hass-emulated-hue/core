@@ -881,7 +881,7 @@ class HueApi:
 
     async def __async_get_bridge_config(self, full_details: bool = False) -> dict:
         """Return the (virtual) bridge configuration."""
-        result = self.hue.config.definitions["bridge"].copy()
+        result = self.hue.config.definitions.get("bridge").get("basic").copy()
         result.update(
             {
                 "name": self.config.bridge_name,
@@ -891,49 +891,16 @@ class HueApi:
             }
         )
         if full_details:
+            result.update(self.hue.config.definitions.get("bridge").get("full"))
             result.update(
                 {
-                    "backup": {"errorcode": 0, "status": "idle"},
-                    "dhcp": True,
-                    "internetservices": {
-                        "internet": "connected",
-                        "remoteaccess": "connected",
-                        "swupdate": "connected",
-                        "time": "connected",
-                    },
-                    "netmask": "255.255.255.0",
+                    "ipaddress": self.config.ip_addr,
                     "gateway": self.config.ip_addr,
-                    "proxyport": 0,
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
+                    "localtime": datetime.datetime.now().isoformat().split(".")[0],
                     "timezone": self.config.get_storage_value(
                         "bridge_config", "timezone", "Europe/Amsterdam"
                     ),
-                    "portalconnection": "connected",
-                    "portalservices": True,
-                    "portalstate": {
-                        "communication": "disconnected",
-                        "incoming": False,
-                        "outgoing": False,
-                        "signedon": True,
-                    },
-                    "swupdate": {
-                        "checkforupdate": False,
-                        "devicetypes": {"bridge": False, "lights": [], "sensors": []},
-                        "notify": True,
-                        "text": "",
-                        "updatestate": 0,
-                        "url": "",
-                    },
-                    "swupdate2": {
-                        "checkforupdate": False,
-                        "lastchange": "2018-06-09T10:11:08",
-                        "bridge": {
-                            "state": "noupdates",
-                            "lastinstall": "2018-06-08T19:09:45",
-                        },
-                        "state": "noupdates",
-                        "autoinstall": {"updatetime": "T14:00:00", "on": False},
-                    },
                     "whitelist": await self.config.async_get_storage_value(
                         "users", default={}
                     ),

@@ -1,12 +1,63 @@
 {
   "bridge": {
-    "datastoreversion": 70,
-    "swversion": "1941132080",
-    "apiversion": "1.39.0",
-    "modelid": "BSB002",
-    "factorynew": false,
-    "replacesbridgeid": null,
-    "starterkitid": ""
+    "basic": {
+      "datastoreversion": 70,
+      "swversion": "1941132080",
+      "apiversion": "1.39.0",
+      "modelid": "BSB002",
+      "factorynew": false,
+      "replacesbridgeid": null,
+      "starterkitid": ""
+    },
+    "full": {
+      "backup": {
+        "errorcode": 0,
+        "status": "idle"
+      },
+      "dhcp": true,
+      "internetservices": {
+        "internet": "connected",
+        "remoteaccess": "connected",
+        "swupdate": "connected",
+        "time": "connected"
+      },
+      "netmask": "255.255.255.0",
+      "proxyport": 0,
+      "portalconnection": "connected",
+      "portalservices": true,
+      "portalstate": {
+        "communication": "disconnected",
+        "incoming": false,
+        "outgoing": false,
+        "signedon": true
+      },
+      "swupdate": {
+        "checkforupdate": false,
+        "devicetypes": {
+          "bridge": false,
+          "lights": [],
+          "sensors": []
+        },
+        "notify": false,
+        "text": "",
+        "updatestate": 0,
+        "url": ""
+      },
+      "swupdate2": {
+        "checkforupdate": false,
+        "lastchange": "2018-06-09T10:11:08",
+        "bridge": {
+          "state": "noupdates",
+          "lastinstall": "2018-06-08T19:09:45"
+        },
+        "state": "noupdates",
+        "install": false,
+        "autoinstall": {
+          "updatetime": "T14:00:00",
+          "on": false
+        }
+      }
+    }
   },
   "lights": {
     "Extended color light": {
@@ -43,7 +94,7 @@
       "modelid": "LCT016",
       "productname": "Hue color lamp",
       "swversion": "1.50.2_r30933",
-      "productid": "Philips-LCT016-1-A19ECLv5"
+      "productid": "cool id"
     },
     "Color light": {
       "capabilities": {
