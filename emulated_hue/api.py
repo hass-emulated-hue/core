@@ -445,7 +445,7 @@ class HueApi:
     @check_request(False)
     async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get the (full) config of this emulated bridge."""
-        username = request.match_info["username"].replace("/", "")
+        username = request.match_info.get("username")
         valid_user = True
         if not username or not await self.config.async_get_user(username):
             valid_user = False
