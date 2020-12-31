@@ -1,5 +1,4 @@
 """Support for a Hue API to control Home Assistant."""
-import asyncio
 import datetime
 import functools
 import inspect
@@ -13,7 +12,7 @@ import emulated_hue.const as const
 from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert
-from emulated_hue.utils import send_json_response, update_dict
+from emulated_hue.utils import send_json_response, send_error_response, update_dict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -71,7 +70,7 @@ def check_request(check_user=True, log_request=True):
             if check_user:
                 username = request.match_info.get("username")
                 if not username or not await cls.config.async_get_user(username):
-                    return send_json_response(const.HUE_UNAUTHORIZED_USER)
+                    return send_error_response(request.path, "unauthorized user", 1)
             # check and unpack (json) body if needed
             if request.method in ["PUT", "POST"]:
                 try:
@@ -176,21 +175,7 @@ class HueApi:
             return send_json_response(("Devicetype not specified", 302))
         if not self.config.link_mode_enabled:
             await self.config.async_enable_link_mode_discovery()
-            # wait max 30 seconds for link mode to be enabled
-            count = 0
-            while not self.config.link_mode_enabled and count < 60:
-                count += 1
-                await asyncio.sleep(0.5)
-        if not self.config.link_mode_enabled:
-            return send_json_response(
-                {
-                    "error": {
-                        "address": "/",
-                        "description": "link button not pressed",
-                        "type": 101,
-                    }
-                }
-            )
+            return send_error_response(request.path, "link button not pressed", 101)
 
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
