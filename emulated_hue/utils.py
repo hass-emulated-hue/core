@@ -76,8 +76,8 @@ def send_json_response(data):
     )
 
 def send_error_response(address: str, description: str, type: int):
-    """Sends error message using provided inputs. JSON with surrounding brackets"""
-    response = \
+    """Send error message using provided inputs with format of JSON with surrounding brackets."""
+    response = json.dumps(
         {
             "error": {
                 "address": address,
@@ -85,7 +85,7 @@ def send_error_response(address: str, description: str, type: int):
                 "type": type,
             }
         }
-    response = json.dumps(response, ensure_ascii=False)
+        , ensure_ascii=False)
     response = f"[\n{response}\n]"
     return web.Response(
         text=response, content_type="application/json"

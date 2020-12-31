@@ -74,7 +74,7 @@ class Config:
 
     @property
     def bridge_serial(self) -> str:
-        """Return the bridge id of the emulated bridge."""
+        """Return the bridge serial of the emulated bridge."""
         return self._bridge_serial
 
     @property

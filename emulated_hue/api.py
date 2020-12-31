@@ -20,6 +20,10 @@ DESCRIPTION_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "description.xml"
 )
 
+CLIP_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "clip.html"
+)
+
 
 class ClassRouteTableDef(web.RouteTableDef):
     """Allow decorators for route registering within class methods."""
@@ -102,6 +106,9 @@ class HueApi:
         self._new_lights = {}
         with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
             self._description_xml = fdesc.read()
+
+        with open(CLIP_FILE, encoding="utf-8") as fdesc:
+            self._clip_html = fdesc.read()
 
     async def async_setup(self):
         """Async set-up of the webserver."""
@@ -567,6 +574,19 @@ class HueApi:
         """Return all timezones."""
         return send_json_response(self.config.definitions["timezones"])
 
+    # Static Content Begin
+    @routes.get("/clip.html")
+    @check_request(False)
+    async def async_get_clip_debugger(self, request: web.Request):
+        """Serve the CLIP Debugger."""
+        return web.Response(text=self._clip_html, content_type="text/html")
+
+    @routes.get("/robots.txt")
+    @check_request(False)
+    async def async_get_robots_txt(self, request: web.Request):
+        """Serve robots.txt."""
+        return web.Response(text=const.ROBOTS_TXT, content_type="text/plain")
+
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
         if request.method in ["PUT", "POST"]:
@@ -578,6 +598,7 @@ class HueApi:
         else:
             LOGGER.warning("Invalid/unknown request: %s", request)
         return web.Response(status=404)
+
 
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
