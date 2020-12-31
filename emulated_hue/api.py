@@ -678,8 +678,7 @@ class HueApi:
             #  productname/modelid for device
             "productname": "Emulated Hue",  # Hue ambiance lamp
             "modelid": entity["entity_id"],  # LTW001
-            # replace swversion with unique version per device type
-            "swversion": "5.130.1.30000"
+            "swversion": entity["entity_id"]  # "5.130.1.30000"
         }
 
         # get device type, model etc. from the Hass device registry

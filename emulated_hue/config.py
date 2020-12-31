@@ -1,5 +1,6 @@
 """Hold configuration variables for the emulated hue bridge."""
 import datetime
+import hashlib
 import logging
 import os
 import uuid
@@ -13,7 +14,6 @@ if TYPE_CHECKING:
     from emulated_hue import HueEmulator
 else:
     HueEmulator = "HueEmulator"
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -117,11 +117,7 @@ class Config:
         if lights:
             next_light_id = str(max(int(k) for k in lights) + 1)
         # generate unique id (fake zigbee address) from entity id
-        unique_id = entity_id\
-            .replace(".", "")\
-            .replace("_", "")\
-            .replace("-", "")
-        unique_id = f"{unique_id:0<16}"
+        unique_id = hashlib.md5(entity_id.encode()).hexdigest()
         unique_id = "00:{}:{}:{}:{}:{}:{}:{}-{}".format(
             unique_id[0:2],
             unique_id[2:4],
@@ -199,13 +195,13 @@ class Config:
         return conf
 
     async def async_get_storage_value(
-        self, key: str, subkey: str = None, default: Optional[Any] = None
+            self, key: str, subkey: str = None, default: Optional[Any] = None
     ) -> Any:
         """Get a value from persistent storage."""
         return self.get_storage_value(key, subkey, default)
 
     def get_storage_value(
-        self, key: str, subkey: str = None, default: Optional[Any] = None
+            self, key: str, subkey: str = None, default: Optional[Any] = None
     ) -> Any:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
@@ -332,6 +328,7 @@ class Config:
         await self.hue.hass.async_call_service(
             "persistent_notification", "create", msg_details
         )
+
         # make sure that the notification and link request are dismissed after 5 minutes
 
         def auto_disable():
