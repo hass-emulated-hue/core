@@ -1,12 +1,21 @@
+# MAC OS
 .DS_Store
-__pycache__
-.vscode
-.venv/
-*.code-workspace
-.idea
 
+# Python
+__pycache__
+.venv/
+
+# VsCode
+.vscode
+hass_emulated_hue.code-workspace
+
+# PyCharm
+.idea
 .run
 
-config
+# Dev containers
 .devcontainer/docker-compose-pycharm.yml
 .devcontainer/docker-compose-vscode.yml
+
+# Run config
+config
