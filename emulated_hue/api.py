@@ -832,23 +832,36 @@ class HueApi:
 
         # Hass group (area)
         if "area_id" in group_conf:
-            for device in self.hass.device_registry.values():
-                if device["area_id"] != group_conf["area_id"]:
+            for entity in self.hass.entity_registry.values():
+                if entity["disabled_by"]:
+                    # do not include disabled devices
                     continue
-                # get all entities for this device
-                for entity in self.hass.entity_registry.values():
-                    if entity["device_id"] != device["id"] or entity["disabled_by"]:
-                        continue
-                    if not entity["entity_id"].startswith("light."):
-                        continue
-                    light_id = await self.config.async_entity_id_to_light_id(
-                        entity["entity_id"]
-                    )
-                    light_conf = await self.config.async_get_light_config(light_id)
-                    if not light_conf["enabled"]:
-                        continue
-                    entity = self.hass.get_state(entity["entity_id"], attribute=None)
-                    yield entity
+                if not entity["entity_id"].startswith("light."):
+                    # for now only include lights
+                    # TODO: include switches, sensors ?
+                    continue
+                device = self.hass.device_registry.get(entity["device_id"])
+                # first check if area is defined on entity itself
+                if entity["area_id"] and entity["area_id"] != group_conf["area_id"]:
+                    # different area id defined on entity so skip this entity
+                    continue
+                elif entity["area_id"] == group_conf["area_id"]:
+                    # our area_id is configured on the entity, use it
+                    pass
+                elif device and device["area_id"] == group_conf["area_id"]:
+                    # our area_id is configured on the entity's device, use it
+                    pass
+                else:
+                    continue
+                # process the light entity
+                light_id = await self.config.async_entity_id_to_light_id(
+                    entity["entity_id"]
+                )
+                light_conf = await self.config.async_get_light_config(light_id)
+                if not light_conf["enabled"]:
+                    continue
+                entity = self.hass.get_state(entity["entity_id"], attribute=None)
+                yield entity
 
         # Local group
         else:
