@@ -69,27 +69,39 @@ def update_dict(dict1, dict2):
             dict1[key] = value
 
 
-def send_json_response(data):
+def send_json_response(data) -> web.Response:
     """Send json response in unicode format instead of converting to ascii."""
     return web.Response(
         text=json.dumps(data, ensure_ascii=False), content_type="application/json"
     )
 
-def send_error_response(address: str, description: str, type: int):
+
+def send_success_response(
+    request_path: str, request_data: dict, username: str
+) -> web.Response:
+    """Create success responses for all received keys."""
+    request_path = request_path.replace(f"/api/{username}", "")
+    json_response = []
+    for key, val in request_data.items():
+        obj_path = f"{request_path}/{key}"
+        item = {"success": {obj_path: val}}
+        json_response.append(item)
+    return send_json_response(json_response)
+
+
+def send_error_response(address: str, description: str, type: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
-    response = json.dumps(
-        {
-            "error": {
-                "address": address,
-                "description": description,
-                "type": type,
+    response = \
+        [
+            {
+                "error": {
+                    "address": address,
+                    "description": description,
+                    "type": type,
+                }
             }
-        }
-        , ensure_ascii=False)
-    response = f"[\n{response}\n]"
-    return web.Response(
-        text=response, content_type="application/json"
-    )
+        ]
+    return send_json_response(response)
 
 def load_json(filename: str) -> dict:
     """Load JSON from file."""

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 else:
     HueEmulator = "HueEmulator"
 
-
 LOGGER = logging.getLogger(__name__)
 
 CONFIG_FILE = "emulated_hue.json"
@@ -196,13 +195,13 @@ class Config:
         return conf
 
     async def async_get_storage_value(
-        self, key: str, subkey: str = None, default: Optional[Any] = None
+            self, key: str, subkey: str = None, default: Optional[Any] = None
     ) -> Any:
         """Get a value from persistent storage."""
         return self.get_storage_value(key, subkey, default)
 
     def get_storage_value(
-        self, key: str, subkey: str = None, default: Optional[Any] = None
+            self, key: str, subkey: str = None, default: Optional[Any] = None
     ) -> Any:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
@@ -329,6 +328,7 @@ class Config:
         await self.hue.hass.async_call_service(
             "persistent_notification", "create", msg_details
         )
+
         # make sure that the notification and link request are dismissed after 5 minutes
 
         def auto_disable():
