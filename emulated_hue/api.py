@@ -11,7 +11,7 @@ from typing import Any, AsyncGenerator, Optional
 import emulated_hue.const as const
 from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
-from emulated_hue.ssl_cert import async_generate_selfsigned_cert
+from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 from emulated_hue.utils import (
     send_error_response,
     send_json_response,
@@ -149,7 +149,7 @@ class HueApi:
         # create self signed certificate for HTTPS API
         cert_file = self.config.get_path(".cert.pem")
         key_file = self.config.get_path(".cert_key.pem")
-        if not os.path.isfile(cert_file) or not os.path.isfile(key_file):
+        if not check_certificate(cert_file, self.config):
             await async_generate_selfsigned_cert(cert_file, key_file, self.config)
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(cert_file, key_file)
@@ -196,7 +196,7 @@ class HueApi:
         return send_json_response(response)
 
     @routes.get("/api/{username}/lights")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_lights(self, request: web.Request):
         """Handle requests to retrieve the info all lights."""
         return send_json_response(await self.__async_get_all_lights())
@@ -267,7 +267,7 @@ class HueApi:
         return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}/groups")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_groups(self, request: web.Request):
         """Handle requests to retrieve all rooms/groups."""
         groups = await self.__async_get_all_groups()
@@ -377,7 +377,7 @@ class HueApi:
         return send_json_response(result)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_localitem(self, request: web.Request):
         """Handle requests to retrieve info for a single localitem."""
         item_id = request.match_info["item_id"]
@@ -420,7 +420,7 @@ class HueApi:
         result = [{"success": f"/{itemtype}/{item_id} deleted."}]
         return send_json_response(result)
 
-    @check_request(check_user=False, log_request=False)
+    @check_request(check_user=False)
     async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get (full or partial) config of this emulated bridge."""
         username = request.match_info.get("username")
@@ -480,7 +480,7 @@ class HueApi:
         return send_json_response(json_response)
 
     @routes.get("/api/{username}/sensors")
-    @check_request(log_request=False)
+    @check_request()
     async def async_get_sensors(self, request: web.Request):
         """Return sensors on the (virtual) bridge."""
         # not supported yet but prevent errors

@@ -1,6 +1,7 @@
 """Emulated HUE Bridge for HomeAssistant - Certificate utils."""
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 
 from cryptography import x509
@@ -11,6 +12,22 @@ from cryptography.x509.oid import NameOID
 from emulated_hue.config import Config
 
 LOGGER = logging.getLogger(__name__)
+
+
+def check_certificate(cert_file: str, config: Config):
+    """Check existing certificate file if the bridge id (mac address) matches."""
+    if not os.path.isfile(cert_file):
+        return False
+    with open(cert_file) as fileobj:
+        cert_pem = fileobj.read().encode("utf-8")
+    cert = x509.load_pem_x509_certificate(cert_pem, default_backend())
+    try:
+        names = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        cert_cn = names[0].value
+        # return if certificate CN matched the bridge id
+        return cert_cn == config.bridge_id
+    except x509.ExtensionNotFound:
+        return False
 
 
 async def async_generate_selfsigned_cert(
