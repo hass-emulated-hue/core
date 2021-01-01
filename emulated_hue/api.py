@@ -746,6 +746,13 @@ class HueApi:
                 retval["productname"] = device["name"]
                 if device["sw_version"]:
                     retval["swversion"] = device["sw_version"]
+                if device["identifiers"]:
+                    # prefer real zigbee address if we have that
+                    # might come in handy later when we want to
+                    # send entertainment packets to the zigbee mesh
+                    for key, value in device["identifiers"]:
+                        if key == "zha":
+                            retval["uniqueid"] = value
 
         return retval
 
