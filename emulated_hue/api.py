@@ -12,7 +12,12 @@ import emulated_hue.const as const
 from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert
-from emulated_hue.utils import send_success_response, send_json_response, send_error_response, update_dict
+from emulated_hue.utils import (
+    send_error_response,
+    send_json_response,
+    send_success_response,
+    update_dict,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,9 +25,7 @@ DESCRIPTION_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "description.xml"
 )
 
-CLIP_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "clip.html"
-)
+CLIP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clip.html")
 
 
 class ClassRouteTableDef(web.RouteTableDef):
@@ -209,7 +212,6 @@ class HueApi:
     async def async_search_new_lights(self, request: web.Request, request_data):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
         username = request.match_info["username"]
-        self._search_enabled = True
         LOGGER.info(
             "Search mode activated. Any deleted/disabled lights will be reactivated."
         )
@@ -580,7 +582,6 @@ class HueApi:
             LOGGER.warning("Invalid/unknown request: %s", request)
         return web.Response(status=404)
 
-
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
 
@@ -635,6 +636,7 @@ class HueApi:
         self, entity: dict, light_config: Optional[dict] = None
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
+        entity_attr = entity["attributes"]
         entity_features = entity["attributes"].get(
             const.HASS_ATTR_SUPPORTED_FEATURES, 0
         )
@@ -654,26 +656,9 @@ class HueApi:
             "name": light_config["name"]
             or entity["attributes"].get("friendly_name", ""),
             "uniqueid": light_config["uniqueid"],
-            "manufacturername": "Signify Netherlands B.V.",
-            # TODO: replace productname/modelid with equivalent hue
-            #  productname/modelid for device
-            "productname": "Emulated Hue",  # Hue ambiance lamp
-            "modelid": entity["entity_id"],  # LTW001
-            "swversion": entity["entity_id"]  # "5.130.1.30000"
         }
 
-        # get device type, model etc. from the Hass device registry
-        entity_attr = entity["attributes"]
-        reg_entity = self.hass.entity_registry.get(entity["entity_id"])
-        if reg_entity and reg_entity["device_id"] is not None:
-            device = self.hass.device_registry.get(reg_entity["device_id"])
-            if device:
-                retval["manufacturername"] = device["manufacturer"]
-                retval["modelid"] = device["model"]
-                retval["productname"] = device["name"]
-                if device["sw_version"]:
-                    retval["swversion"] = device["sw_version"]
-
+        # Determine correct Hue type from HA supported features
         if (
             (entity_features & const.HASS_SUPPORT_BRIGHTNESS)
             and (entity_features & const.HASS_SUPPORT_COLOR)
@@ -681,7 +666,12 @@ class HueApi:
         ):
             # Extended Color light (Zigbee Device ID: 0x0210)
             # Same as Color light, but which supports additional setting of color temperature
-            retval["type"] = "Extended color light"
+            retval.update(self.hue.config.definitions["lights"]["Extended color light"])
+            # get color temperature min/max values from HA attributes
+            ct_min = entity_attr.get("min_mireds", 153)
+            retval["capabilities"]["control"]["ct"]["min"] = ct_min
+            ct_max = entity_attr.get("max_mireds", 500)
+            retval["capabilities"]["control"]["ct"]["max"] = ct_max
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
@@ -702,7 +692,7 @@ class HueApi:
         ):
             # Color light (Zigbee Device ID: 0x0200)
             # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
-            retval["type"] = "Color light"
+            retval.update(self.hue.config.definitions["lights"]["Color light"])
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
@@ -718,7 +708,14 @@ class HueApi:
         ):
             # Color temperature light (Zigbee Device ID: 0x0220)
             # Supports groups, scenes, on/off, dimming, and setting of a color temperature
-            retval["type"] = "Color temperature light"
+            retval.update(
+                self.hue.config.definitions["lights"]["Color temperature light"]
+            )
+            # get color temperature min/max values from HA attributes
+            ct_min = entity_attr.get("min_mireds", 153)
+            retval["capabilities"]["control"]["ct"]["min"] = ct_min
+            ct_max = entity_attr.get("max_mireds", 500)
+            retval["capabilities"]["control"]["ct"]["max"] = ct_max
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
@@ -731,16 +728,24 @@ class HueApi:
             # Supports groups, scenes, on/off and dimming
             brightness = entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0)
             retval["type"] = "Dimmable light"
+            retval.update(self.hue.config.definitions["lights"]["Dimmable light"])
             retval["state"].update({const.HUE_ATTR_BRI: brightness})
         else:
             # On/off light (Zigbee Device ID: 0x0000)
             # Supports groups, scenes, on/off control
-            retval["type"] = "On/off light"
+            retval.update(self.hue.config.definitions["lights"]["On/off light"])
 
-        # append advanced model info
-        adv_info = self.hue.config.definitions["lights"].get(retval["type"])
-        if adv_info:
-            retval.update(adv_info)
+        # Get device type, model etc. from the Hass device registry
+        entity_attr = entity["attributes"]
+        reg_entity = self.hass.entity_registry.get(entity["entity_id"])
+        if reg_entity and reg_entity["device_id"] is not None:
+            device = self.hass.device_registry.get(reg_entity["device_id"])
+            if device:
+                retval["manufacturername"] = device["manufacturer"]
+                retval["modelid"] = device["model"]
+                retval["productname"] = device["name"]
+                if device["sw_version"]:
+                    retval["swversion"] = device["sw_version"]
 
         return retval
 

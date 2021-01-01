@@ -91,10 +91,11 @@
           "renderer": true
         }
       },
+      "type": "Extended color light",
+      "manufacturername": "Signify Netherlands B.V.",
       "modelid": "LCT016",
       "productname": "Hue color lamp",
-      "swversion": "1.50.2_r30933",
-      "productid": "cool id"
+      "swversion": "1.50.2_r30933"
     },
     "Color light": {
       "capabilities": {
@@ -124,6 +125,10 @@
           "renderer": true
         }
       },
+      "type": "Color light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "Hue ambiance lamp",
+      "modelid": "LTW010",
       "swversion": "5.127.1.26581"
     },
     "Color temperature light": {
@@ -142,7 +147,10 @@
           "proxy": false
         }
       },
-      "modelid": "LTW015",
+      "type": "Color temperature light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "Hue ambiance lamp",
+      "modelid": "LTW010",
       "swversion": "5.127.1.26581"
     },
     "Dimmable light": {
@@ -157,6 +165,19 @@
           "renderer": false
         }
       },
+      "type": "Dimmable light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "Dimmable light",
+      "modelid": "LTW010",
+      "swversion": "5.127.1.26581"
+    },
+    "On/off light": {
+      "capabilities": {
+      },
+      "type": "On/off light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "On/off light",
+      "modelid": "LTW010",
       "swversion": "5.127.1.26581"
     }
   },
