@@ -56,7 +56,7 @@ if __name__ == "__main__":
     datapath = args.data
     url = args.url
     token = args.token
-    if args.verbose or os.getenv("VERBOSE"):
+    if args.verbose or os.getenv("VERBOSE", "") == "true":
         logger.setLevel(logging.DEBUG)
 
     hue = HueEmulator(datapath, url, token)
