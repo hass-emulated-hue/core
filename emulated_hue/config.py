@@ -48,6 +48,9 @@ class Config:
 
         mac_addr = str(get_mac_address(ip=self.ip_addr))
         if not mac_addr or len(mac_addr) < 16:
+            # try again without ip
+            mac_addr = str(get_mac_address())
+        if not mac_addr or len(mac_addr) < 16:
             # fall back to dummy mac
             mac_addr = "b6:82:d3:45:ac:29"
         self._mac_addr = mac_addr
@@ -195,13 +198,13 @@ class Config:
         return conf
 
     async def async_get_storage_value(
-            self, key: str, subkey: str = None, default: Optional[Any] = None
+        self, key: str, subkey: str = None, default: Optional[Any] = None
     ) -> Any:
         """Get a value from persistent storage."""
         return self.get_storage_value(key, subkey, default)
 
     def get_storage_value(
-            self, key: str, subkey: str = None, default: Optional[Any] = None
+        self, key: str, subkey: str = None, default: Optional[Any] = None
     ) -> Any:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
