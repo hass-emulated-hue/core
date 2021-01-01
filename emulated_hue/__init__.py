@@ -74,7 +74,7 @@ class HueEmulator:
                 port=80,
                 properties={
                     "bridgeid": self.config.bridge_id,
-                    "modelid": self.config.definitions["bridge"]["modelid"],
+                    "modelid": self.config.definitions["bridge"]["basic"]["modelid"],
                 },
             )
             zeroconf.register_service(info)
