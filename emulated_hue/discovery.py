@@ -1,10 +1,49 @@
 """Support UPNP discovery method that mimics Hue hubs."""
+import asyncio
 import logging
 import select
 import socket
 import threading
 
+from zeroconf import InterfaceChoice, ServiceInfo, Zeroconf
+
+from .config import Config
+from .utils import get_ip_pton
+
 LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_discovery(config: Config) -> None:
+    """Make this Emulated bridge discoverable on the network."""
+    # https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
+    loop = asyncio.get_running_loop()
+
+    LOGGER.debug("Starting mDNS/uPNP discovery broadcast...")
+
+    # start ssdp discovery
+    upnp_listener = UPNPResponderThread(config)
+    upnp_listener.start()
+
+    # start mdns/zeroconf discovery
+    loop.run_in_executor(None, start_zeroconf_discovery, config)
+
+
+def start_zeroconf_discovery(config: Config):
+    """Start zeroconf discovery."""
+    zeroconf = Zeroconf(interfaces=InterfaceChoice.All)
+    zeroconf_type = "_hue._tcp.local."
+
+    info = ServiceInfo(
+        zeroconf_type,
+        name=f"Philips Hue - {config.bridge_id[-6:]}.{zeroconf_type}",
+        addresses=[get_ip_pton()],
+        port=80,
+        properties={
+            "bridgeid": config.bridge_id,
+            "modelid": config.definitions["bridge"]["basic"]["modelid"],
+        },
+    )
+    zeroconf.register_service(info)
 
 
 class UPNPResponderThread(threading.Thread):
@@ -14,13 +53,14 @@ class UPNPResponderThread(threading.Thread):
 
     _interrupted = False
 
-    def __init__(self, config):
+    def __init__(self, config: Config, bind_multicast: bool = True):
         """Initialize the class."""
         threading.Thread.__init__(self)
+        self.daemon = True
 
         self.ip_addr = config.ip_addr
         self.listen_port = config.http_port
-        self.upnp_bind_multicast = True
+        self.upnp_bind_multicast = bind_multicast
 
         # Note that the double newline at the end of
         # this string is required per the SSDP spec
@@ -28,15 +68,17 @@ class UPNPResponderThread(threading.Thread):
 CACHE-CONTROL: max-age=60
 EXT:
 LOCATION: http://{0}:{1}/description.xml
-SERVER: FreeRTOS/6.0.5, UPnP/1.0, IpBridge/0.1
-hue-bridgeid: 1234
-ST: urn:schemas-upnp-org:device:basic:1
-USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
+SERVER: Linux/3.14.0 UPnP/1.0 IpBridge/1.20.0
+hue-bridgeid: {2}
+ST: uuid:{3}
+USN: uuid:{3}
 
 """
 
         self.upnp_response = (
-            resp_template.format(config.ip_addr, config.http_port)
+            resp_template.format(
+                config.ip_addr, config.http_port, config.bridge_id, config.bridge_uid
+            )
             .replace("\n", "\r\n")
             .encode("utf-8")
         )
@@ -93,7 +135,7 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
                 resp_socket.sendto(self.upnp_response, addr)
-                # LOGGER.debug("Serving SSDP discovery info to %s", addr)
+                LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):
@@ -106,5 +148,4 @@ USN: uuid:Socket-1_0-221438K0100073::urn:schemas-upnp-org:device:basic:1
 def clean_socket_close(sock):
     """Close a socket connection and logs its closure."""
     LOGGER.info("UPNP responder shutting down.")
-
     sock.close()
