@@ -649,7 +649,6 @@ class HueApi:
         retval = {
             "state": {
                 const.HUE_ATTR_ON: entity["state"] == const.HASS_STATE_ON,
-                "alert": "none",
                 "reachable": entity["state"] != const.HASS_STATE_UNAVAILABLE,
                 "mode": "homeautomation",
             },
@@ -685,6 +684,7 @@ class HueApi:
                     const.HUE_ATTR_EFFECT: entity_attr.get(
                         const.HASS_ATTR_EFFECT, "none"
                     ),
+                    const.HUE_ATTR_ALERT: "none",
                 }
             )
         elif (entity_features & const.HASS_SUPPORT_BRIGHTNESS) and (
