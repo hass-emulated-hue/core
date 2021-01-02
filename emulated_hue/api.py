@@ -624,7 +624,7 @@ class HueApi:
         if const.HUE_ATTR_TRANSITION in request_data:
             # Duration of the transition from the light to the new state
             # is given as a multiple of 100ms and defaults to 4 (400ms).
-            transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 100
+            transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 10
             data[const.HASS_ATTR_TRANSITION] = transitiontime
         else:
             data[const.HASS_ATTR_TRANSITION] = 0.4
