@@ -21,7 +21,7 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
     if IS_SUPERVISOR:
-        default_data_dir = "/data"
+        default_data_dir = "/config/hass-emulated-hue"
     else:
         default_data_dir = (
             os.getenv("APPDATA") if os.name == "nt" else os.path.expanduser("~")
