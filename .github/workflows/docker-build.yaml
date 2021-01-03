@@ -69,7 +69,7 @@ jobs:
             repo: hassemulatedhue/core
           }
           - {
-            url: ghcr.io/marcelveldt,
+            url: ghcr.io/hass-emulated-hue,
             username: GCHR_USERNAME,
             password: GHCR_PAT,
             repo: ghcr.io/hass-emulated-hue/core
@@ -141,10 +141,10 @@ jobs:
             repo: hassemulatedhue/core
           }
           - {
-            url: ghcr.io/marcelveldt,
+            url: ghcr.io/hass-emulated-hue,
             username: GCHR_USERNAME,
             password: GHCR_PAT,
-            repo: ghcr.io/marcelveldt/hass_emulated_hue
+            repo: ghcr.io/hass-emulated-hue/core
           }
     steps:
       - name: Enable Experimental Docker Features
@@ -281,10 +281,10 @@ jobs:
             repo: hassemulatedhue/core
           }
           - {
-            url: ghcr.io/marcelveldt,
+            url: ghcr.io/hass-emulated-hue,
             username: GCHR_USERNAME,
             password: GHCR_PAT,
-            repo: ghcr.io/marcelveldt/hass_emulated_hue
+            repo: ghcr.io/hass-emulated-hue/core
           }
         images:
           - {
