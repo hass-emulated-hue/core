@@ -64,15 +64,15 @@ jobs:
         registry:
           - {
             url: "https://index.docker.io/v1/",
-            username: dockerID,
-            password: dockerPassword,
-            repo: marcelveldt/hass-emulated-hue
+            username: DOCKER_USERNAME,
+            password: DOCKER_PASSWORD,
+            repo: hassemulatedhue/core
           }
           - {
             url: ghcr.io/marcelveldt,
-            username: CR_USER,
-            password: CR_PAT,
-            repo: ghcr.io/marcelveldt/hass_emulated_hue
+            username: GCHR_USERNAME,
+            password: GHCR_PAT,
+            repo: ghcr.io/hass-emulated-hue/core
           }
     steps:
       - name: Download container artifact
@@ -136,14 +136,14 @@ jobs:
         registry:
           - {
             url: "https://index.docker.io/v1/",
-            username: dockerID,
-            password: dockerPassword,
-            repo: marcelveldt/hass-emulated-hue
+            username: DOCKER_USERNAME,
+            password: DOCKER_PASSWORD,
+            repo: hassemulatedhue/core
           }
           - {
             url: ghcr.io/marcelveldt,
-            username: CR_USER,
-            password: CR_PAT,
+            username: GCHR_USERNAME,
+            password: GHCR_PAT,
             repo: ghcr.io/marcelveldt/hass_emulated_hue
           }
     steps:
@@ -276,14 +276,14 @@ jobs:
         registry:
           - {
             url: "https://index.docker.io/v1/",
-            username: dockerID,
-            password: dockerPassword,
-            repo: marcelveldt/hass-emulated-hue
+            username: DOCKER_USERNAME,
+            password: DOCKER_PASSWORD,
+            repo: hassemulatedhue/core
           }
           - {
             url: ghcr.io/marcelveldt,
-            username: CR_USER,
-            password: CR_PAT,
+            username: GCHR_USERNAME,
+            password: GHCR_PAT,
             repo: ghcr.io/marcelveldt/hass_emulated_hue
           }
         images:
