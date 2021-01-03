@@ -1,24 +1,84 @@
 {
   "bridge": {
-    "datastoreversion": 70,
-    "swversion": "1941132080",
-    "apiversion": "1.39.0",
-    "modelid": "BSB002",
-    "factorynew": false,
-    "replacesbridgeid": null,
-    "starterkitid": ""
+    "basic": {
+      "datastoreversion": 70,
+      "swversion": "1941132080",
+      "apiversion": "1.39.0",
+      "modelid": "BSB002",
+      "factorynew": false,
+      "replacesbridgeid": null,
+      "starterkitid": ""
+    },
+    "full": {
+      "backup": {
+        "errorcode": 0,
+        "status": "idle"
+      },
+      "dhcp": true,
+      "internetservices": {
+        "internet": "connected",
+        "remoteaccess": "connected",
+        "swupdate": "connected",
+        "time": "connected"
+      },
+      "netmask": "255.255.255.0",
+      "proxyport": 0,
+      "portalconnection": "connected",
+      "portalservices": true,
+      "portalstate": {
+        "communication": "disconnected",
+        "incoming": false,
+        "outgoing": false,
+        "signedon": true
+      },
+      "swupdate": {
+        "checkforupdate": false,
+        "devicetypes": {
+          "bridge": false,
+          "lights": [],
+          "sensors": []
+        },
+        "notify": false,
+        "text": "",
+        "updatestate": 0,
+        "url": ""
+      },
+      "swupdate2": {
+        "checkforupdate": false,
+        "lastchange": "2018-06-09T10:11:08",
+        "bridge": {
+          "state": "noupdates",
+          "lastinstall": "2018-06-08T19:09:45"
+        },
+        "state": "noupdates",
+        "install": false,
+        "autoinstall": {
+          "updatetime": "T14:00:00",
+          "on": false
+        }
+      }
+    }
   },
   "lights": {
     "Extended color light": {
       "capabilities": {
         "certified": true,
         "control": {
-          "mindimlevel": 5000,
-          "maxlumen": 600,
+          "mindimlevel": 1000,
+          "maxlumen": 800,
           "colorgamut": [
-            [0.6915, 0.3083],
-            [0.17, 0.7],
-            [0.1532, 0.0475]
+            [
+              0.6915,
+              0.3083
+            ],
+            [
+              0.17,
+              0.7
+            ],
+            [
+              0.1532,
+              0.0475
+            ]
           ],
           "colorgamuttype": "C",
           "ct": {
@@ -27,11 +87,15 @@
           }
         },
         "streaming": {
-          "proxy": false,
+          "proxy": true,
           "renderer": true
         }
       },
-      "swversion": "5.127.1.26581"
+      "type": "Extended color light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "modelid": "LCT016",
+      "productname": "Hue color lamp",
+      "swversion": "1.50.2_r30933"
     },
     "Color light": {
       "capabilities": {
@@ -39,9 +103,18 @@
         "control": {
           "colorgamuttype": "B",
           "colorgamut": [
-            [0.675, 0.322],
-            [0.409, 0.518],
-            [0.167, 0.04]
+            [
+              0.675,
+              0.322
+            ],
+            [
+              0.409,
+              0.518
+            ],
+            [
+              0.167,
+              0.04
+            ]
           ],
           "ct": {},
           "maxlumen": 800,
@@ -52,24 +125,32 @@
           "renderer": true
         }
       },
+      "type": "Color light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "Hue ambiance lamp",
+      "modelid": "LTW010",
       "swversion": "5.127.1.26581"
     },
     "Color temperature light": {
       "capabilities": {
         "certified": true,
         "control": {
-          "ct": {
-            "max": 500,
-            "min": 153
-          },
+          "mindimlevel": 1000,
           "maxlumen": 800,
-          "mindimlevel": 1000
+          "ct": {
+            "min": 153,
+            "max": 454
+          }
         },
         "streaming": {
-          "proxy": false,
-          "renderer": false
+          "renderer": false,
+          "proxy": false
         }
       },
+      "type": "Color temperature light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "Hue ambiance lamp",
+      "modelid": "LTW010",
       "swversion": "5.127.1.26581"
     },
     "Dimmable light": {
@@ -84,6 +165,19 @@
           "renderer": false
         }
       },
+      "type": "Dimmable light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "Dimmable light",
+      "modelid": "LTW010",
+      "swversion": "5.127.1.26581"
+    },
+    "On/off light": {
+      "capabilities": {
+      },
+      "type": "On/off light",
+      "manufacturername": "Signify Netherlands B.V.",
+      "productname": "On/off light",
+      "modelid": "LTW010",
       "swversion": "5.127.1.26581"
     }
   },

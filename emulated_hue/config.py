@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 else:
     HueEmulator = "HueEmulator"
 
-
 LOGGER = logging.getLogger(__name__)
 
 CONFIG_FILE = "emulated_hue.json"
@@ -48,6 +47,9 @@ class Config:
         self.https_port = 443
 
         mac_addr = str(get_mac_address(ip=self.ip_addr))
+        if not mac_addr or len(mac_addr) < 16:
+            # try again without ip
+            mac_addr = str(get_mac_address())
         if not mac_addr or len(mac_addr) < 16:
             # fall back to dummy mac
             mac_addr = "b6:82:d3:45:ac:29"
@@ -329,6 +331,7 @@ class Config:
         await self.hue.hass.async_call_service(
             "persistent_notification", "create", msg_details
         )
+
         # make sure that the notification and link request are dismissed after 5 minutes
 
         def auto_disable():
