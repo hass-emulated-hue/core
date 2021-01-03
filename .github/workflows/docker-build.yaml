@@ -1,0 +1,372 @@
+name: Docker Build
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    strategy:
+      matrix:
+        include:
+          - arch: linux/386
+            arch_friendly: i386
+          - arch: linux/amd64
+            arch_friendly: amd64
+          - arch: linux/arm/v6
+            arch_friendly: armv6
+          - arch: linux/arm/v7
+            arch_friendly: armv7
+          - arch: linux/arm64
+            arch_friendly: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.arch }}
+          load: true
+          tags: hass_emulated_hue:ci
+
+      - name: Inspect
+        run: |
+          docker image inspect hass_emulated_hue:ci
+
+      - name: Save tarball
+        run: |
+          docker save --output output.tar hass_emulated_hue:ci
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar
+          path: output.tar
+
+  publish:
+    needs: build
+    name: Publish Image
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ i386, amd64, armv6, armv7, arm64 ]
+        registry:
+          - {
+            url: "https://index.docker.io/v1/",
+            username: DOCKER_USERNAME,
+            password: DOCKER_PASSWORD,
+            repo: hassemulatedhue/core
+          }
+          - {
+            url: ghcr.io/hass-emulated-hue,
+            username: GCHR_USERNAME,
+            password: GHCR_PAT,
+            repo: ghcr.io/hass-emulated-hue/core
+          }
+    steps:
+      - name: Download container artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: ci-${{ matrix.arch }}-${{ github.run_number }}.tar
+
+      - name: Import image
+        run: |
+          docker load --input output.tar
+
+      - name: Docker login
+        run: |
+          docker login ${{ matrix.registry.url }} -u ${{ secrets[matrix.registry.username] }} -p ${{ secrets[matrix.registry.password] }}
+
+      # arch-run_num
+      - name: Deploy Run Number
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }} published
+
+      # arch-branch-sha
+      - name: Deploy Commit Hash
+        if: ${{ github.sha != '' }}
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA published
+
+      # latest
+      - name: Deploy Latest
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest published
+
+      # arch-branch
+      - name: Deploy Branch
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/} published
+
+      # arch-tag
+      - name: Deploy Tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/} published
+
+  create_manifest:
+    needs: publish
+    name: Create Manifest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        registry:
+          - {
+            url: "https://index.docker.io/v1/",
+            username: DOCKER_USERNAME,
+            password: DOCKER_PASSWORD,
+            repo: hassemulatedhue/core
+          }
+          - {
+            url: ghcr.io/hass-emulated-hue,
+            username: GCHR_USERNAME,
+            password: GHCR_PAT,
+            repo: ghcr.io/hass-emulated-hue/core
+          }
+    steps:
+      - name: Enable Experimental Docker Features
+        run: |
+          export DOCKER_CLI_EXPERIMENTAL="enabled"
+          echo "DOCKER_CLI_EXPERIMENTAL=${DOCKER_CLI_EXPERIMENTAL}" >> $GITHUB_ENV
+
+      - name: Docker login
+        run: |
+          docker login ${{ matrix.registry.url }} -u ${{ secrets[matrix.registry.username] }} -p ${{ secrets[matrix.registry.password] }}
+
+      # branch-sha
+      - name: Deploy Commit ID
+        if: ${{ github.sha != '' }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA
+          echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA published
+
+      # run_number
+      - name: Deploy Run Number
+        if: ${{ github.sha != '' }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER
+          echo ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER published
+
+      # latest
+      - name: Deploy Latest
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:latest \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:latest \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:latest \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:latest \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:latest
+          echo ${{ matrix.registry.repo }}:latest published
+
+      # branch
+      - name: Deploy Branch
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}
+          echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/} published
+
+      # tag
+      - name: Deploy Tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}
+          echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/} published
+
+# allows registry to show proper architecture by creating a manifest for the image
+  retag_arch:
+    needs: create_manifest
+    name: Fix image variants
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        registry:
+          - {
+            url: "https://index.docker.io/v1/",
+            username: DOCKER_USERNAME,
+            password: DOCKER_PASSWORD,
+            repo: hassemulatedhue/core
+          }
+          - {
+            url: ghcr.io/hass-emulated-hue,
+            username: GCHR_USERNAME,
+            password: GHCR_PAT,
+            repo: ghcr.io/hass-emulated-hue/core
+          }
+        images:
+          - {
+            variant: v6,
+            arch: arm,
+            arch_friendly: armv6
+          }
+          - {
+            variant: v7,
+            arch: arm,
+            arch_friendly: armv7
+          }
+          - {
+            variant: v8,
+            arch: arm64,
+            arch_friendly: arm64
+          }
+    steps:
+      - name: Enable Experimental Docker Features
+        run: |
+          export DOCKER_CLI_EXPERIMENTAL="enabled"
+          echo "DOCKER_CLI_EXPERIMENTAL=${DOCKER_CLI_EXPERIMENTAL}" >> $GITHUB_ENV
+
+      - name: Docker login
+        run: |
+          docker login ${{ matrix.registry.url }} -u ${{ secrets[matrix.registry.username] }} -p ${{ secrets[matrix.registry.password] }}
+
+      - name: Run Number
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${{ github.run_number }}
+          docker manifest annotate \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${{ github.run_number }} \
+            --arch ${{ matrix.images.arch }} --variant ${{ matrix.images.variant }}
+          docker manifest push ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${{ github.run_number }}
+
+      - name: Commit Hash
+        if: ${{ github.sha != '' }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}-$GITHUB_SHA \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}-$GITHUB_SHA
+          docker manifest annotate \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}-$GITHUB_SHA \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}-$GITHUB_SHA \
+            --arch ${{ matrix.images.arch }} --variant ${{ matrix.images.variant }}
+          docker manifest push ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}-$GITHUB_SHA
+
+      - name: Latest
+        if: ${{ github.ref == 'refs/heads/master' }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-latest \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-latest
+          docker manifest annotate \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-latest \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-latest \
+            --arch ${{ matrix.images.arch }} --variant ${{ matrix.images.variant }}
+          docker manifest push ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-latest
+
+      - name: Branch
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}
+          docker manifest annotate \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/} \
+            --arch ${{ matrix.images.arch }} --variant ${{ matrix.images.variant }}
+          docker manifest push ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}
+
+      - name: Tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}
+          docker manifest annotate \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/} \
+            ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/} \
+            --arch ${{ matrix.images.arch }} --variant ${{ matrix.images.variant }}
+          docker manifest push ${{ matrix.registry.repo }}:${{ matrix.images.arch_friendly }}-${GITHUB_REF##*/}
