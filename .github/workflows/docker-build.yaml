@@ -91,14 +91,14 @@ jobs:
           docker login ${{ matrix.registry.url }} -u ${{ secrets[matrix.registry.username] }} -p ${{ secrets[matrix.registry.password] }}
 
       # arch-run_num
-      - name: Deploy Run Number
+      - name: Deploy Run Number (arch-run_num)
         run: |
           docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }} published
 
       # arch-branch-sha
-      - name: Deploy Commit Hash
+      - name: Deploy Commit Hash (arch-branch-sha)
         if: ${{ github.sha != '' }}
         run: |
           docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA
@@ -106,7 +106,7 @@ jobs:
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA published
 
       # latest
-      - name: Deploy Latest
+      - name: Deploy Latest (latest)
         if: ${{ github.ref == 'refs/heads/master' }}
         run: |
           docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest
@@ -114,20 +114,36 @@ jobs:
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest published
 
       # arch-branch
-      - name: Deploy Branch
+      - name: Deploy Branch (arch-branch)
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
           docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/} published
 
+      # arch-branch-run_num
+      - name: Deploy Branch and Run Number (arch-branch-run_num)
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }} published
+
       # arch-tag
-      - name: Deploy Tag
+      - name: Deploy Tag (arch-tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/} published
+
+      # arch-branch-run_num
+      - name: Deploy Tag and Run Number (arch-branch-run_num)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
+          docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
+          echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }} published
 
   create_manifest:
     needs: publish
@@ -159,7 +175,7 @@ jobs:
           docker login ${{ matrix.registry.url }} -u ${{ secrets[matrix.registry.username] }} -p ${{ secrets[matrix.registry.password] }}
 
       # branch-sha
-      - name: Deploy Commit ID
+      - name: Deploy Commit ID (sha)
         if: ${{ github.sha != '' }}
         run: |
           docker manifest create \
@@ -181,7 +197,7 @@ jobs:
           echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_SHA published
 
       # run_number
-      - name: Deploy Run Number
+      - name: Deploy Run Number (run_number)
         if: ${{ github.sha != '' }}
         run: |
           docker manifest create \
@@ -203,7 +219,7 @@ jobs:
           echo ${{ matrix.registry.repo }}:$GITHUB_RUN_NUMBER published
 
       # latest
-      - name: Deploy Latest
+      - name: Deploy Latest (latest)
         if: ${{ github.ref == 'refs/heads/master' }}
         run: |
           docker manifest create \
@@ -225,7 +241,7 @@ jobs:
           echo ${{ matrix.registry.repo }}:latest published
 
       # branch
-      - name: Deploy Branch
+      - name: Deploy Branch (branch)
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
           docker manifest create \
@@ -245,6 +261,28 @@ jobs:
 
           docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}
           echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/} published
+
+      # branch-run_number
+      - name: Deploy Branch and Run Number (branch-run_number)
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER
+          echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER published
 
       # tag
       - name: Deploy Tag
@@ -267,6 +305,28 @@ jobs:
 
           docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}
           echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/} published
+
+      # tag-run_number
+      - name: Deploy Tag and Run Number (tag-run_number)
+        if: ${{ startsWith(github.ref, 'refs/heads/') }}
+        run: |
+          docker manifest create \
+            ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:i386-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:amd64-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }}
+
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:armv6-${{ github.run_number }} --arch arm --variant v6
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:armv7-${{ github.run_number }} --arch arm --variant v7
+          docker manifest annotate ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
+            ${{ matrix.registry.repo }}:arm64-${{ github.run_number }} --arch arm64 --variant v8
+
+          docker manifest push ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER
+          echo ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER published
 
 # allows registry to show proper architecture by creating a manifest for the image
   retag_arch:
