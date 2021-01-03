@@ -308,7 +308,7 @@ jobs:
 
       # tag-run_number
       - name: Deploy Tag and Run Number (tag-run_number)
-        ${{ startsWith(github.ref, 'refs/tags/') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
           docker manifest create \
             ${{ matrix.registry.repo }}:${GITHUB_REF##*/}-$GITHUB_RUN_NUMBER \
