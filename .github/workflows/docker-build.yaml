@@ -32,17 +32,19 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+
 
       - name: Build
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: ${{ matrix.arch }}
-          load: true
-          tags: hass_emulated_hue:ci
-          build-args: |
-            BUILD_VERSION=${GITHUB_REF##*/}
+        run: |
+          docker build \
+            --build-arg BUILD_VERSION=${GITHUB_REF##*/} \
+            --tag hass_emulated_hue:ci \
+            --platform ${{ matrix.arch }} \
+            --file ./Dockerfile \
+            --load \
+            .
 
       - name: Inspect
         run: |
