@@ -21,11 +21,8 @@ from emulated_hue.utils import (
 
 LOGGER = logging.getLogger(__name__)
 
-DESCRIPTION_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "description.xml"
-)
-
-CLIP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clip.html")
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_static")
+DESCRIPTION_FILE = os.path.join(STATIC_DIR, "description.xml")
 
 
 class ClassRouteTableDef(web.RouteTableDef):
@@ -110,9 +107,6 @@ class HueApi:
         with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
             self._description_xml = fdesc.read()
 
-        with open(CLIP_FILE, encoding="utf-8") as fdesc:
-            self._clip_html = fdesc.read()
-
     async def async_setup(self):
         """Async set-up of the webserver."""
         app = web.Application()
@@ -128,8 +122,10 @@ class HueApi:
         # add all routes defined with decorator
         routes.add_class_routes(self)
         app.add_routes(routes)
-        # Add catch-all handler for unknown requests
-        app.router.add_route("*", "/{tail:.*}", self.async_unknown_request)
+        # Add catch-all handler for unknown requests to api
+        app.router.add_route("*", "/api/{tail:.*}", self.async_unknown_request)
+        # static files hosting
+        app.router.add_static("/", STATIC_DIR, append_version=True)
         self.runner = web.AppRunner(app, access_log=None)
         await self.runner.setup()
 
@@ -556,19 +552,6 @@ class HueApi:
     async def async_get_timezones(self, request: web.Request):
         """Return all timezones."""
         return send_json_response(self.config.definitions["timezones"])
-
-    # Static Content Begin
-    @routes.get("/clip.html")
-    @check_request(False)
-    async def async_get_clip_debugger(self, request: web.Request):
-        """Serve the CLIP Debugger."""
-        return web.Response(text=self._clip_html, content_type="text/html")
-
-    @routes.get("/robots.txt")
-    @check_request(False)
-    async def async_get_robots_txt(self, request: web.Request):
-        """Serve robots.txt."""
-        return web.Response(text=const.ROBOTS_TXT, content_type="text/plain")
 
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""

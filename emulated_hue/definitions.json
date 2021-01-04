@@ -1,9 +1,9 @@
 {
   "bridge": {
     "basic": {
-      "datastoreversion": 70,
+      "datastoreversion": "98",
       "swversion": "1941132080",
-      "apiversion": "1.39.0",
+      "apiversion": "1.41.0",
       "modelid": "BSB002",
       "factorynew": false,
       "replacesbridgeid": null,
@@ -32,29 +32,28 @@
         "signedon": true
       },
       "swupdate": {
+        "updatestate": 0,
         "checkforupdate": false,
         "devicetypes": {
           "bridge": false,
           "lights": [],
           "sensors": []
         },
-        "notify": false,
+        "url": "",
         "text": "",
-        "updatestate": 0,
-        "url": ""
+        "notify": true
       },
       "swupdate2": {
         "checkforupdate": false,
-        "lastchange": "2018-06-09T10:11:08",
+        "lastchange": "2020-12-02T05:46:23",
         "bridge": {
           "state": "noupdates",
-          "lastinstall": "2018-06-08T19:09:45"
+          "lastinstall": "2020-12-02T05:41:17"
         },
         "state": "noupdates",
-        "install": false,
         "autoinstall": {
-          "updatetime": "T14:00:00",
-          "on": false
+          "updatetime": "T06:00:00",
+          "on": true
         }
       }
     }
@@ -67,18 +66,9 @@
           "mindimlevel": 1000,
           "maxlumen": 800,
           "colorgamut": [
-            [
-              0.6915,
-              0.3083
-            ],
-            [
-              0.17,
-              0.7
-            ],
-            [
-              0.1532,
-              0.0475
-            ]
+            [0.6915, 0.3083],
+            [0.17, 0.7],
+            [0.1532, 0.0475]
           ],
           "colorgamuttype": "C",
           "ct": {
@@ -103,18 +93,9 @@
         "control": {
           "colorgamuttype": "B",
           "colorgamut": [
-            [
-              0.675,
-              0.322
-            ],
-            [
-              0.409,
-              0.518
-            ],
-            [
-              0.167,
-              0.04
-            ]
+            [0.675, 0.322],
+            [0.409, 0.518],
+            [0.167, 0.04]
           ],
           "ct": {},
           "maxlumen": 800,
@@ -172,8 +153,7 @@
       "swversion": "5.127.1.26581"
     },
     "On/off light": {
-      "capabilities": {
-      },
+      "capabilities": {},
       "type": "On/off light",
       "manufacturername": "Signify Netherlands B.V.",
       "productname": "On/off light",

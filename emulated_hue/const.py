@@ -47,5 +47,3 @@ HUE_ATTR_SAT_MIN = 0  # Saturation
 HUE_ATTR_SAT_MAX = 254
 HUE_ATTR_CT_MIN = 153  # Color temp
 HUE_ATTR_CT_MAX = 500
-
-ROBOTS_TXT = "User-agent: *\nDisallow: /"

@@ -42,7 +42,6 @@ def start_zeroconf_discovery(config: Config):
             "bridgeid": config.bridge_id,
             "modelid": config.definitions["bridge"]["basic"]["modelid"],
         },
-        server=f"hue_{config.bridge_id[-6:]}.local.",
     )
     zeroconf.register_service(info)
 
