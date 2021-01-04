@@ -18,9 +18,9 @@ Control all lights connected to your Home Assistant box with HUE compatible apps
 - You've replaced the Official HUE bridge with ZHA/zigbee2mqtt and you miss some original HUE features.
 - You'd like to sync your lights with your TV/game (e.g. HUE Sync, Ambilight+HUE).
 
-## How ro run/install/use this thing ?
+## How to run/install/use this thing ?
 - Add the custom repository to the Home Assistant supervisor's add-on store: 
-  https://github.com/marcelveldt/hassio-addons-repo
+  https://github.com/hass-emulated-hue/hassio-repo
 - Install the Emulated HUE addon from the addon-store
 - Start the newly installed addon and it will work instantly
 
