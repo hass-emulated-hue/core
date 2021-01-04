@@ -21,11 +21,9 @@ from emulated_hue.utils import (
 
 LOGGER = logging.getLogger(__name__)
 
-DESCRIPTION_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "description.xml"
-)
-
-CLIP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "clip.html")
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_static")
+DESCRIPTION_FILE = os.path.join(STATIC_DIR, "description.xml")
+CLIP_FILE = os.path.join(STATIC_DIR, "clip.html")
 
 
 class ClassRouteTableDef(web.RouteTableDef):
@@ -563,6 +561,12 @@ class HueApi:
     async def async_get_clip_debugger(self, request: web.Request):
         """Serve the CLIP Debugger."""
         return web.Response(text=self._clip_html, content_type="text/html")
+
+    @routes.get("/favicon.ico")
+    @check_request(False)
+    async def async_get_favicon(self, request: web.Request):
+        """Serve the Favicon."""
+        return web.FileResponse(os.path.join(STATIC_DIR, "favicon.ico"))
 
     @routes.get("/robots.txt")
     @check_request(False)
