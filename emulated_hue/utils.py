@@ -103,6 +103,7 @@ def send_error_response(address: str, description: str, type: int) -> web.Respon
         ]
     return send_json_response(response)
 
+
 def load_json(filename: str) -> dict:
     """Load JSON from file."""
     try:
