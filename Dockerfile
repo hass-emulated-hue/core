@@ -24,7 +24,7 @@ FROM ghcr.io/hass-emulated-hue/base-image
 ARG BUILD_VERSION
 
 # Copy root filesystem
-COPY --from=downloader /base/rootfs/ /
+COPY --from=s6-base-downloader /base/rootfs/ /
 # Copy app
 COPY emulated_hue emulated_hue
 
