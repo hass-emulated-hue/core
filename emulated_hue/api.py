@@ -23,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_static")
 DESCRIPTION_FILE = os.path.join(STATIC_DIR, "description.xml")
-CLIP_FILE = os.path.join(STATIC_DIR, "clip.html")
 
 
 class ClassRouteTableDef(web.RouteTableDef):
@@ -107,9 +106,6 @@ class HueApi:
         self._new_lights = {}
         with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
             self._description_xml = fdesc.read()
-
-        with open(CLIP_FILE, encoding="utf-8") as fdesc:
-            self._clip_html = fdesc.read()
 
     async def async_setup(self):
         """Async set-up of the webserver."""
