@@ -91,16 +91,9 @@ def send_success_response(
 
 def send_error_response(address: str, description: str, type: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
-    response = \
-        [
-            {
-                "error": {
-                    "address": address,
-                    "description": description,
-                    "type": type,
-                }
-            }
-        ]
+    response = [
+        {"error": {"address": address, "description": description, "type": type}}
+    ]
     return send_json_response(response)
 
 
