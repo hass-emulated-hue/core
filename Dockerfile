@@ -10,8 +10,8 @@ FROM alpine:latest as s6-base-downloader
 
 WORKDIR /base
 
-RUN wget -O base.tar.gz https://github.com/hass-emulated-hue/s6-overlay-base/archive/master.tar.gz \
-    && tar zxvf base.tar.gz --strip 1 -C .
+RUN wget -O /tmp/base.tar.gz https://github.com/hass-emulated-hue/s6-overlay-base/archive/master.tar.gz \
+    && tar zxvf /tmp/base.tar.gz --strip 1 -C .
 
 
 #####################################################################
