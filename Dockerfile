@@ -9,6 +9,7 @@ ARG BUILD_VERSION
 FROM alpine:latest as s6-base-downloader
 
 RUN wget -O /tmp/base.tar.gz https://github.com/hass-emulated-hue/s6-overlay-base/archive/master.tar.gz \
+    && mkdir /base
     && tar zxvf /tmp/base.tar.gz --strip 1 -C /base
 
 
