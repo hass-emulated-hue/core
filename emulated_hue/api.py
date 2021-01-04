@@ -126,8 +126,10 @@ class HueApi:
         # add all routes defined with decorator
         routes.add_class_routes(self)
         app.add_routes(routes)
-        # Add catch-all handler for unknown requests
-        app.router.add_route("*", "/{tail:.*}", self.async_unknown_request)
+        # Add catch-all handler for unknown requests to api
+        app.router.add_route("*", "/api/{tail:.*}", self.async_unknown_request)
+        # static files hosting
+        app.router.add_static("/", STATIC_DIR, append_version=True)
         self.runner = web.AppRunner(app, access_log=None)
         await self.runner.setup()
 
@@ -554,25 +556,6 @@ class HueApi:
     async def async_get_timezones(self, request: web.Request):
         """Return all timezones."""
         return send_json_response(self.config.definitions["timezones"])
-
-    # Static Content Begin
-    @routes.get("/clip.html")
-    @check_request(False)
-    async def async_get_clip_debugger(self, request: web.Request):
-        """Serve the CLIP Debugger."""
-        return web.Response(text=self._clip_html, content_type="text/html")
-
-    @routes.get("/favicon.ico")
-    @check_request(False)
-    async def async_get_favicon(self, request: web.Request):
-        """Serve the Favicon."""
-        return web.FileResponse(os.path.join(STATIC_DIR, "favicon.ico"))
-
-    @routes.get("/robots.txt")
-    @check_request(False)
-    async def async_get_robots_txt(self, request: web.Request):
-        """Serve robots.txt."""
-        return web.Response(text=const.ROBOTS_TXT, content_type="text/plain")
 
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
