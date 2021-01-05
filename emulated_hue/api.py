@@ -642,8 +642,8 @@ class HueApi:
             "uniqueid": light_config["uniqueid"],
             "swupdate": {
                 "state": "noupdates",
-                "lastinstall": datetime.datetime.utcnow().isoformat().split(".")[0]
-            }
+                "lastinstall": datetime.datetime.utcnow().isoformat().split(".")[0],
+            },
         }
 
         # Determine correct Hue type from HA supported features
