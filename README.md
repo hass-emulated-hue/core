@@ -4,9 +4,8 @@ Convert your Home Assistant instance to a fully functional Philips HUE bridge!
 Control all lights connected to your Home Assistant box with HUE compatible apps/devices like the official Hue app, Hue essentials and Philips Ambilight+Hue etc.
 
 ## Features
-- Rooms will be auto created based on areas created in Home Assistant.
-- All lights will be supported with full functionality.
-- For now only support for light entities as it's primary use case is to give you HUE control over your HASS lights.
+- Your Areas in Home Assistant will be auto created as rooms in the HUE app.
+- All your Home Assistant lights will be supported with full functionality.
 - Allow you to create your own HUE groups and scenes.
 - Secured connection and authentication flow (unlike default emulated hue component in hass).
 - Fully emulates a "V2" HUE bridge.
@@ -53,3 +52,17 @@ The next step we have in mind is, if you own official HUE lights connected to ZH
 
 Please use the Github issue tracker for feature requests (including motivation) and off course for reporting any issues you may find!
 
+
+## FAQ
+
+*I do not want to have all my Home Assistant lights imported to HUE*
+By default all your Home Assistant lights and areas will be imported to get you started quickly but you can customize this.
+In your Home Assistant config directory you'll find a folder for emulated_hue witha file called emulated_hue.json.
+In that file you can disable lights or groups by setting enabled to false.
+You can also delete a light in the HUE app. That will also mark the light as disabled.
+
+*When I enable Entertainment mode my light/platform gets overwhelmed with commands*
+Entertainment mode is heavy. It will send multiple commands per second to each light. If you hardware can't cope up with this we have an advanced little setting hidden in the above mentioned emulated_hue.json config file called "entertainment_throttle". Set a value (in milliseconds) to throttle requests to this light. A good value to start with is 500. Remember to stop the addon before you start editing this file.
+
+*I run Home Assistant manually without all the supervisor stuff, can I still run this thing ?*
+Sure, just run the docker image manually. We'll provide you with some sampel run commands soon.
