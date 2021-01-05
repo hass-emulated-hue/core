@@ -1,4 +1,5 @@
 """Support for a Hue API to control Home Assistant."""
+import copy
 import datetime
 import functools
 import inspect
@@ -9,6 +10,7 @@ import ssl
 from typing import Any, AsyncGenerator, Optional
 
 import emulated_hue.const as const
+import tzlocal
 from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
@@ -436,8 +438,22 @@ class HueApi:
         # just log this request and return succes
         LOGGER.debug("Change config called with params: %s", request_data)
         for key, value in request_data.items():
-            await self.config.async_set_storage_value("bridge_config", key, value)
+            if key == "linkbutton" and value and not self.config.link_mode_enabled:
+                await self.config.async_enable_link_mode()
+            else:
+                await self.config.async_set_storage_value("bridge_config", key, value)
         return send_success_response(request.path, request_data, username)
+
+    async def async_scene_to_full_state(self) -> dict:
+        """Return scene data, removing lightstates and adds group lights instead."""
+        groups = await self.__async_get_all_groups()
+        scenes = await self.config.async_get_storage_value("scenes", default={})
+        scenes = copy.deepcopy(scenes)
+        for scene_num, scene_data in scenes.items():
+            scenes_group = scene_data["group"]
+            del scene_data["lightstates"]
+            scene_data["lights"] = groups[scenes_group]["lights"]
+        return scenes
 
     @routes.get("/api/{username}")
     @check_request()
@@ -449,7 +465,7 @@ class HueApi:
                 "schedules", default={}
             ),
             "rules": await self.config.async_get_storage_value("rules", default={}),
-            "scenes": await self.config.async_get_storage_value("scenes", default={}),
+            "scenes": await self.async_scene_to_full_state(),
             "resourcelinks": await self.config.async_get_storage_value(
                 "resourcelinks", default={}
             ),
@@ -638,6 +654,10 @@ class HueApi:
             "name": light_config["name"]
             or entity["attributes"].get("friendly_name", ""),
             "uniqueid": light_config["uniqueid"],
+            "swupdate": {
+                "state": "noupdates",
+                "lastinstall": datetime.datetime.utcnow().isoformat().split(".")[0],
+            },
         }
 
         # Determine correct Hue type from HA supported features
@@ -663,6 +683,12 @@ class HueApi:
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
+                    const.HUE_ATTR_HUE: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[0],
+                    const.HUE_ATTR_SAT: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[1],
                     const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
                     const.HUE_ATTR_EFFECT: entity_attr.get(
                         const.HASS_ATTR_EFFECT, "none"
@@ -683,6 +709,12 @@ class HueApi:
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
+                    const.HUE_ATTR_HUE: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[0],
+                    const.HUE_ATTR_SAT: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[1],
                     const.HUE_ATTR_EFFECT: "none",
                 }
             )
@@ -875,7 +907,7 @@ class HueApi:
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
                     "localtime": datetime.datetime.now().isoformat().split(".")[0],
                     "timezone": self.config.get_storage_value(
-                        "bridge_config", "timezone", "Europe/Amsterdam"
+                        "bridge_config", "timezone", tzlocal.get_localzone().zone
                     ),
                     "whitelist": await self.config.async_get_storage_value(
                         "users", default={}

@@ -14,6 +14,8 @@ DEFAULT_THROTTLE_MS = 0
 
 if os.path.isfile("/usr/local/opt/openssl@1.1/bin/openssl"):
     OPENSSL_BIN = "/usr/local/opt/openssl@1.1/bin/openssl"
+elif os.name == "nt":
+    OPENSSL_BIN = "C:/Program Files/Git/usr/bin/openssl.exe"
 else:
     OPENSSL_BIN = "openssl"
 

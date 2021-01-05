@@ -22,6 +22,7 @@
         "time": "connected"
       },
       "netmask": "255.255.255.0",
+      "proxyaddress": "none",
       "proxyport": 0,
       "portalconnection": "connected",
       "portalservices": true,
