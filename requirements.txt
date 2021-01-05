@@ -7,3 +7,4 @@ cryptography==3.3.1
 hass-client==0.0.9
 uvloop==0.14.0; sys_platform != 'win32'
 zeroconf==0.28.7
+tzlocal==2.1

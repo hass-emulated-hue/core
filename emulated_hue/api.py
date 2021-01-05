@@ -8,8 +8,10 @@ import os
 import ssl
 from typing import Any, AsyncGenerator, Optional
 
-import emulated_hue.const as const
+import tzlocal
 from aiohttp import web
+
+import emulated_hue.const as const
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 from emulated_hue.utils import (
@@ -638,6 +640,10 @@ class HueApi:
             "name": light_config["name"]
             or entity["attributes"].get("friendly_name", ""),
             "uniqueid": light_config["uniqueid"],
+            "swupdate": {
+                "state": "noupdates",
+                "lastinstall": datetime.datetime.utcnow().isoformat().split(".")[0]
+            }
         }
 
         # Determine correct Hue type from HA supported features
@@ -663,6 +669,12 @@ class HueApi:
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
+                    const.HUE_ATTR_HUE: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[0],
+                    const.HUE_ATTR_SAT: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[1],
                     const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
                     const.HUE_ATTR_EFFECT: entity_attr.get(
                         const.HASS_ATTR_EFFECT, "none"
@@ -682,6 +694,9 @@ class HueApi:
                     const.HUE_ATTR_COLORMODE: "xy",  # TODO: remember last command to set colormode
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
+                    ),
+                    const.HUE_ATTR_HUE: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
                     ),
                     const.HUE_ATTR_EFFECT: "none",
                 }
@@ -875,7 +890,7 @@ class HueApi:
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
                     "localtime": datetime.datetime.now().isoformat().split(".")[0],
                     "timezone": self.config.get_storage_value(
-                        "bridge_config", "timezone", "Europe/Amsterdam"
+                        "bridge_config", "timezone", tzlocal.get_localzone().zone
                     ),
                     "whitelist": await self.config.async_get_storage_value(
                         "users", default={}
