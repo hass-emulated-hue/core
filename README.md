@@ -79,7 +79,7 @@ Sure, just run the docker image manually. We'll provide you with some sample run
 diyHue was created to be a hub on it's own. You can directly connect your lights and devices to it and it. You can see it as a minimal competitor for Home automation solutions like Home Assistant. Our approach is that we want to use Home Assistant as the "hub" connected to all our lights and devices. This emulator is just a translator between Home Assistant and the HUE api protocol and does not have any internal logic. 
 
 
-#### How doe sthis thing differ from the default emulated hue component in Home Assistant ?
+#### How does this thing differ from the default emulated hue component in Home Assistant ?
 The emulated Hue component in Home Assistant is a very basic implemention of the HUE API for the V1 HUE bridge which is soon to be discontinued by Philips. At that time it was meant to get Alexa/Google Home devices working with Home Assistant. In the meanwhile other solutions are available for that so the component is more or less absolute.
 
 
