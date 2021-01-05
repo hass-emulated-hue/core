@@ -72,3 +72,20 @@ Entertainment mode is heavy. It will send multiple commands per second to each l
 
 #### I run Home Assistant manually without all the supervisor stuff, can I still run this thing ?
 Sure, just run the docker image manually. We'll provide you with some sample run commands soon.
+
+
+#### How does this thing differ from the existing solution diyHue ?
+
+diyHue was created to be a hub on it's own. You can directly connect your lights and devices to it and it. You can see it as a minimal competitor for Home automation solutions like Home Assistant. Our approach is that we want to use Home Assistant as the "hub" connected to all our lights and devices. This emulator is just a translator between Home Assistant and the HUE api protocol and does not have any internal logic. 
+
+
+#### How doe sthis thing differ from the default emulated hue component in Home Assistant ?
+The emulated Hue component in Home Assistant is a very basic implemention of the HUE API for the V1 HUE bridge which is soon to be discontinued by Philips. At that time it was meant to get Alexa/Google Home devices working with Home Assistant. In the meanwhile other solutions are available for that so the component is more or less absolute.
+
+
+#### Why is this a addon and not a Home Assistant integration
+Well this project actually started as integration but we ran into some serious trouble:
+1) HUE requires the HUB to be on HTTTP port 80 and HTTPS port 443
+2) The entertainment mode executable is not working with the Alpine docker image from Home Assistant.
+The current approach gives you the flexibility of running the emulated HUE bridge on a diferent machine than HA.
+
