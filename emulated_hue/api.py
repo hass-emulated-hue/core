@@ -8,10 +8,9 @@ import os
 import ssl
 from typing import Any, AsyncGenerator, Optional
 
+import emulated_hue.const as const
 import tzlocal
 from aiohttp import web
-
-import emulated_hue.const as const
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 from emulated_hue.utils import (
