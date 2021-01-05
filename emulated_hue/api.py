@@ -1,4 +1,5 @@
 """Support for a Hue API to control Home Assistant."""
+import copy
 import datetime
 import functools
 import inspect
@@ -440,6 +441,16 @@ class HueApi:
             await self.config.async_set_storage_value("bridge_config", key, value)
         return send_success_response(request.path, request_data, username)
 
+    async def async_scene_to_full_state(self):
+        groups = await self.__async_get_all_groups()
+        scenes = await self.config.async_get_storage_value("scenes", default={})
+        scenes = copy.deepcopy(scenes)
+        for scene_num, scene_data in scenes.items():
+            scenes_group = scene_data["group"]
+            del scene_data["lightstates"]
+            scene_data["lights"] = groups[scenes_group]["lights"]
+        return scenes
+
     @routes.get("/api/{username}")
     @check_request()
     async def get_full_state(self, request: web.Request):
@@ -450,7 +461,7 @@ class HueApi:
                 "schedules", default={}
             ),
             "rules": await self.config.async_get_storage_value("rules", default={}),
-            "scenes": await self.config.async_get_storage_value("scenes", default={}),
+            "scenes": await self.async_scene_to_full_state(),
             "resourcelinks": await self.config.async_get_storage_value(
                 "resourcelinks", default={}
             ),
