@@ -55,14 +55,17 @@ Please use the Github issue tracker for feature requests (including motivation) 
 
 ## FAQ
 
-*I do not want to have all my Home Assistant lights imported to HUE*
+
+**I do not want to have all my Home Assistant lights imported to HUE**
 By default all your Home Assistant lights and areas will be imported to get you started quickly but you can customize this.
 In your Home Assistant config directory you'll find a folder for emulated_hue witha file called emulated_hue.json.
 In that file you can disable lights or groups by setting enabled to false.
 You can also delete a light in the HUE app. That will also mark the light as disabled.
 
-*When I enable Entertainment mode my light/platform gets overwhelmed with commands*
+
+**When I enable Entertainment mode my light/platform gets overwhelmed with commands**
 Entertainment mode is heavy. It will send multiple commands per second to each light. If you hardware can't cope up with this we have an advanced little setting hidden in the above mentioned emulated_hue.json config file called "entertainment_throttle". Set a value (in milliseconds) to throttle requests to this light. A good value to start with is 500. Remember to stop the addon before you start editing this file.
 
-*I run Home Assistant manually without all the supervisor stuff, can I still run this thing ?*
-Sure, just run the docker image manually. We'll provide you with some sampel run commands soon.
+
+**I run Home Assistant manually without all the supervisor stuff, can I still run this thing ?**
+Sure, just run the docker image manually. We'll provide you with some sample run commands soon.
