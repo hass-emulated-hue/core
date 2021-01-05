@@ -438,7 +438,10 @@ class HueApi:
         # just log this request and return succes
         LOGGER.debug("Change config called with params: %s", request_data)
         for key, value in request_data.items():
-            await self.config.async_set_storage_value("bridge_config", key, value)
+            if key == "linkbutton" and value and not self.config.link_mode_enabled:
+                await self.config.async_enable_link_mode()
+            else:
+                await self.config.async_set_storage_value("bridge_config", key, value)
         return send_success_response(request.path, request_data, username)
 
     async def async_scene_to_full_state(self) -> dict:
