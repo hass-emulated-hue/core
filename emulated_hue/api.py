@@ -697,7 +697,10 @@ class HueApi:
                     ),
                     const.HUE_ATTR_HUE: entity_attr.get(
                         const.HASS_ATTR_HS_COLOR, [0, 0]
-                    ),
+                    )[0],
+                    const.HUE_ATTR_SAT: entity_attr.get(
+                        const.HASS_ATTR_HS_COLOR, [0, 0]
+                    )[1],
                     const.HUE_ATTR_EFFECT: "none",
                 }
             )
