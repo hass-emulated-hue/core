@@ -316,7 +316,7 @@ class HueApi:
         username = request.match_info["username"]
         group_conf = await self.config.async_get_storage_value("groups", group_id)
         if not group_conf:
-            return web.Response(status=404)
+            return send_error_response(request.path, "no group config", 404)
         update_dict(group_conf, request_data)
 
         # Hue entertainment support (experimental)
@@ -362,7 +362,7 @@ class HueApi:
         username = request.match_info["username"]
         light_conf = await self.config.async_get_storage_value("lights", light_id)
         if not light_conf:
-            return web.Response(status=404)
+            return send_error_response(request.path, "no light config", 404)
         update_dict(light_conf, request_data)
         return send_success_response(request.path, request_data, username)
 
@@ -401,7 +401,7 @@ class HueApi:
         username = request.match_info["username"]
         local_item = await self.config.async_get_storage_value(itemtype, item_id)
         if not local_item:
-            return web.Response(status=404)
+            return send_error_response(request.path, "no localitem", 404)
         update_dict(local_item, request_data)
         await self.config.async_set_storage_value(itemtype, item_id, local_item)
         return send_success_response(request.path, request_data, username)
@@ -579,7 +579,7 @@ class HueApi:
             LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
         else:
             LOGGER.warning("Invalid/unknown request: %s", request)
-        return web.Response(status=404)
+        return send_error_response(request.path, "unknown request", 404)
 
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
