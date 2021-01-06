@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:experimental
 ARG BUILD_VERSION
 
 #####################################################################
@@ -29,8 +28,3 @@ COPY --from=s6-base-downloader /base/rootfs/ /
 COPY emulated_hue emulated_hue
 
 LABEL io.hass.version=${BUILD_VERSION}
-
-ENV DEBUG=false
-ENV VERBOSE=false
-ENV HASS_URL=""
-ENV HASS_TOKEN=""
