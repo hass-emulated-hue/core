@@ -76,11 +76,15 @@ def send_json_response(data) -> web.Response:
     )
 
 
+# TODO: figure out correct response for:
+# PUT: /api/username/lights/light_id
+# {'config': {'startup': {'mode': 'safety'}}}
 def send_success_response(
-    request_path: str, request_data: dict, username: str
+    request_path: str, request_data: dict, username: str = None
 ) -> web.Response:
     """Create success responses for all received keys."""
-    request_path = request_path.replace(f"/api/{username}", "")
+    if username:
+        request_path = request_path.replace(f"/api/{username}", "")
     json_response = []
     for key, val in request_data.items():
         obj_path = f"{request_path}/{key}"

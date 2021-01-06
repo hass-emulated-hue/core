@@ -483,7 +483,7 @@ class HueApi:
                     "name": "Daylight",
                     "type": "Daylight",
                     "modelid": "PHDL00",
-                    "manufacturername": "Philips",
+                    "manufacturername": "Signify Netherlands B.V.",
                     "swversion": "1.0",
                 }
             },
@@ -658,6 +658,7 @@ class HueApi:
                 "state": "noupdates",
                 "lastinstall": datetime.datetime.utcnow().isoformat().split(".")[0],
             },
+            "config": light_config["config"],
         }
 
         # Determine correct Hue type from HA supported features
@@ -887,6 +888,17 @@ class HueApi:
                 entity = await self.config.async_entity_by_light_id(light_id)
                 yield entity
 
+    async def __async_whitelist_to_bridge_config(self) -> dict:
+        whitelist = await self.config.async_get_storage_value(
+                        "users", default={}
+                    )
+        whitelist = copy.deepcopy(whitelist)
+        for username, data in whitelist.items():
+            del data["username"]
+            del data["clientkey"]
+        return whitelist
+
+
     async def __async_get_bridge_config(self, full_details: bool = False) -> dict:
         """Return the (virtual) bridge configuration."""
         result = self.hue.config.definitions.get("bridge").get("basic").copy()
@@ -895,13 +907,13 @@ class HueApi:
                 "name": self.config.bridge_name,
                 "mac": self.config.mac_addr,
                 "bridgeid": self.config.bridge_id,
-                "linkbutton": self.config.link_mode_enabled,
             }
         )
         if full_details:
             result.update(self.hue.config.definitions.get("bridge").get("full"))
             result.update(
                 {
+                    "linkbutton": self.config.link_mode_enabled,
                     "ipaddress": self.config.ip_addr,
                     "gateway": self.config.ip_addr,
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
@@ -909,9 +921,7 @@ class HueApi:
                     "timezone": self.config.get_storage_value(
                         "bridge_config", "timezone", tzlocal.get_localzone().zone
                     ),
-                    "whitelist": await self.config.async_get_storage_value(
-                        "users", default={}
-                    ),
+                    "whitelist": await self.__async_whitelist_to_bridge_config(),
                     "zigbeechannel": self.config.get_storage_value(
                         "bridge_config", "zigbeechannel", 25
                     ),
