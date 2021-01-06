@@ -889,15 +889,12 @@ class HueApi:
                 yield entity
 
     async def __async_whitelist_to_bridge_config(self) -> dict:
-        whitelist = await self.config.async_get_storage_value(
-                        "users", default={}
-                    )
+        whitelist = await self.config.async_get_storage_value("users", default={})
         whitelist = copy.deepcopy(whitelist)
         for username, data in whitelist.items():
             del data["username"]
             del data["clientkey"]
         return whitelist
-
 
     async def __async_get_bridge_config(self, full_details: bool = False) -> dict:
         """Return the (virtual) bridge configuration."""

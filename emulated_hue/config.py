@@ -143,10 +143,7 @@ class Config:
                 "function": "mixed",
                 "direction": "omnidirectional",
                 # TODO: find some way to control the actual startup state?
-                "startup": {
-                  "configured": True,
-                  "mode": "safety"
-                }
+                "startup": {"configured": True, "mode": "safety"},
             },
             "entertainment_throttle": 0,
         }
@@ -268,7 +265,9 @@ class Config:
         """Get details for given username."""
         user_data = await self.async_get_storage_value("users", username)
         if user_data:
-            user_data["last use date"] = datetime.datetime.now().isoformat().split(".")[0]
+            user_data["last use date"] = (
+                datetime.datetime.now().isoformat().split(".")[0]
+            )
             await self.async_set_storage_value("users", username, user_data)
         return user_data
 
