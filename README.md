@@ -83,7 +83,7 @@ diyHue was created to be a hub on it's own. You can directly connect your lights
 The emulated Hue component in Home Assistant is a very basic implemention of the HUE API for the V1 HUE bridge which is soon to be discontinued by Philips. At that time it was meant to get Alexa/Google Home devices working with Home Assistant. In the meanwhile other solutions are available for that so the component is more or less absolute.
 
 
-#### Why is this a addon and not a Home Assistant integration
+#### Why is this an addon and not a Home Assistant integration
 Well this project actually started as integration but we ran into some serious trouble:
 1) HUE requires the HUB to be on HTTTP port 80 and HTTPS port 443
 2) The entertainment mode executable is not working with the Alpine docker image from Home Assistant.
