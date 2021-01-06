@@ -512,7 +512,7 @@ class HueApi:
         resp_text = self._description_xml.format(
             self.config.ip_addr,
             self.config.http_port,
-            self.config.bridge_name,
+            f"{self.config.bridge_name} ({self.config.ip_addr})",
             self.config.bridge_serial,
             self.config.bridge_uid,
         )
