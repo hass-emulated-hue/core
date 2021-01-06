@@ -19,7 +19,7 @@ RUN wget -O /tmp/base.tar.gz "https://github.com/hass-emulated-hue/s6-overlay-ba
 #                                                                   #
 #####################################################################
 FROM ghcr.io/hass-emulated-hue/base-image
-# Required to presist build arg
+# Required to persist build arg
 ARG BUILD_VERSION
 
 # Copy root filesystem
