@@ -70,14 +70,29 @@ EXT:
 LOCATION: http://{0}:{1}/description.xml
 SERVER: Linux/3.14.0 UPnP/1.0 IpBridge/1.20.0
 hue-bridgeid: {2}
-ST: uuid:{3}
-USN: uuid:{3}
+ST: {3}
+USN: uuid:{4}
 
 """
 
-        self.upnp_response = (
+        self.upnp_root_response = (
             resp_template.format(
-                config.ip_addr, config.http_port, config.bridge_id, config.bridge_uid
+                config.ip_addr,
+                config.http_port,
+                config.bridge_id,
+                "upnp:rootdevice",
+                f"{config.bridge_uid}::upnp:rootdevice",
+            )
+            .replace("\n", "\r\n")
+            .encode("utf-8")
+        )
+        self.upnp_device_response = (
+            resp_template.format(
+                config.ip_addr,
+                config.http_port,
+                config.bridge_id,
+                "urn:schemas-upnp-org:device:basic:1",
+                config.bridge_uid,
             )
             .replace("\n", "\r\n")
             .encode("utf-8")
@@ -130,11 +145,15 @@ USN: uuid:{3}
                 # because the data object has not been initialized
                 continue
 
-            if "M-SEARCH" in data.decode("utf-8", errors="ignore"):
+            decoded_data = data.decode("utf-8", errors="ignore")
+            if "M-SEARCH" in decoded_data:
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-                resp_socket.sendto(self.upnp_response, addr)
+                if "upnp:rootdevice" in decoded_data:
+                    resp_socket.sendto(self.upnp_root_response, addr)
+                else:
+                    resp_socket.sendto(self.upnp_device_response, addr)
                 LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
