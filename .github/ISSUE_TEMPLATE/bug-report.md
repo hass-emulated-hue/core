@@ -61,7 +61,7 @@ Steps to reproduce the behavior:
 <!-- A clear and concise description of what you expected to happen. -->
 
 **Logs**
-<!-- If applicable, provide output logs. These can be obtained via running `docker logs diyHue` -->
+<!-- If applicable, provide output logs. -->
 
 
 **Hardware Info:**
