@@ -595,7 +595,11 @@ class HueApi:
 
             # set the brightness, hue, saturation and color temp
             if const.HUE_ATTR_BRI in request_data:
-                data[const.HASS_ATTR_BRIGHTNESS] = request_data[const.HUE_ATTR_BRI]
+                # Prevent 0 brightness from turning light off
+                request_bri = request_data[const.HUE_ATTR_BRI]
+                if request_bri < const.HASS_ATTR_BRI_MIN:
+                    request_bri = const.HASS_ATTR_BRI_MIN
+                data[const.HASS_ATTR_BRIGHTNESS] = request_bri
 
             if const.HUE_ATTR_HUE in request_data or const.HUE_ATTR_SAT in request_data:
                 hue = request_data.get(const.HUE_ATTR_HUE, 0)
