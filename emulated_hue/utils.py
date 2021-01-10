@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
@@ -95,6 +96,8 @@ def send_success_response(
 
 def send_error_response(address: str, description: str, type: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
+    address = re.sub("(/api/)[^/]*", "", address)
+    address = "/" if address == "" else address
     response = [
         {"error": {"address": address, "description": description, "type": type}}
     ]
