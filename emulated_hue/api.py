@@ -286,6 +286,7 @@ class HueApi:
         """Handle requests to perform action on a group of lights/room."""
         group_id = request.match_info["group_id"]
         username = request.match_info["username"]
+        group_conf = await self.config.async_get_storage_value("groups", group_id)
         if group_id == "0" and "scene" in request_data:
             # scene request
             scene = await self.config.async_get_storage_value(
@@ -298,6 +299,18 @@ class HueApi:
             # forward request to all group lights
             async for entity in self.__async_get_group_lights(group_id):
                 await self.__async_light_action(entity, request_data)
+        if "stream" in group_conf:
+            # Request streaming stop
+            # Duplicate code here. Method instead?
+            LOGGER.info(
+                "Stop Entertainment mode for group %s - params: %s",
+                group_id,
+                request_data,
+            )
+            if self.streaming_api:
+                # stop service if needed
+                self.streaming_api.stop()
+                self.streaming_api = None
         # Create success responses for all received keys
         return send_success_response(request.path, request_data, username)
 
@@ -328,6 +341,7 @@ class HueApi:
                     group_id,
                     request_data,
                 )
+                del group_conf["stream"]["active"]
                 if not self.streaming_api:
                     user_data = await self.config.async_get_user(username)
                     self.streaming_api = EntertainmentAPI(
@@ -345,7 +359,6 @@ class HueApi:
                     group_id,
                     request_data,
                 )
-                group_conf["stream"] = {"active": False}
                 if self.streaming_api:
                     # stop service if needed
                     self.streaming_api.stop()
@@ -807,7 +820,14 @@ class HueApi:
         # local groups first
         groups = await self.config.async_get_storage_value("groups", default={})
         for group_id, group_conf in groups.items():
+            # no area_id = not hass area
             if "area_id" not in group_conf:
+                if "stream" in group_conf:
+                    group_conf = copy.deepcopy(group_conf)
+                    if self.streaming_api:
+                        group_conf["stream"]["active"] = True
+                    else:
+                        group_conf["stream"]["active"] = False
                 result[group_id] = group_conf
 
         # Hass areas/rooms
