@@ -695,21 +695,20 @@ class HueApi:
             retval["capabilities"]["control"]["ct"]["min"] = ct_min
             ct_max = entity_attr.get("max_mireds", 500)
             retval["capabilities"]["control"]["ct"]["max"] = ct_max
+            # TODO: remember last command to set colormode
+            xy_color = entity_attr.get(const.HASS_ATTR_XY_COLOR, [0, 0])
+            hs_color = entity_attr.get(const.HASS_ATTR_HS_COLOR, [0, 0])
+            if xy_color == [0, 0] or hs_color == [0, 0]:
+                color_mode = const.HUE_ATTR_CT
+            else:
+                color_mode = const.HUE_ATTR_XY
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    # TODO: remember last command to set colormode
-                    const.HUE_ATTR_COLORMODE: const.HUE_ATTR_XY,
-                    # TODO: add hue/sat
-                    const.HUE_ATTR_XY: entity_attr.get(
-                        const.HASS_ATTR_XY_COLOR, [0, 0]
-                    ),
-                    const.HUE_ATTR_HUE: entity_attr.get(
-                        const.HASS_ATTR_HS_COLOR, [0, 0]
-                    )[0],
-                    const.HUE_ATTR_SAT: entity_attr.get(
-                        const.HASS_ATTR_HS_COLOR, [0, 0]
-                    )[1],
+                    const.HUE_ATTR_COLORMODE: color_mode,
+                    const.HUE_ATTR_XY: xy_color,
+                    const.HUE_ATTR_HUE: hs_color[0],
+                    const.HUE_ATTR_SAT: hs_color[1],
                     const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
                     const.HUE_ATTR_EFFECT: entity_attr.get(
                         const.HASS_ATTR_EFFECT, "none"
@@ -726,7 +725,8 @@ class HueApi:
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    const.HUE_ATTR_COLORMODE: "xy",  # TODO: remember last command to set colormode
+                    # TODO: remember last command to set colormode
+                    const.HUE_ATTR_COLORMODE: const.HUE_ATTR_XY,
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
