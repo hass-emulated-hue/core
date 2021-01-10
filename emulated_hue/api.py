@@ -794,6 +794,8 @@ class HueApi:
             item_id = str(i)
             if item_id not in local_items:
                 break
+        if data["type"] in ["LightGroup", "Room", "Zone"] and "class" not in data:
+            data["class"] = "Other"
         await self.config.async_set_storage_value(itemtype, item_id, data)
         return item_id
 

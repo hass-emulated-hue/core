@@ -216,7 +216,7 @@ class Config:
             return main_val.get(subkey, default)
         return main_val
 
-    async def async_set_storage_value(self, key: str, subkey: str, value: str) -> None:
+    async def async_set_storage_value(self, key: str, subkey: str, value: str or dict) -> None:
         """Set a value in persistent storage."""
         needs_save = False
         if subkey is None and self._config.get(key) != value:
@@ -239,6 +239,12 @@ class Config:
         """Delete a value in persistent storage."""
         # if Home Assistant group/area, we just disable it
         if key == "groups" and subkey:
+            # when deleting groups, we must delete all associated scenes
+            scenes = await self.async_get_storage_value("scenes", default={})
+            for scene_num, scene_data in scenes.copy().items():
+                if scene_data["group"] == subkey:
+                    del scenes[scene_num]
+            # simply disable the group if its a HASS group
             group_conf = await self.async_get_group_config(subkey)
             if group_conf["class"] == "Home Assistant":
                 # group_conf = {**group_conf}
