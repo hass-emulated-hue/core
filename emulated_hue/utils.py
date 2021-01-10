@@ -131,3 +131,17 @@ def save_json(filename: str, data: dict):
             file_obj.write(json_data)
     except IOError:
         LOGGER.exception("Failed to serialize to JSON: %s", filename)
+
+
+def entity_attributes_to_int(attributes: dict):
+    """Convert entity attribute floats to int."""
+    for attr_name, attr_data in attributes.items():
+        if attr_name == "xy_color":
+            continue
+        if isinstance(attr_data, float):
+            attributes[attr_name] = int(attr_data)
+        elif isinstance(attr_data, list):
+            for i, value in enumerate(attr_data):
+                if isinstance(value, float):
+                    attr_data[i] = int(value)
+    return attributes

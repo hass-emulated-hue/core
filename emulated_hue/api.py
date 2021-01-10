@@ -15,6 +15,7 @@ from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 from emulated_hue.utils import (
+    entity_attributes_to_int,
     send_error_response,
     send_json_response,
     send_success_response,
@@ -635,7 +636,7 @@ class HueApi:
         self, entity: dict, light_config: Optional[dict] = None
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
-        entity_attr = entity["attributes"]
+        entity_attr = entity_attributes_to_int(entity["attributes"])
         entity_features = entity["attributes"].get(
             const.HASS_ATTR_SUPPORTED_FEATURES, 0
         )
