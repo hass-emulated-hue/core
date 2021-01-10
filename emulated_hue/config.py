@@ -245,7 +245,7 @@ class Config:
             scenes = await self.async_get_storage_value("scenes", default={})
             for scene_num, scene_data in scenes.copy().items():
                 if scene_data["group"] == subkey:
-                    del scenes[scene_num]
+                    await self.async_delete_storage_value("scenes", scene_num)
             # simply disable the group if its a HASS group
             group_conf = await self.async_get_group_config(subkey)
             if group_conf["class"] == "Home Assistant":
