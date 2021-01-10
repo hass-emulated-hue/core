@@ -72,9 +72,9 @@ def update_dict(dict1, dict2):
 
 def send_json_response(data) -> web.Response:
     """Send json response in unicode format instead of converting to ascii."""
-    return web.Response(
-        text=json.dumps(data, ensure_ascii=False), content_type="application/json"
-    )
+    response = bytearray(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    response.append(0x00)
+    return web.Response(text=response.decode(), content_type="application/json")
 
 
 # TODO: figure out correct response for:
