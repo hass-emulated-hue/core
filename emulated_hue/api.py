@@ -673,7 +673,7 @@ class HueApi:
             prev_data.get(const.HUE_ATTR_BRI, 0)
             == light_data.get(const.HUE_ATTR_BRI, 0)
             and prev_data.get(const.HUE_ATTR_HUE, 0)
-            == light_data.get(const.HUE_ATTR_HUE, (0, 0))
+            == light_data.get(const.HUE_ATTR_HUE, 0)
             and prev_data.get(const.HUE_ATTR_SAT, 0)
             == light_data.get(const.HUE_ATTR_SAT, 0)
             and prev_data.get(const.HUE_ATTR_CT, 0)
