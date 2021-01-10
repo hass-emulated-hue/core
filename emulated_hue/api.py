@@ -80,7 +80,12 @@ def check_request(check_user=True, log_request=True):
             # check and unpack (json) body if needed
             if request.method in ["PUT", "POST"]:
                 try:
-                    request_data = await request.json()
+                    request_data = await request.text()
+                    # clean request_data for weird apps like f.lux
+                    request_data = (
+                        request_data.encode("utf-8").rstrip(b"\x00").decode("utf-8")
+                    )
+                    request_data = json.loads(request_data)
                 except ValueError:
                     request_data = await request.text()
                 LOGGER.debug(request_data)
@@ -121,6 +126,10 @@ class HueApi:
             "GET", "/api/{username}/config/", self.async_get_bridge_config
         )
         app.router.add_route("GET", "/api/config/", self.async_get_bridge_config)
+        app.router.add_route("GET", "/api", self.async_unknown_get)
+        app.router.add_route("GET", "/api/", self.async_unknown_get)
+        app.router.add_route("GET", "/api//lights", self.async_unknown_get)
+        app.router.add_route("GET", "/api//lights/", self.async_unknown_get)
         # add all routes defined with decorator
         routes.add_class_routes(self)
         app.add_routes(routes)
@@ -173,6 +182,10 @@ class HueApi:
         await self.https_site.stop()
         if self.streaming_api:
             self.streaming_api.stop()
+
+    async def async_unknown_get(self, request: web.Request):
+        """Return error message for unknown GET request."""
+        return send_error_response("/", "method, GET, not available for resource, /", 4)
 
     @routes.post("/api")
     @check_request(False)
