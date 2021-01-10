@@ -439,8 +439,10 @@ class HueApi:
         # just log this request and return succes
         LOGGER.debug("Change config called with params: %s", request_data)
         for key, value in request_data.items():
-            if key == "linkbutton" and value and not self.config.link_mode_enabled:
-                await self.config.async_enable_link_mode()
+            if key == "linkbutton" and value:
+                # prevent storing value in config
+                if not self.config.link_mode_enabled:
+                    await self.config.async_enable_link_mode()
             else:
                 await self.config.async_set_storage_value("bridge_config", key, value)
         return send_success_response(request.path, request_data, username)
