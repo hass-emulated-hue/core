@@ -9,7 +9,7 @@ LOGGER = logging.getLogger(__name__)
 
 COLOR_TYPE_RGB = "RGB"
 COLOR_TYPE_XY_BR = "XY Brightness"
-DEFAULT_THROTTLE_MS = 0
+DEFAULT_ENTERTAINMENT_THROTTLE_MS = 0
 
 
 if os.path.isfile("/usr/local/opt/openssl@1.1/bin/openssl"):
@@ -98,7 +98,7 @@ class EntertainmentAPI:
         # TODO: can we send udp messages to supported lights such as esphome ?
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
-        throttle_ms = light_conf.get("entertainment_throttle", DEFAULT_THROTTLE_MS)
+        throttle_ms = light_conf.get("entertainment_throttle", DEFAULT_ENTERTAINMENT_THROTTLE_MS)
         if not self.__update_allowed(light_id, light_data, throttle_ms):
             return
 
