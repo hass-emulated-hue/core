@@ -145,7 +145,7 @@ class Config:
                 # TODO: find some way to control the actual startup state?
                 "startup": {"configured": True, "mode": "safety"},
             },
-            "throttle": 0,
+            "entertainment_throttle": 0,
         }
         await self.async_set_storage_value("lights", next_light_id, light_config)
         return next_light_id

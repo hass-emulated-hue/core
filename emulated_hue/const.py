@@ -1,7 +1,5 @@
 """Emulated HUE Bridge for HomeAssistant - constants."""
 
-DEFAULT_THROTTLE_MS = 0
-
 HASS_ATTR_BRIGHTNESS = "brightness"
 HASS_ATTR_COLOR_TEMP = "color_temp"
 HASS_ATTR_XY_COLOR = "xy_color"
