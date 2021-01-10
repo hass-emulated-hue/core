@@ -27,7 +27,6 @@ LOGGER = logging.getLogger(__name__)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_static")
 DESCRIPTION_FILE = os.path.join(STATIC_DIR, "description.xml")
-DEFAULT_THROTTLE_MS = 0
 
 
 class ClassRouteTableDef(web.RouteTableDef):
@@ -606,7 +605,7 @@ class HueApi:
 
         light_id = await self.config.async_entity_id_to_light_id(entity["entity_id"])
         light_conf = await self.config.async_get_light_config(light_id)
-        throttle_ms = light_conf.get("throttle", DEFAULT_THROTTLE_MS)
+        throttle_ms = light_conf.get("throttle", const.DEFAULT_THROTTLE_MS)
 
         # Construct what we need to send to the service
         data = {const.HASS_ATTR_ENTITY_ID: entity["entity_id"]}
