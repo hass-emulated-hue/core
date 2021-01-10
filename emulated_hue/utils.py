@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
@@ -76,11 +77,15 @@ def send_json_response(data) -> web.Response:
     )
 
 
+# TODO: figure out correct response for:
+# PUT: /api/username/lights/light_id
+# {'config': {'startup': {'mode': 'safety'}}}
 def send_success_response(
-    request_path: str, request_data: dict, username: str
+    request_path: str, request_data: dict, username: str = None
 ) -> web.Response:
     """Create success responses for all received keys."""
-    request_path = request_path.replace(f"/api/{username}", "")
+    if username:
+        request_path = request_path.replace(f"/api/{username}", "")
     json_response = []
     for key, val in request_data.items():
         obj_path = f"{request_path}/{key}"
@@ -91,6 +96,8 @@ def send_success_response(
 
 def send_error_response(address: str, description: str, type: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
+    address = re.sub("(/api/)[^/]*", "", address)
+    address = "/" if address == "" else address
     response = [
         {"error": {"address": address, "description": description, "type": type}}
     ]
@@ -124,3 +131,17 @@ def save_json(filename: str, data: dict):
             file_obj.write(json_data)
     except IOError:
         LOGGER.exception("Failed to serialize to JSON: %s", filename)
+
+
+def entity_attributes_to_int(attributes: dict):
+    """Convert entity attribute floats to int."""
+    for attr_name, attr_data in attributes.items():
+        if attr_name == "xy_color":
+            continue
+        if isinstance(attr_data, float):
+            attributes[attr_name] = int(attr_data)
+        elif isinstance(attr_data, list):
+            for i, value in enumerate(attr_data):
+                if isinstance(value, float):
+                    attr_data[i] = int(value)
+    return attributes
