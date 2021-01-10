@@ -142,6 +142,8 @@ class Config:
                 "archetype": "sultanbulb",
                 "function": "mixed",
                 "direction": "omnidirectional",
+                # TODO: find some way to control the actual startup state?
+                "startup": {"configured": True, "mode": "safety"},
             },
             "entertainment_throttle": 0,
             "throttle": 0,
@@ -215,7 +217,9 @@ class Config:
             return main_val.get(subkey, default)
         return main_val
 
-    async def async_set_storage_value(self, key: str, subkey: str, value: str) -> None:
+    async def async_set_storage_value(
+        self, key: str, subkey: str, value: str or dict
+    ) -> None:
         """Set a value in persistent storage."""
         needs_save = False
         if subkey is None and self._config.get(key) != value:
@@ -238,6 +242,12 @@ class Config:
         """Delete a value in persistent storage."""
         # if Home Assistant group/area, we just disable it
         if key == "groups" and subkey:
+            # when deleting groups, we must delete all associated scenes
+            scenes = await self.async_get_storage_value("scenes", default={})
+            for scene_num, scene_data in scenes.copy().items():
+                if scene_data["group"] == subkey:
+                    await self.async_delete_storage_value("scenes", scene_num)
+            # simply disable the group if its a HASS group
             group_conf = await self.async_get_group_config(subkey)
             if group_conf["class"] == "Home Assistant":
                 # group_conf = {**group_conf}
@@ -262,7 +272,13 @@ class Config:
 
     async def async_get_user(self, username: str) -> dict:
         """Get details for given username."""
-        return await self.async_get_storage_value("users", username)
+        user_data = await self.async_get_storage_value("users", username)
+        if user_data:
+            user_data["last use date"] = (
+                datetime.datetime.now().isoformat().split(".")[0]
+            )
+            await self.async_set_storage_value("users", username, user_data)
+        return user_data
 
     async def async_create_user(self, devicetype: str) -> dict:
         """Create a new user for the api access."""
@@ -275,12 +291,12 @@ class Config:
             if item["name"] == devicetype:
                 return item
         # create username and clientkey with uuid module
-        username = str(uuid.uuid4()).replace("-", "")[:20]
-        clientkey = str(uuid.uuid4()).replace("-", "")
+        username = str(uuid.uuid4())
+        clientkey = str(uuid.uuid4()).replace("-", "").upper()
         user_obj = {
             "name": devicetype,
             "clientkey": clientkey,
-            "create date": datetime.datetime.now().strftime("%Y-%M-%DT%H:%M:%S"),
+            "create date": datetime.datetime.now().isoformat().split(".")[0],
             "username": username,
         }
         await self.async_set_storage_value("users", username, user_obj)
