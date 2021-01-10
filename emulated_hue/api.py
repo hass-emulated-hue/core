@@ -763,12 +763,24 @@ class HueApi:
                 if device["sw_version"]:
                     retval["swversion"] = device["sw_version"]
                 if device["identifiers"]:
-                    # prefer real zigbee address if we have that
-                    # might come in handy later when we want to
-                    # send entertainment packets to the zigbee mesh
-                    for key, value in device["identifiers"]:
-                        if key == "zha":
-                            retval["uniqueid"] = value
+                    identifiers = device["identifiers"]
+                    if isinstance(identifiers, dict):
+                        # prefer real zigbee address if we have that
+                        # might come in handy later when we want to
+                        # send entertainment packets to the zigbee mesh
+                        for key, value in device["identifiers"]:
+                            if key == "zha":
+                                retval["uniqueid"] = value
+                    elif isinstance(identifiers, list):
+                        # simply grab the first available identifier for now
+                        # may inprove this in the future
+                        for identifier in identifiers:
+                            if isinstance(identifier, list):
+                                retval["uniqueid"] = identifier[-1]
+                                break
+                            elif isinstance(identifier, str):
+                                retval["uniqueid"] = identifier
+                                break
 
         return retval
 
