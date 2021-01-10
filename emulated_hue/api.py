@@ -648,7 +648,9 @@ class HueApi:
                 transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 10
             data[const.HASS_ATTR_TRANSITION] = transitiontime
         else:
-            data[const.HASS_ATTR_TRANSITION] = 0.4 if throttle_ms <= 400 else throttle_ms / 1000
+            data[const.HASS_ATTR_TRANSITION] = (
+                0.4 if throttle_ms <= 400 else throttle_ms / 1000
+            )
 
         # execute service
         await self.hass.async_call_service(const.HASS_DOMAIN_LIGHT, service, data)
@@ -658,21 +660,31 @@ class HueApi:
     ) -> bool:
         """Minimalistic form of throttling, only allow updates to a light within a timespan."""
 
-        # check if data changed
-        # when not using udp no need to send same light command again
         prev_data = self._prev_data.get(light_id, {})
 
         # force to update if power state changed
-        if prev_data.get(const.HASS_STATE_ON, True) != light_data.get(const.HASS_STATE_ON, True):
+        if prev_data.get(const.HASS_STATE_ON, True) != light_data.get(
+            const.HASS_STATE_ON, True
+        ):
             return True
-        if prev_data.get(const.HUE_ATTR_BRI, 0) == light_data.get(const.HUE_ATTR_BRI, 0)\
-                and prev_data.get(const.HUE_ATTR_HUE, 0) == light_data.get(const.HUE_ATTR_HUE, (0, 0)) \
-                and prev_data.get(const.HUE_ATTR_SAT, 0) == light_data.get(const.HUE_ATTR_SAT, 0) \
-                and prev_data.get(const.HUE_ATTR_CT, 0) == light_data.get(const.HUE_ATTR_CT, 0)\
-                and prev_data.get(const.HUE_ATTR_XY, [0, 0]) == light_data.get(const.HUE_ATTR_XY, [0, 0]):
+        # check if data changed
+        # when not using udp no need to send same light command again
+        if (
+            prev_data.get(const.HUE_ATTR_BRI, 0)
+            == light_data.get(const.HUE_ATTR_BRI, 0)
+            and prev_data.get(const.HUE_ATTR_HUE, 0)
+            == light_data.get(const.HUE_ATTR_HUE, (0, 0))
+            and prev_data.get(const.HUE_ATTR_SAT, 0)
+            == light_data.get(const.HUE_ATTR_SAT, 0)
+            and prev_data.get(const.HUE_ATTR_CT, 0)
+            == light_data.get(const.HUE_ATTR_CT, 0)
+            and prev_data.get(const.HUE_ATTR_XY, [0, 0])
+            == light_data.get(const.HUE_ATTR_XY, [0, 0])
+        ):
             return False
 
         self._prev_data[light_id] = light_data.copy()
+
         # check throttle timestamp so light commands are only sent once every X milliseconds
         # this is to not overload a light implementation in Home Assistant
         if not throttle_ms:
