@@ -216,7 +216,9 @@ class Config:
             return main_val.get(subkey, default)
         return main_val
 
-    async def async_set_storage_value(self, key: str, subkey: str, value: str or dict) -> None:
+    async def async_set_storage_value(
+        self, key: str, subkey: str, value: str or dict
+    ) -> None:
         """Set a value in persistent storage."""
         needs_save = False
         if subkey is None and self._config.get(key) != value:
