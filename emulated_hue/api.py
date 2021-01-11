@@ -677,10 +677,11 @@ class HueApi:
 
         prev_data = self._prev_data.get(light_id, {})
 
-        # force to update if power state changed
-        if prev_data.get(const.HASS_STATE_ON, True) != light_data.get(
+        # force to update if power state changed or no prev_data
+        if not prev_data or prev_data.get(const.HASS_STATE_ON, True) != light_data.get(
             const.HASS_STATE_ON, True
         ):
+            self._prev_data[light_id] = light_data.copy()
             return True
         # check if data changed
         # when not using udp no need to send same light command again
