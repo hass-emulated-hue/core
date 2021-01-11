@@ -615,7 +615,7 @@ class HueApi:
         # throttle command to light
         data_with_power = request_data.copy()
         data_with_power[const.HASS_STATE_ON] = power_on
-        if not self.__update_allowed(light_id, data_with_power, throttle_ms):
+        if not self.__update_allowed(entity, data_with_power, throttle_ms):
             return
 
         service = (
@@ -671,17 +671,17 @@ class HueApi:
         await self.hass.async_call_service(const.HASS_DOMAIN_LIGHT, service, data)
 
     def __update_allowed(
-        self, light_id: str, light_data: dict, throttle_ms: int
+        self, entity: dict, light_data: dict, throttle_ms: int
     ) -> bool:
         """Minimalistic form of throttling, only allow updates to a light within a timespan."""
 
-        prev_data = self._prev_data.get(light_id, {})
+        prev_data = self._prev_data.get(entity["entity_id"], {})
 
-        # force to update if power state changed or no prev_data
-        if not prev_data or prev_data.get(const.HASS_STATE_ON, True) != light_data.get(
+        # force to update if power state changed
+        if not prev_data or (entity["state"] == const.HASS_STATE_ON) != light_data.get(
             const.HASS_STATE_ON, True
         ):
-            self._prev_data[light_id] = light_data.copy()
+            self._prev_data[entity["entity_id"]] = light_data.copy()
             return True
         # check if data changed
         # when not using udp no need to send same light command again
@@ -699,18 +699,18 @@ class HueApi:
         ):
             return False
 
-        self._prev_data[light_id] = light_data.copy()
+        self._prev_data[entity["entity_id"]] = light_data.copy()
 
         # check throttle timestamp so light commands are only sent once every X milliseconds
         # this is to not overload a light implementation in Home Assistant
         if not throttle_ms:
             return True
-        prev_timestamp = self._timestamps.get(light_id, 0)
+        prev_timestamp = self._timestamps.get(entity["entity_id"], 0)
         cur_timestamp = int(time.time() * 1000)
         time_diff = abs(cur_timestamp - prev_timestamp)
         if time_diff >= throttle_ms:
             # change allowed only if within throttle limit
-            self._timestamps[light_id] = cur_timestamp
+            self._timestamps[entity["entity_id"]] = cur_timestamp
             return True
         return False
 
