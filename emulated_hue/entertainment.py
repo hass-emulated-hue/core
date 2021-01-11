@@ -16,7 +16,6 @@ LOGGER = logging.getLogger(__name__)
 
 COLOR_TYPE_RGB = "RGB"
 COLOR_TYPE_XY_BR = "XY Brightness"
-DEFAULT_THROTTLE_MS = 0
 
 
 if os.path.isfile("/usr/local/opt/openssl@1.1/bin/openssl"):
@@ -81,11 +80,13 @@ class EntertainmentAPI:
                 # at a rate between 25 and 50 packets per second !
                 color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
                 lights_data = data[16:]
-                # enumerate light states
-                for light_data in chunked(9, lights_data):
-                    self.hue.loop.create_task(
+                # issue command to all lights
+                await asyncio.gather(
+                    *[
                         self.__async_process_light_packet(light_data, color_space)
-                    )
+                        for light_data in chunked(9, lights_data)
+                    ]
+                )
 
         LOGGER.info("HUE Entertainment Service stopped.")
 
@@ -105,7 +106,7 @@ class EntertainmentAPI:
         # TODO: can we send udp messages to supported lights such as esphome ?
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
-        throttle_ms = light_conf.get("entertainment_throttle", DEFAULT_THROTTLE_MS)
+        throttle_ms = light_conf.get("throttle", 0)
         if not self.__update_allowed(light_id, light_data, throttle_ms):
             return
 
