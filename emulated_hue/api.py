@@ -674,6 +674,9 @@ class HueApi:
         self, entity: dict, light_data: dict, throttle_ms: int
     ) -> bool:
         """Minimalistic form of throttling, only allow updates to a light within a timespan."""
+        
+        if not throttle_ms:
+            return True
 
         prev_data = self._prev_data.get(entity["entity_id"], {})
 
@@ -703,8 +706,6 @@ class HueApi:
 
         # check throttle timestamp so light commands are only sent once every X milliseconds
         # this is to not overload a light implementation in Home Assistant
-        if not throttle_ms:
-            return True
         prev_timestamp = self._timestamps.get(entity["entity_id"], 0)
         cur_timestamp = int(time.time() * 1000)
         time_diff = abs(cur_timestamp - prev_timestamp)
