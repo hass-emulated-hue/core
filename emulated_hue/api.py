@@ -674,7 +674,7 @@ class HueApi:
         self, entity: dict, light_data: dict, throttle_ms: int
     ) -> bool:
         """Minimalistic form of throttling, only allow updates to a light within a timespan."""
-        
+
         if not throttle_ms:
             return True
 
