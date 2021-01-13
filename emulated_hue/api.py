@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import ssl
+import time
 from typing import Any, AsyncGenerator, Optional
 
 import emulated_hue.const as const
@@ -107,6 +108,8 @@ class HueApi:
         self.http_site = None
         self.https_site = None
         self._new_lights = {}
+        self._timestamps = {}
+        self._prev_data = {}
         with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
             self._description_xml = fdesc.read()
 
@@ -600,10 +603,21 @@ class HueApi:
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
 
+        light_id = await self.config.async_entity_id_to_light_id(entity["entity_id"])
+        light_conf = await self.config.async_get_light_config(light_id)
+        throttle_ms = light_conf.get("throttle", const.DEFAULT_THROTTLE_MS)
+
         # Construct what we need to send to the service
         data = {const.HASS_ATTR_ENTITY_ID: entity["entity_id"]}
 
         power_on = request_data.get(const.HASS_STATE_ON, True)
+
+        # throttle command to light
+        data_with_power = request_data.copy()
+        data_with_power[const.HASS_STATE_ON] = power_on
+        if not self.__update_allowed(entity, data_with_power, throttle_ms):
+            return
+
         service = (
             const.HASS_SERVICE_TURN_ON if power_on else const.HASS_SERVICE_TURN_OFF
         )
@@ -643,13 +657,73 @@ class HueApi:
         if const.HUE_ATTR_TRANSITION in request_data:
             # Duration of the transition from the light to the new state
             # is given as a multiple of 100ms and defaults to 4 (400ms).
-            transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 10
+            if request_data[const.HUE_ATTR_TRANSITION] * 100 <= throttle_ms:
+                transitiontime = throttle_ms / 1000
+            else:
+                transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 10
             data[const.HASS_ATTR_TRANSITION] = transitiontime
         else:
-            data[const.HASS_ATTR_TRANSITION] = 0.4
+            data[const.HASS_ATTR_TRANSITION] = (
+                0.4 if throttle_ms <= 400 else throttle_ms / 1000
+            )
 
         # execute service
         await self.hass.async_call_service(const.HASS_DOMAIN_LIGHT, service, data)
+
+    def __update_allowed(
+        self, entity: dict, light_data: dict, throttle_ms: int
+    ) -> bool:
+        """Minimalistic form of throttling, only allow updates to a light within a timespan."""
+
+        if not throttle_ms:
+            return True
+
+        prev_data = self._prev_data.get(entity["entity_id"], {})
+
+        # pass initial request to light
+        if not prev_data:
+            self._prev_data[entity["entity_id"]] = light_data.copy()
+            return True
+
+        # force to update if power state changed
+        if (entity["state"] == const.HASS_STATE_ON) != light_data.get(
+            const.HASS_STATE_ON, True
+        ):
+            self._prev_data[entity["entity_id"]].update(light_data)
+            return True
+
+        # check if data changed
+        # when not using udp no need to send same light command again
+        if (
+            prev_data.get(const.HUE_ATTR_BRI, 0)
+            == light_data.get(const.HUE_ATTR_BRI, 0)
+            and prev_data.get(const.HUE_ATTR_HUE, 0)
+            == light_data.get(const.HUE_ATTR_HUE, 0)
+            and prev_data.get(const.HUE_ATTR_SAT, 0)
+            == light_data.get(const.HUE_ATTR_SAT, 0)
+            and prev_data.get(const.HUE_ATTR_CT, 0)
+            == light_data.get(const.HUE_ATTR_CT, 0)
+            and prev_data.get(const.HUE_ATTR_XY, [0, 0])
+            == light_data.get(const.HUE_ATTR_XY, [0, 0])
+            and prev_data.get(const.HUE_ATTR_EFFECT, "none")
+            == light_data.get(const.HUE_ATTR_EFFECT, "none")
+            and prev_data.get(const.HUE_ATTR_ALERT, "none")
+            == light_data.get(const.HUE_ATTR_ALERT, "none")
+        ):
+            return False
+
+        self._prev_data[entity["entity_id"]].update(light_data)
+
+        # check throttle timestamp so light commands are only sent once every X milliseconds
+        # this is to not overload a light implementation in Home Assistant
+        prev_timestamp = self._timestamps.get(entity["entity_id"], 0)
+        cur_timestamp = int(time.time() * 1000)
+        time_diff = abs(cur_timestamp - prev_timestamp)
+        if time_diff >= throttle_ms:
+            # change allowed only if within throttle limit
+            self._timestamps[entity["entity_id"]] = cur_timestamp
+            return True
+        return False
 
     async def __async_entity_to_hue(
         self, entity: dict, light_config: Optional[dict] = None
