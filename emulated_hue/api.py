@@ -680,12 +680,18 @@ class HueApi:
 
         prev_data = self._prev_data.get(entity["entity_id"], {})
 
-        # force to update if power state changed
-        if not prev_data or (entity["state"] == const.HASS_STATE_ON) != light_data.get(
-            const.HASS_STATE_ON, True
-        ):
+        # pass initial request to light
+        if not prev_data:
             self._prev_data[entity["entity_id"]] = light_data.copy()
             return True
+
+        # force to update if power state changed
+        if (entity["state"] == const.HASS_STATE_ON) != light_data.get(
+            const.HASS_STATE_ON, True
+        ):
+            self._prev_data[entity["entity_id"]].update(light_data)
+            return True
+
         # check if data changed
         # when not using udp no need to send same light command again
         if (
@@ -699,10 +705,14 @@ class HueApi:
             == light_data.get(const.HUE_ATTR_CT, 0)
             and prev_data.get(const.HUE_ATTR_XY, [0, 0])
             == light_data.get(const.HUE_ATTR_XY, [0, 0])
+            and prev_data.get(const.HUE_ATTR_EFFECT, "none")
+            == light_data.get(const.HUE_ATTR_EFFECT, "none")
+            and prev_data.get(const.HUE_ATTR_ALERT, "none")
+            == light_data.get(const.HUE_ATTR_ALERT, "none")
         ):
             return False
 
-        self._prev_data[entity["entity_id"]] = light_data.copy()
+        self._prev_data[entity["entity_id"]].update(light_data)
 
         # check throttle timestamp so light commands are only sent once every X milliseconds
         # this is to not overload a light implementation in Home Assistant
