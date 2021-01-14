@@ -290,6 +290,8 @@ class HueApi:
         """Handle requests to perform action on a group of lights/room."""
         group_id = request.match_info["group_id"]
         username = request.match_info["username"]
+        # instead of directly getting groups should have a property
+        # get groups instead so we can easily modify it
         group_conf = await self.config.async_get_storage_value("groups", group_id)
         if group_id == "0" and "scene" in request_data:
             # scene request
@@ -301,9 +303,11 @@ class HueApi:
                 await self.__async_light_action(entity, light_state)
         else:
             # forward request to all group lights
+            # may need refactor to make __async_get_group_lights not an
+            # async generator to instead return a dict
             async for entity in self.__async_get_group_lights(group_id):
                 await self.__async_light_action(entity, request_data)
-        if "stream" in group_conf:
+        if group_conf and "stream" in group_conf:
             # Request streaming stop
             # Duplicate code here. Method instead?
             LOGGER.info(
@@ -964,7 +968,14 @@ class HueApi:
         self, group_id: str
     ) -> AsyncGenerator[dict, None]:
         """Get all light entities for a group."""
-        group_conf = await self.config.async_get_storage_value("groups", group_id)
+        if group_id == "0":
+            all_lights = await self.__async_get_all_lights()
+            group_conf = {}
+            group_conf["lights"] = []
+            for light_id in all_lights:
+                group_conf["lights"].append(light_id)
+        else:
+            group_conf = await self.config.async_get_storage_value("groups", group_id)
         if not group_conf:
             raise RuntimeError("Invalid group id: %s" % group_id)
 
