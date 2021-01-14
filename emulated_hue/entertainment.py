@@ -6,6 +6,7 @@ import os
 import time
 
 from emulated_hue.const import (
+    DEFAULT_THROTTLE_MS,
     HASS_ATTR_BRIGHTNESS,
     HASS_ATTR_RGB_COLOR,
     HASS_ATTR_TRANSITION,
@@ -106,7 +107,7 @@ class EntertainmentAPI:
         # TODO: can we send udp messages to supported lights such as esphome ?
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
-        throttle_ms = light_conf.get("throttle", 0)
+        throttle_ms = light_conf.get("throttle", DEFAULT_THROTTLE_MS)
         if not self.__update_allowed(light_id, light_data, throttle_ms):
             return
 
