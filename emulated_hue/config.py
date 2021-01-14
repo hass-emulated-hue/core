@@ -21,6 +21,7 @@ CONFIG_FILE = "emulated_hue.json"
 DEFINITIONS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "definitions.json"
 )
+DEFAULT_THROTTLE_MS = 0
 
 
 class Config:
@@ -145,7 +146,7 @@ class Config:
                 # TODO: find some way to control the actual startup state?
                 "startup": {"configured": True, "mode": "safety"},
             },
-            "throttle": 0,
+            "throttle": DEFAULT_THROTTLE_MS,
         }
         await self.async_set_storage_value("lights", next_light_id, light_config)
         return next_light_id

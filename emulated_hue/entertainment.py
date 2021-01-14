@@ -81,11 +81,13 @@ class EntertainmentAPI:
                 # at a rate between 25 and 50 packets per second !
                 color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
                 lights_data = data[16:]
-                # enumerate light states
-                for light_data in chunked(9, lights_data):
-                    self.hue.loop.create_task(
+                # issue command to all lights
+                await asyncio.gather(
+                    *[
                         self.__async_process_light_packet(light_data, color_space)
-                    )
+                        for light_data in chunked(9, lights_data)
+                    ]
+                )
 
         LOGGER.info("HUE Entertainment Service stopped.")
 
