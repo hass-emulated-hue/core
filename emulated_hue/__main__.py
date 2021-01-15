@@ -71,7 +71,7 @@ if __name__ == "__main__":
     if args.verbose or os.getenv("VERBOSE", "").strip() == "true":
         logger.setLevel(logging.DEBUG)
 
-    hue = HueEmulator(datapath, url, token)
+    hue = HueEmulator(datapath, url, token, args.http_port, args.https_port)
 
     def on_shutdown(loop):
         """Call on loop shutdown."""
