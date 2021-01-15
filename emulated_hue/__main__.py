@@ -51,6 +51,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verbose", action="store_true", help="Enable more verbose logging"
     )
+    parser.add_argument(
+        "--http-port",
+        type=int,
+        help="Port to run the HTTP server (for use with reverse proxy, use with care)",
+        default=80,
+    )
+    parser.add_argument(
+        "--https-port",
+        type=int,
+        help="Port to run the HTTPS server (for use with reverse proxy, use with care)",
+        default=443,
+    )
 
     args = parser.parse_args()
     datapath = args.data

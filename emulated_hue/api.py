@@ -135,8 +135,7 @@ class HueApi:
         self.runner = web.AppRunner(app, access_log=None)
         await self.runner.setup()
 
-        # Create and start the HTTP API on port 80
-        # Port MUST be 80 to maintain compatability with Hue apps
+        # Create and start the HTTP webserver/api
         self.http_site = web.TCPSite(self.runner, port=self.config.http_port)
         try:
             await self.http_site.start()
@@ -156,8 +155,7 @@ class HueApi:
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(cert_file, key_file)
 
-        # Create and start the HTTPS API on port 443
-        # Port MUST be 443 to maintain compatability with Hue apps
+        # Create and start the HTTPS webserver/API
         self.https_site = web.TCPSite(
             self.runner, port=self.config.https_port, ssl_context=ssl_context
         )
