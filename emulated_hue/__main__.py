@@ -55,13 +55,13 @@ if __name__ == "__main__":
         "--http-port",
         type=int,
         help="Port to run the HTTP server (for use with reverse proxy, use with care)",
-        default=80,
+        default=os.getenv("HTTP_PORT", 80),
     )
     parser.add_argument(
         "--https-port",
         type=int,
         help="Port to run the HTTPS server (for use with reverse proxy, use with care)",
-        default=443,
+        default=os.getenv("HTTPS_PORT", 443),
     )
 
     args = parser.parse_args()
