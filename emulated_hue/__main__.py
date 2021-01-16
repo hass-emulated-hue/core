@@ -51,6 +51,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verbose", action="store_true", help="Enable more verbose logging"
     )
+    parser.add_argument(
+        "--http-port",
+        type=int,
+        help="Port to run the HTTP server (for use with reverse proxy, use with care)",
+        default=os.getenv("HTTP_PORT", 80),
+    )
+    parser.add_argument(
+        "--https-port",
+        type=int,
+        help="Port to run the HTTPS server (for use with reverse proxy, use with care)",
+        default=os.getenv("HTTPS_PORT", 443),
+    )
 
     args = parser.parse_args()
     datapath = args.data
@@ -59,7 +71,7 @@ if __name__ == "__main__":
     if args.verbose or os.getenv("VERBOSE", "").strip() == "true":
         logger.setLevel(logging.DEBUG)
 
-    hue = HueEmulator(datapath, url, token)
+    hue = HueEmulator(datapath, url, token, args.http_port, args.https_port)
 
     def on_shutdown(loop):
         """Call on loop shutdown."""
