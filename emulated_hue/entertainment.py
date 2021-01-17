@@ -1,9 +1,10 @@
 """Experimental support for Hue Entertainment API."""
 # https://developers.meethue.com/develop/hue-entertainment/philips-hue-entertainment-api/
-import asyncio
 import logging
 import os
+import socket
 import time
+from contextlib import suppress
 
 from emulated_hue.const import (
     DEFAULT_THROTTLE_MS,
@@ -12,6 +13,7 @@ from emulated_hue.const import (
     HASS_ATTR_TRANSITION,
     HASS_ATTR_XY_COLOR,
 )
+from mbedtls import tls
 
 LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +35,13 @@ def chunked(size, source):
         yield source[i : i + size]
 
 
+def block(callback, *args, **kwargs):
+    """Block until error is gone."""
+    while True:
+        with suppress(tls.WantReadError, tls.WantWriteError):
+            return callback(*args, **kwargs)
+
+
 class EntertainmentAPI:
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
@@ -47,55 +56,65 @@ class EntertainmentAPI:
         self._timestamps = {}
         self._prev_data = {}
         self._user_details = user_details
-        self.hue.loop.create_task(self.async_run())
+        self.hue.loop.run_in_executor(None, self.run)
 
-    async def async_run(self):
+    def run(self):
         """Run the server."""
-        # MDTLS + PSK is not supported very well in native python
-        # As a (temporary?) workaround we rely on the OpenSSL executable which is
-        # very well supported on all platforms.
         LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
-        self._socket_daemon = await asyncio.create_subprocess_exec(
-            OPENSSL_BIN,
-            *[
-                "s_server",
-                "-dtls",
-                "-accept",
-                "2100",
-                "-nocert",
-                "-psk_identity",
-                self._user_details["username"],
-                "-psk",
-                self._user_details["clientkey"],
-                "-quiet",
-            ],
-            stdout=asyncio.subprocess.PIPE,
-        )
-        while not self._interrupted:
-            data = await self._socket_daemon.stdout.read(pktsize)
-            if data:
-                # Once the client starts streaming, it will pass in packets
-                # at a rate between 25 and 50 packets per second !
-                color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
-                lights_data = data[16:]
-                # issue command to all lights
-                await asyncio.gather(
-                    *[
-                        self.__async_process_light_packet(light_data, color_space)
-                        for light_data in chunked(9, lights_data)
-                    ]
-                )
 
-        LOGGER.info("HUE Entertainment Service stopped.")
+        srv_conf = tls.DTLSConfiguration(
+            ciphers=(
+                # PSK Requires the selection PSK ciphers.
+                "TLS-ECDHE-PSK-WITH-CHACHA20-POLY1305-SHA256",
+                "TLS-RSA-PSK-WITH-CHACHA20-POLY1305-SHA256",
+                "TLS-PSK-WITH-CHACHA20-POLY1305-SHA256",
+                "TLS-PSK-WITH-AES-128-GCM-SHA256",
+            ),
+            pre_shared_key_store={
+                self._user_details["username"]: self._user_details["clientkey"].encode()
+            },
+            validate_certificates=False,
+        )
+
+        dtls_srv_ctx = tls.ServerContext(srv_conf)
+        dtls_srv = dtls_srv_ctx.wrap_socket(
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        )
+        port = 2100
+        dtls_srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        dtls_srv.bind(("0.0.0.0", port))
+        self._dtls_srv = dtls_srv
+
+        conn, addr = dtls_srv.accept()
+        conn.setcookieparam(addr[0].encode())
+        with suppress(tls.HelloVerifyRequest):
+            block(conn.do_handshake)
+        conn, addr = conn.accept()
+        conn.setcookieparam(addr[0].encode())
+        block(conn.do_handshake)
+
+        while not self._interrupted:
+            data = conn.recv(pktsize)
+            LOGGER.debug(data)
+            # Once the client starts streaming, it will pass in packets
+            # at a rate between 25 and 50 packets per second !
+            color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
+            lights_data = data[16:]
+            # issue command to all lights
+            for light_data in chunked(9, lights_data):
+                self.hue.loop.create_task(
+                    self.__async_process_light_packet(light_data, color_space)
+                )
 
     def stop(self):
         """Stop the Entertainment service."""
         self._interrupted = True
-        if self._socket_daemon:
-            self._socket_daemon.terminate()
+        if self._dtls_srv:
+            self._dtls_srv.close()
+        LOGGER.info("HUE Entertainment Service stopped.")
 
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
