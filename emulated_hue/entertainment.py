@@ -13,6 +13,8 @@ from emulated_hue.const import (
     HASS_ATTR_XY_COLOR,
 )
 
+import subprocess
+
 LOGGER = logging.getLogger(__name__)
 
 COLOR_TYPE_RGB = "RGB"
@@ -58,38 +60,48 @@ class EntertainmentAPI:
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
-        self._socket_daemon = await asyncio.create_subprocess_exec(
-            OPENSSL_BIN,
-            *[
-                "s_server",
-                "-dtls",
-                "-accept",
-                "2100",
-                "-nocert",
-                "-psk_identity",
-                self._user_details["username"],
-                "-psk",
-                self._user_details["clientkey"],
-                "-quiet",
-            ],
-            stdout=asyncio.subprocess.PIPE,
-        )
-        while not self._interrupted:
-            data = await self._socket_daemon.stdout.read(pktsize)
-            if data:
-                # Once the client starts streaming, it will pass in packets
-                # at a rate between 25 and 50 packets per second !
-                color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
-                lights_data = data[16:]
-                # issue command to all lights
-                await asyncio.gather(
-                    *[
-                        self.__async_process_light_packet(light_data, color_space)
-                        for light_data in chunked(9, lights_data)
-                    ]
-                )
+        LOGGER.debug("STARTING SH")
+        subprocess.Popen(['/app/entertain.sh'], shell=True)
+        # waits for process to start
+        await asyncio.sleep(1)
+        reader, writer = await asyncio.open_connection('127.0.0.1', 7777)
+        while True:
+            data = await reader.read(pktsize)
+            LOGGER.debug(data)
+        # while True:
+        #     LOGGER.debug(sock.recv(pktsize))
+        # self._socket_daemon = await asyncio.create_subprocess_exec(
+        #     OPENSSL_BIN,
+        #     *[
+        #         "s_server",
+        #         "-dtls",
+        #         "-accept",
+        #         "2100",
+        #         "-nocert",
+        #         "-psk_identity",
+        #         self._user_details["username"],
+        #         "-psk",
+        #         self._user_details["clientkey"],
+        #         "-quiet",
+        #     ],
+        #     stdout=asyncio.subprocess.PIPE,
+        # )
+        # while not self._interrupted:
+        #     data = await self._socket_daemon.stdout.read(pktsize)
+        #     if data:
+        #         # Once the client starts streaming, it will pass in packets
+        #         # at a rate between 25 and 50 packets per second !
+        #         color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
+        #         lights_data = data[16:]
+        #         # issue command to all lights
+        #         await asyncio.gather(
+        #             *[
+        #                 self.__async_process_light_packet(light_data, color_space)
+        #                 for light_data in chunked(9, lights_data)
+        #             ]
+        #         )
 
-        LOGGER.info("HUE Entertainment Service stopped.")
+        # LOGGER.info("HUE Entertainment Service stopped.")
 
     def stop(self):
         """Stop the Entertainment service."""

@@ -26,5 +26,9 @@ ARG BUILD_VERSION
 COPY --from=s6-base-downloader /base/rootfs/ /
 # Copy app
 COPY emulated_hue emulated_hue
+COPY entertain.sh .
+RUN chmod 777 entertain.sh \
+    && apt-get update \
+    && apt-get install -y netcat nano
 
 LABEL io.hass.version=${BUILD_VERSION}
