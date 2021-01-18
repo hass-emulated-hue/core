@@ -7,11 +7,13 @@ services:
       dockerfile: ./.devcontainer/Dockerfile
       target: dev_pycharm
     restart: "no"
-    environment:
-      - DATA_DIR=/config
-      - HASS_URL=http://192.168.1.1:8123
-      - HASS_TOKEN=yourtokenhere
-      - VERBOSE=True
+#    environment:
+#      - DATA_DIR=/config
+#      - HASS_URL=http://192.168.1.1:8123
+#      - HASS_TOKEN=yourtokenhere
+#      - VERBOSE=True
+# Pass arguments in the IDE to avoid passing token when committing
+# Example tasks are included in .launchconfigs
     volumes:
       - ../config:/config
 #    network_mode: "host"
