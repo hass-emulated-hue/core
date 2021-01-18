@@ -29,6 +29,6 @@ COPY emulated_hue emulated_hue
 COPY entertain.sh .
 RUN chmod 777 entertain.sh \
     && apt-get update \
-    && apt-get install -y netcat nano
+    && apt-get install -y netcat nano socat
 
 LABEL io.hass.version=${BUILD_VERSION}

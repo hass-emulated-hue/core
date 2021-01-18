@@ -68,6 +68,7 @@ class EntertainmentAPI:
         subprocess.Popen(['/app/entertain.sh'], shell=True)
         # waits for process to start
         await asyncio.sleep(1)
+        LOGGER.debug("Starting connection")
         reader, writer = await asyncio.open_connection('127.0.0.1', 7777)
         while True:
             data = await reader.read(pktsize)
@@ -92,18 +93,18 @@ class EntertainmentAPI:
         # )
         # while not self._interrupted:
         #     data = await self._socket_daemon.stdout.read(pktsize)
-        #     if data:
-        #         # Once the client starts streaming, it will pass in packets
-        #         # at a rate between 25 and 50 packets per second !
-        #         color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
-        #         lights_data = data[16:]
-        #         # issue command to all lights
-        #         await asyncio.gather(
-        #             *[
-        #                 self.__async_process_light_packet(light_data, color_space)
-        #                 for light_data in chunked(9, lights_data)
-        #             ]
-        #         )
+            if data:
+                # Once the client starts streaming, it will pass in packets
+                # at a rate between 25 and 50 packets per second !
+                color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
+                lights_data = data[16:]
+                # issue command to all lights
+                await asyncio.gather(
+                    *[
+                        self.__async_process_light_packet(light_data, color_space)
+                        for light_data in chunked(9, lights_data)
+                    ]
+                )
 
         # LOGGER.info("HUE Entertainment Service stopped.")
 
