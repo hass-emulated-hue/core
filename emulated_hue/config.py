@@ -37,7 +37,7 @@ class Config:
             os.mkdir(data_path)
         self._config = load_json(self.get_path(CONFIG_FILE))
         self._definitions = load_json(DEFINITIONS_FILE)
-        self._link_mode_enabled = False
+        self._link_mode_enabled = True # got annoyed
         self._link_mode_discovery_key = None
 
         # Get the IP address that will be passed to during discovery

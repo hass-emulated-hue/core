@@ -61,6 +61,10 @@ class EntertainmentAPI:
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
         LOGGER.debug("STARTING SH")
+        with open("/var/run/s6/container_environment/USERNAME", "w+") as file:
+            file.write(self._user_details["username"])
+        with open("/var/run/s6/container_environment/CLIENTKEY", "w+") as file:
+            file.write(self._user_details["clientkey"])
         subprocess.Popen(['/app/entertain.sh'], shell=True)
         # waits for process to start
         await asyncio.sleep(1)
