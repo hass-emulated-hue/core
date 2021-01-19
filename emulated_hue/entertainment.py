@@ -72,7 +72,8 @@ class EntertainmentAPI:
             "-quiet",
         ]
         # use pseudo tty to fix issue with running openssl in docker (expecting tty)
-        _, slave = os.openpty()
+        # _, slave = os.openpty()
+        slave = os.devnull
         self._socket_daemon = await asyncio.create_subprocess_shell(
             " ".join(args), stdout=asyncio.subprocess.PIPE, stdin=slave, limit=pktsize
         )
