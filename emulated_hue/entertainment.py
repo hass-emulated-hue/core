@@ -87,7 +87,7 @@ class EntertainmentAPI:
             #     self._user_details["clientkey"],
             #     "-quiet",
             # ],
-            f'{OPENSSL_BIN} s_server -dtls -accept 2100 -nocert -psk_identity {self._user_details["username"]} -psk {self._user_details["clientkey"]} -quiet',
+            f'{OPENSSL_BIN} s_server -dtls -accept 2100 -nocert -psk_identity {self._user_details["username"]} -psk {self._user_details["clientkey"]} -quiet | cat',
             stdout=asyncio.subprocess.PIPE,
         )
         while not self._interrupted:
