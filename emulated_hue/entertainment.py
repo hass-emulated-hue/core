@@ -13,8 +13,6 @@ from emulated_hue.const import (
     HASS_ATTR_XY_COLOR,
 )
 
-import subprocess
-
 LOGGER = logging.getLogger(__name__)
 
 COLOR_TYPE_RGB = "RGB"
@@ -60,40 +58,42 @@ class EntertainmentAPI:
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
-        LOGGER.debug("STARTING SH")
-        with open("/var/run/s6/container_environment/USERNAME", "w+") as file:
-            file.write(self._user_details["username"])
-        with open("/var/run/s6/container_environment/CLIENTKEY", "w+") as file:
-            file.write(self._user_details["clientkey"])
-        subprocess.Popen(['/app/entertain.sh'], shell=True)
-        # waits for process to start
-        await asyncio.sleep(1)
-        LOGGER.debug("Starting connection")
-        reader, writer = await asyncio.open_connection('127.0.0.1', 7777)
-        while True:
-            data = await reader.read(pktsize)
-            LOGGER.debug(data)
+        # LOGGER.debug("STARTING SH")
+        # with open("/var/run/s6/container_environment/USERNAME", "w+") as file:
+        #     file.write(self._user_details["username"])
+        # with open("/var/run/s6/container_environment/CLIENTKEY", "w+") as file:
+        #     file.write(self._user_details["clientkey"])
+        # subprocess.Popen(['/app/entertain.sh'], shell=True)
+        # # waits for process to start
+        # await asyncio.sleep(1)
+        # LOGGER.debug("Starting connection")
+        # reader, writer = await asyncio.open_connection('127.0.0.1', 7777)
+        # while True:
+        #     data = await reader.read(pktsize)
+        #     LOGGER.debug(data)
         # while True:
         #     LOGGER.debug(sock.recv(pktsize))
-        # self._socket_daemon = await asyncio.create_subprocess_exec(
-        #     OPENSSL_BIN,
-        #     *[
-        #         "s_server",
-        #         "-dtls",
-        #         "-accept",
-        #         "2100",
-        #         "-nocert",
-        #         "-psk_identity",
-        #         self._user_details["username"],
-        #         "-psk",
-        #         self._user_details["clientkey"],
-        #         "-quiet",
-        #     ],
-        #     stdout=asyncio.subprocess.PIPE,
-        # )
-        # while not self._interrupted:
-        #     data = await self._socket_daemon.stdout.read(pktsize)
+        self._socket_daemon = await asyncio.create_subprocess_shell(
+            # *[
+            #     OPENSSL_BIN,
+            #     "s_server",
+            #     "-dtls",
+            #     "-accept",
+            #     "2100",
+            #     "-nocert",
+            #     "-psk_identity",
+            #     self._user_details["username"],
+            #     "-psk",
+            #     self._user_details["clientkey"],
+            #     "-quiet",
+            # ],
+            f'{OPENSSL_BIN} s_server -dtls -accept 2100 -nocert -psk_identity {self._user_details["username"]} -psk {self._user_details["clientkey"]} -quiet',
+            stdout=asyncio.subprocess.PIPE,
+        )
+        while not self._interrupted:
+            data = await self._socket_daemon.stdout.read(pktsize)
             if data:
+                LOGGER.debug(data)
                 # Once the client starts streaming, it will pass in packets
                 # at a rate between 25 and 50 packets per second !
                 color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
@@ -106,13 +106,12 @@ class EntertainmentAPI:
                     ]
                 )
 
-        # LOGGER.info("HUE Entertainment Service stopped.")
-
     def stop(self):
         """Stop the Entertainment service."""
         self._interrupted = True
         if self._socket_daemon:
             self._socket_daemon.terminate()
+        LOGGER.info("HUE Entertainment Service stopped.")
 
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
