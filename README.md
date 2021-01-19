@@ -90,3 +90,5 @@ Well this project actually started as integration, but we ran into some serious 
 
 The current approach gives you the flexibility of running the emulated HUE bridge on a diferent machine than HA.
 
+#### How can I detect when entertainment is started?
+We now provide a binary sensor `binary_sensor.emulated_hue_entertainment_active` that will allow you to detect this event in Home Assistant.
