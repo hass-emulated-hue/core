@@ -54,7 +54,7 @@ class EntertainmentAPI:
         # MDTLS + PSK is not supported very well in native python
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
-        LOGGER.info("Start HUE Entertainment Service on UDP port 2100. TEST")
+        LOGGER.info("Start HUE Entertainment Service on UDP port 2100. TEST2")
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
@@ -73,7 +73,7 @@ class EntertainmentAPI:
         ]
         # use pseudo tty to fix issue with running openssl in docker (expecting tty)
         # _, slave = os.openpty()
-        slave = os.devnull
+        slave = asyncio.subprocess.PIPE
         self._socket_daemon = await asyncio.create_subprocess_shell(
             " ".join(args), stdout=asyncio.subprocess.PIPE, stdin=slave, limit=pktsize
         )
