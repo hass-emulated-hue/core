@@ -54,7 +54,7 @@ class EntertainmentAPI:
         # MDTLS + PSK is not supported very well in native python
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
-        LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
+        LOGGER.info("Start HUE Entertainment Service on UDP port 2100. TEST")
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
