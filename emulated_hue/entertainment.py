@@ -54,7 +54,7 @@ class EntertainmentAPI:
         # MDTLS + PSK is not supported very well in native python
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
-        LOGGER.info("Start HUE Entertainment Service on UDP port 2100. TEST2")
+        LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
@@ -71,11 +71,12 @@ class EntertainmentAPI:
             self._user_details["clientkey"],
             "-quiet",
         ]
-        # use pseudo tty to fix issue with running openssl in docker (expecting tty)
-        # _, slave = os.openpty()
-        slave = asyncio.subprocess.PIPE
+        # NOTE: enable stdin is required for openssl, even if we do not use it.
         self._socket_daemon = await asyncio.create_subprocess_shell(
-            " ".join(args), stdout=asyncio.subprocess.PIPE, stdin=slave, limit=pktsize
+            " ".join(args),
+            stdout=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE,
+            limit=pktsize,
         )
         while not self._interrupted:
             data = await self._socket_daemon.stdout.read(pktsize)
@@ -103,8 +104,7 @@ class EntertainmentAPI:
         light_conf = await self.config.async_get_light_config(light_id)
 
         # throttle command to light
-        # TODO: can we pass the raw entertainment message as unicast message on ZHA ?
-        # TODO: can we send udp messages to supported lights such as esphome ?
+        # TODO: can we send udp messages to supported lights such as esphome or native ZHA ?
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
         throttle_ms = light_conf.get("throttle", DEFAULT_THROTTLE_MS)
