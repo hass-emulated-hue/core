@@ -74,21 +74,20 @@ class EntertainmentAPI:
         # while True:
         #     LOGGER.debug(sock.recv(pktsize))
 
-        cmd = " ".join(
-            [
-                OPENSSL_BIN,
-                "s_server",
-                "-dtls",
-                "-accept",
-                "2100",
-                "-nocert",
-                "-psk_identity",
-                self._user_details["username"],
-                "-psk",
-                self._user_details["clientkey"],
-                "-quiet",
-            ]
-        )
+        args = [
+            OPENSSL_BIN,
+            "s_server",
+            "-dtls",
+            "-accept",
+            "2100",
+            "-nocert",
+            "-psk_identity",
+            self._user_details["username"],
+            "-psk",
+            self._user_details["clientkey"],
+            "-quiet",
+        ]
+        cmd = " ".join(args)
         master, slave = os.openpty()
 
         LOGGER.debug(cmd)
