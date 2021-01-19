@@ -86,9 +86,7 @@ class EntertainmentAPI:
         #     self._user_details["clientkey"],
         #     "-quiet",
         # ])
-        cmd = (
-            f'{OPENSSL_BIN} s_server -dtls -accept 2100 -nocert -psk_identity {self._user_details["username"]} -psk {self._user_details["clientkey"]} -quiet | cat',
-        )
+        cmd = f'{OPENSSL_BIN} s_server -dtls -accept 2100 -nocert -psk_identity {self._user_details["username"]} -psk {self._user_details["clientkey"]} -quiet | cat'
         LOGGER.debug(cmd)
         self._socket_daemon = await asyncio.create_subprocess_shell(
             cmd, stdout=asyncio.subprocess.PIPE
