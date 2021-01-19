@@ -73,22 +73,25 @@ class EntertainmentAPI:
         #     LOGGER.debug(data)
         # while True:
         #     LOGGER.debug(sock.recv(pktsize))
-        self._socket_daemon = await asyncio.create_subprocess_shell(
-            # *[
-            #     OPENSSL_BIN,
-            #     "s_server",
-            #     "-dtls",
-            #     "-accept",
-            #     "2100",
-            #     "-nocert",
-            #     "-psk_identity",
-            #     self._user_details["username"],
-            #     "-psk",
-            #     self._user_details["clientkey"],
-            #     "-quiet",
-            # ],
+        # cmd = " ".join([
+        #     OPENSSL_BIN,
+        #     "s_server",
+        #     "-dtls",
+        #     "-accept",
+        #     "2100",
+        #     "-nocert",
+        #     "-psk_identity",
+        #     self._user_details["username"],
+        #     "-psk",
+        #     self._user_details["clientkey"],
+        #     "-quiet",
+        # ])
+        cmd = (
             f'{OPENSSL_BIN} s_server -dtls -accept 2100 -nocert -psk_identity {self._user_details["username"]} -psk {self._user_details["clientkey"]} -quiet | cat',
-            stdout=asyncio.subprocess.PIPE,
+        )
+        LOGGER.debug(cmd)
+        self._socket_daemon = await asyncio.create_subprocess_shell(
+            cmd, stdout=asyncio.subprocess.PIPE
         )
         while not self._interrupted:
             data = await self._socket_daemon.stdout.read(pktsize)
