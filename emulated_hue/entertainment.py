@@ -58,21 +58,23 @@ class EntertainmentAPI:
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])
         pktsize = 16 + (9 * num_lights)
-        self._socket_daemon = await asyncio.create_subprocess_exec(
+        args = [
             OPENSSL_BIN,
-            *[
-                "s_server",
-                "-dtls",
-                "-accept",
-                "2100",
-                "-nocert",
-                "-psk_identity",
-                self._user_details["username"],
-                "-psk",
-                self._user_details["clientkey"],
-                "-quiet",
-            ],
-            stdout=asyncio.subprocess.PIPE,
+            "s_server",
+            "-dtls",
+            "-accept",
+            "2100",
+            "-nocert",
+            "-psk_identity",
+            self._user_details["username"],
+            "-psk",
+            self._user_details["clientkey"],
+            "-quiet",
+        ]
+        # use pseudo tty to fix issue with running openssl in docker (expecting tty)
+        _, slave = os.openpty()
+        self._socket_daemon = await asyncio.create_subprocess_shell(
+            " ".join(args), stdout=asyncio.subprocess.PIPE, stdin=slave, limit=0
         )
         while not self._interrupted:
             data = await self._socket_daemon.stdout.read(pktsize)
@@ -82,20 +84,17 @@ class EntertainmentAPI:
                 color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
                 lights_data = data[16:]
                 # issue command to all lights
-                await asyncio.gather(
-                    *[
+                for light_data in chunked(9, lights_data):
+                    self.hue.loop.create_task(
                         self.__async_process_light_packet(light_data, color_space)
-                        for light_data in chunked(9, lights_data)
-                    ]
-                )
-
-        LOGGER.info("HUE Entertainment Service stopped.")
+                    )
 
     def stop(self):
         """Stop the Entertainment service."""
         self._interrupted = True
         if self._socket_daemon:
-            self._socket_daemon.terminate()
+            self._socket_daemon.kill()
+        LOGGER.info("HUE Entertainment Service stopped.")
 
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
