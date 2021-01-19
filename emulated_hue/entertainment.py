@@ -22,7 +22,7 @@ HASS_SENSOR = "binary_sensor.emulated_hue_entertainment_active"
 
 if os.path.isfile("/usr/local/opt/openssl@1.1/bin/openssl"):
     OPENSSL_BIN = "/usr/local/opt/openssl@1.1/bin/openssl"
-elif os.name == "nt":
+elif os.path.isfile("C:/Program Files/Git/usr/bin/openssl.exe"):
     OPENSSL_BIN = "C:/Program Files/Git/usr/bin/openssl.exe"
 else:
     OPENSSL_BIN = "openssl"
@@ -76,8 +76,8 @@ class EntertainmentAPI:
             "-quiet",
         ]
         # NOTE: enable stdin is required for openssl, even if we do not use it.
-        self._socket_daemon = await asyncio.create_subprocess_shell(
-            " ".join(args),
+        self._socket_daemon = await asyncio.create_subprocess_exec(
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
             limit=pktsize,
