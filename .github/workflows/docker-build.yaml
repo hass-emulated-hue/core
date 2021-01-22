@@ -41,7 +41,7 @@ jobs:
         run: |
           docker build \
             --build-arg BUILD_VERSION=${GITHUB_REF##*/}-${{ github.run_number }} \
-            --tag hass_emulated_hue:ci \
+            --tag ci:${{ github.run_number }} \
             --platform ${{ matrix.arch }} \
             --progress plain \
             --file ./Dockerfile \
@@ -54,7 +54,7 @@ jobs:
         run: |
           docker build \
             --build-arg BUILD_VERSION=${GITHUB_REF##*/} \
-            --tag hass_emulated_hue:ci \
+            --tag ci:${{ github.run_number }} \
             --platform ${{ matrix.arch }} \
             --file ./Dockerfile \
             --load \
@@ -62,11 +62,11 @@ jobs:
 
       - name: Inspect
         run: |
-          docker image inspect hass_emulated_hue:ci
+          docker image inspect ci:${{ github.run_number }}
 
       - name: Save tarball
         run: |
-          docker save --output output.tar hass_emulated_hue:ci
+          docker save --output output.tar ci:${{ github.run_number }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
@@ -111,7 +111,7 @@ jobs:
       # arch-run_num
       - name: Deploy Run Number (arch-run_num)
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${{ github.run_number }} published
 
@@ -119,7 +119,7 @@ jobs:
       - name: Deploy Commit Hash (arch-branch-sha)
         if: ${{ github.sha != '' }}
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-$GITHUB_SHA published
 
@@ -127,7 +127,7 @@ jobs:
       - name: Deploy Latest (latest)
         if: ${{ github.ref == 'refs/heads/master' }}
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-latest published
 
@@ -135,7 +135,7 @@ jobs:
       - name: Deploy Branch (arch-branch)
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/} published
 
@@ -143,7 +143,7 @@ jobs:
       - name: Deploy Branch and Run Number (arch-branch-run_num)
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }} published
 
@@ -151,7 +151,7 @@ jobs:
       - name: Deploy Tag (arch-tag)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/} published
 
@@ -159,7 +159,7 @@ jobs:
       - name: Deploy Tag and Run Number (arch-branch-run_num)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: |
-          docker tag hass_emulated_hue:ci ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
+          docker tag ci:${{ github.run_number }} ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
           docker push ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }}
           echo ${{ matrix.registry.repo }}:${{ matrix.arch }}-${GITHUB_REF##*/}-${{ github.run_number }} published
 
