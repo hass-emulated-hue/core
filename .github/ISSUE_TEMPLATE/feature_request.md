@@ -16,8 +16,9 @@ the necessary information to understand the request.
 1. Please be sure to fill in the issue template completely
 and to the best of your ability so that we may understand your feature request.
 
-2. Do NOT use this template for user error/help/support questions. If
-this is for a help request, please go back and select the proper template.
+2. Do NOT use this template for anything other than a BUG REPORT.
+If this is for something else, click back and select the correct
+template.
 
 Basic GitHub Comment Tutorial:
 1. Logs

@@ -17,11 +17,9 @@ the necessary information to understand and reproduce the problem.
 and to the best of your ability so that we may reproduce
 the issue. Issues that are not reproducible CANNOT be fixed.
 
-2. Support for installation methods other than Docker have been depreciated so
-ensure you are using Docker so that we may be able to best help you.
-
-3. Do NOT use this template for user error/help/support questions. If
-this is for a help request, please go back and select the proper template.
+2. Do NOT use this template for anything other than a BUG REPORT.
+If this is for something else, click back and select the correct
+template.
 
 Basic GitHub Comment Tutorial:
 1. Logs
@@ -54,6 +52,12 @@ Steps to reproduce the behavior:
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
+
+THIS IS VERY IMPORTANT TO KNOW TO BE ABLE TO FIX THE BUG!
+If at all possible, please try to create reproduction steps from
+a clean environment (delete all existing config and reinstall from
+scratch). Again, please make sure to read all primers to ensure we 
+are able to help you.
 -->
 
 
