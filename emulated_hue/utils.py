@@ -3,8 +3,10 @@ import asyncio
 import json
 import logging
 import os
+import random
 import re
 import socket
+import string
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
 
@@ -145,3 +147,9 @@ def entity_attributes_to_int(attributes: dict):
                 if isinstance(value, float):
                     attr_data[i] = int(value)
     return attributes
+
+
+def create_secure_string(length: int) -> str:
+    """Create secure random string for username, client key, and tokens."""
+    character_array = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    return "".join(random.SystemRandom().choice(character_array) for _ in range(length))

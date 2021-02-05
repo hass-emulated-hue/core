@@ -3,12 +3,11 @@ import datetime
 import hashlib
 import logging
 import os
-import uuid
 from typing import TYPE_CHECKING, Any, Optional
 
 from getmac import get_mac_address
 
-from .utils import async_save_json, get_local_ip, load_json
+from .utils import async_save_json, create_secure_string, get_local_ip, load_json
 
 if TYPE_CHECKING:
     from emulated_hue import HueEmulator
@@ -297,9 +296,9 @@ class Config:
         for item in all_users.values():
             if item["name"] == devicetype:
                 return item
-        # create username and clientkey with uuid module
-        username = str(uuid.uuid4())
-        clientkey = str(uuid.uuid4()).replace("-", "").upper()
+        # create username and clientkey
+        username = create_secure_string(40)
+        clientkey = create_secure_string(32).upper()
         user_obj = {
             "name": devicetype,
             "clientkey": clientkey,
@@ -340,7 +339,7 @@ class Config:
             "Link request detected - Use the Homeassistant frontend to confirm this link request."
         )
 
-        self._link_mode_discovery_key = str(uuid.uuid4())
+        self._link_mode_discovery_key = create_secure_string(32)
         # create persistent notification in hass
         # user can click the link in the notification to enable linking
 
