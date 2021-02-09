@@ -17,12 +17,13 @@ jobs:
         run: |
           pip install requests
           commit=`python3 -u actions/update-swversion.py 2>&1`
+          echo $commit
           if [[ "true" == "$commit" ]]; then
             export NEED_COMMIT=true
           else
             export NEED_COMMIT=false
           fi
-          echo "##[set-output name=needcommit;]NEED_COMMIT"
+          echo "##[set-output name=needcommit;]$NEED_COMMIT"
       - name: Commit
         if: ${{ steps.update.outputs.needcommit == 'true' }}
         run: |
