@@ -14,7 +14,8 @@ definitions = load_json(DEFINITIONS_FILE)
 
 def get_latest_version() -> int:
     def extract_version(line) -> int:
-        if match := re.search(r'(firmware)(.+)([0-9]+)(.+)(bridge v2)', line):
+        match = re.search(r'(firmware)(.+)([0-9]+)(.+)(bridge v2)', line)
+        if match:
             partial = match.group(2) + match.group(3)
             if match := re.search(r'([0-9]+)', partial).group():
                 return int(match)
