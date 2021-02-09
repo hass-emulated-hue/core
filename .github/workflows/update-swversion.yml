@@ -16,9 +16,7 @@ jobs:
         id: update
         run: |
           pip install requests
-          python3 -u actions/update-swversion.py
           commit=`python3 -u actions/update-swversion.py 2>&1`
-          echo $commit
           if [[ "true" == "$commit" ]]; then
             export NEED_COMMIT=true
           else
@@ -28,5 +26,8 @@ jobs:
       - name: Commit
         if: ${{ steps.update.outputs.needcommit == 'true' }}
         run: |
-          cat emulated_hue/definitions.json
-          echo commiting changes
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git add .
+          git commit -m "Update swversion"
+          git push
