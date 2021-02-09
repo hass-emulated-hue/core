@@ -17,7 +17,8 @@ def get_latest_version() -> int:
         match = re.search(r'(firmware)(.+)([0-9]+)(.+)(bridge v2)', line)
         if match:
             partial = match.group(2) + match.group(3)
-            if match := re.search(r'([0-9]+)', partial).group():
+            match = re.search(r'([0-9]+)', partial).group()
+            if match:
                 return int(match)
 
     url = 'https://www.philips-hue.com/en-us/support/release-notes/bridge'
