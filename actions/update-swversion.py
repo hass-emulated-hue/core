@@ -1,16 +1,36 @@
+import json
 import os
 import re
 
 import requests
 
-import sys
-sys.path.append('..')
-from emulated_hue.utils import load_json, save_json
+def load_json(filename: str) -> dict:
+    """Load JSON from file."""
+    try:
+        with open(filename, encoding="utf-8") as fdesc:
+            return json.loads(fdesc.read())  # type: ignore
+    except (FileNotFoundError, ValueError, OSError) as error:
+        print("Loading %s failed: %s", filename, error)
+        return {}
+
+def save_json(filename: str, data: dict, backup: bool = True):
+    """Save JSON data to a file."""
+    if backup:
+        safe_copy = filename + ".backup"
+        if os.path.isfile(filename):
+            os.replace(filename, safe_copy)
+    try:
+        json_data = json.dumps(data, sort_keys=False, indent=2, ensure_ascii=False)
+        with open(filename, "w") as file_obj:
+            file_obj.write(json_data)
+    except IOError:
+        print("Failed to serialize to JSON: %s", filename)
 
 DEFINITIONS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "../emulated_hue/definitions.json"
 )
 definitions = load_json(DEFINITIONS_FILE)
+
 
 def get_latest_version() -> int:
     def extract_version(line) -> int:
