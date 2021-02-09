@@ -13,6 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Update
+        id: update
         run: |
           pip install requests
           commit=`python3 -u actions/update-swversion.py 2>&1`
@@ -21,8 +22,9 @@ jobs:
           else
             export NEED_COMMIT=false
           fi
+          echo "##[set-output name=needcommit;]NEED_COMMIT"
       - name: Commit
-        if: ${{ ${NEED_COMMIT} == 'true' }}
+        if: ${{ steps.update.outputs.needcommit == 'true' }}
         run: |
           cat emulated_hue/definitions.json
           echo commiting changes
