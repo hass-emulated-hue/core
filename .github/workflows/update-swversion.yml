@@ -1,0 +1,28 @@
+name: Update swversion
+
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Update swversion
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Update
+        run: |
+          pip install requests
+          commit=`python3 -u actions/update-swversion.py 2>&1`
+          if [[ "true" == "$commit" ]]; then
+            export NEED_COMMIT=true
+          else
+            export NEED_COMMIT=false
+          fi
+      - name: Commit
+        if: ${{ ${NEED_COMMIT} == 'true' }}
+        run: |
+          cat emulated_hue/definitions.json
+          echo commiting changes

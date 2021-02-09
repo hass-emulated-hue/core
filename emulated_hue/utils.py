@@ -122,11 +122,12 @@ async def async_save_json(filename: str, data: dict):
     return await loop.run_in_executor(None, save_json, filename, data)
 
 
-def save_json(filename: str, data: dict):
+def save_json(filename: str, data: dict, backup: bool = True):
     """Save JSON data to a file."""
-    safe_copy = filename + ".backup"
-    if os.path.isfile(filename):
-        os.replace(filename, safe_copy)
+    if backup:
+        safe_copy = filename + ".backup"
+        if os.path.isfile(filename):
+            os.replace(filename, safe_copy)
     try:
         json_data = json.dumps(data, sort_keys=True, indent=4, ensure_ascii=False)
         with open(filename, "w") as file_obj:
