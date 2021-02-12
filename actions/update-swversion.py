@@ -1,8 +1,11 @@
+"""Ran daily to automatically obtain and commit latest swversion."""
+
 import json
 import os
 import re
 
 import requests
+
 
 def load_json(filename: str) -> dict:
     """Load JSON from file."""
@@ -12,6 +15,7 @@ def load_json(filename: str) -> dict:
     except (FileNotFoundError, ValueError, OSError) as error:
         print("Loading %s failed: %s", filename, error)
         return {}
+
 
 def save_json(filename: str, data: dict, backup: bool = True):
     """Save JSON data to a file."""
@@ -26,6 +30,7 @@ def save_json(filename: str, data: dict, backup: bool = True):
     except IOError:
         print("Failed to serialize to JSON: %s", filename)
 
+
 DEFINITIONS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "../emulated_hue/definitions.json"
 )
@@ -33,17 +38,21 @@ definitions = load_json(DEFINITIONS_FILE)
 
 
 def get_latest_version() -> int:
+    """Scrape latest Hue version from website."""
+
     def extract_version(line) -> int:
-        match = re.search(r'(firmware)(.+)([0-9]+)(.+)(bridge v2)', line)
+        match = re.search(r"(firmware)(.+)([0-9]+)(.+)(bridge v2)", line)
         if match:
             partial = match.group(2) + match.group(3)
-            match = re.search(r'([0-9]+)', partial).group()
+            match = re.search(r"([0-9]+)", partial).group()
             if match:
                 return int(match)
 
-    url = 'https://www.philips-hue.com/en-us/support/release-notes/bridge'
+    url = "https://www.philips-hue.com/en-us/support/release-notes/bridge"
     response = requests.get(url)
-    webpage_lines = [x.lower() for x in response.content.decode('utf-8').splitlines() if x]
+    webpage_lines = [
+        x.lower() for x in response.content.decode("utf-8").splitlines() if x
+    ]
     versions = list(filter(None.__ne__, map(extract_version, webpage_lines)))
     # assume versions are in listed in order from newest to oldest. Next best alternative to saving all dates
     return versions[0]
