@@ -4,8 +4,10 @@ python-slugify==4.0.1
 netaddr==0.8.0
 aiorun==2020.12.1
 getmac==0.8.2
-cryptography==3.4.3
 hass-client==0.0.9
 uvloop==0.14.0; sys_platform != 'win32'
 zeroconf==0.28.8
 tzlocal==2.1
+# Pin cryptography until rust is easier to properly install
+# when 1.45.0 is packaged
+cryptography<=3.3.2
