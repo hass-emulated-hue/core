@@ -31,12 +31,6 @@ def save_json(filename: str, data: dict, backup: bool = True):
         print("Failed to serialize to JSON: %s", filename)
 
 
-DEFINITIONS_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "../emulated_hue/definitions.json"
-)
-definitions = load_json(DEFINITIONS_FILE)
-
-
 def get_latest_version() -> int:
     """Scrape latest Hue version from website."""
 
@@ -57,6 +51,11 @@ def get_latest_version() -> int:
     # assume versions are in listed in order from newest to oldest. Next best alternative to saving all dates
     return versions[0]
 
+
+DEFINITIONS_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "../emulated_hue/definitions.json"
+)
+definitions = load_json(DEFINITIONS_FILE)
 
 latest_version = str(get_latest_version())
 
