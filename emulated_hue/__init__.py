@@ -1,8 +1,9 @@
 """Support for local control of entities by emulating a Philips Hue bridge."""
 import asyncio
 import logging
+from typing import Optional
 
-from hass_client import HomeAssistant
+from hass_client import HomeAssistantClient
 
 from .api import HueApi
 from .config import Config
@@ -21,11 +22,13 @@ class HueEmulator:
         hass_token: str,
         http_port: int,
         https_port: int,
-    ):
+    ) -> None:
         """Create an instance of HueEmulator."""
         self._loop = None
         self._config = Config(self, data_path, http_port, https_port)
-        self._hass = HomeAssistant(url=hass_url, token=hass_token)
+        self._hass: Optional[HomeAssistantClient] = None
+        self._hass_url = hass_url
+        self._hass_token = hass_token
         self._api = HueApi(self)
 
     @property
@@ -34,7 +37,7 @@ class HueEmulator:
         return self._config
 
     @property
-    def hass(self) -> HomeAssistant:
+    def hass(self) -> HomeAssistantClient:
         """Return the Home Assistant instance."""
         return self._hass
 
@@ -43,10 +46,11 @@ class HueEmulator:
         """Return the running event loop."""
         return self._loop
 
-    async def async_start(self):
+    async def async_start(self) -> None:
         """Start running the Hue emulation."""
         self._loop = asyncio.get_running_loop()
-        await self._hass.async_connect()
+        self._hass = HomeAssistantClient(url=self._hass_url, token=self._hass_token)
+        await self._hass.connect()
         await self._api.async_setup()
         self.loop.create_task(async_setup_discovery(self.config))
         # remove legacy light_ids config
@@ -54,7 +58,8 @@ class HueEmulator:
             await self.config.async_delete_storage_value("light_ids")
         # TODO: periodic search for renamed/deleted entities/areas
 
-    async def async_stop(self):
+    async def async_stop(self) -> None:
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
+        await self._hass.disconnect()
         await self._api.async_stop()

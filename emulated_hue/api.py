@@ -670,7 +670,7 @@ class HueApi:
             )
 
         # execute service
-        await self.hass.async_call_service(const.HASS_DOMAIN_LIGHT, service, data)
+        await self.hass.call_service(const.HASS_DOMAIN_LIGHT, service, data)
 
     def __update_allowed(
         self, entity: dict, light_data: dict, throttle_ms: int
