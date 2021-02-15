@@ -10,4 +10,4 @@ zeroconf==0.28.8
 tzlocal==2.1
 # Pin cryptography until rust is easier to properly install
 # when 1.45.0 is packaged
-cryptography<=3.3.2
+cryptography<3.4.6
