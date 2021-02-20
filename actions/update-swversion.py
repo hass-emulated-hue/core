@@ -64,6 +64,8 @@ current_version = definitions["bridge"]["basic"]["swversion"]
 if current_version != latest_version:
     definitions["bridge"]["basic"]["swversion"] = latest_version
     save_json(DEFINITIONS_FILE, definitions, False)
-    print("true")
+    # Use failure code as need to commit
+    exit(1)
 else:
-    print("false")
+    # Success == No need to commit
+    exit(0)

@@ -16,8 +16,9 @@ jobs:
         id: update
         run: |
           pip install requests
-          commit=`python3 -u actions/update-swversion.py 2>&1`
-          if [[ "true" == "$commit" ]]; then
+          python3 -u actions/update-swversion.py
+          commit_needed=$?
+          if [ $commit_needed -ne 0 ]; then
             export NEED_COMMIT=true
           else
             export NEED_COMMIT=false
