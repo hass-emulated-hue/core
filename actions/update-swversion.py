@@ -1,19 +1,20 @@
 """Ran daily to automatically obtain and commit latest swversion."""
 
 import json
+import logging
 import os
 import re
-import logging
 
 import requests
 
 logger = logging.getLogger()
-logformat = logging.Formatter(
-    "%(asctime)-15s %(levelname)-5s %(name)s -- %(message)s"
-)
+logformat = logging.Formatter("%(asctime)-15s %(levelname)-5s %(name)s -- %(message)s")
 consolehandler = logging.StreamHandler()
 consolehandler.setFormatter(logformat)
 logger.addHandler(consolehandler)
+logger.setLevel(logging.INFO)
+LOGGER = logging.getLogger(__name__)
+
 
 def load_json(filename: str) -> dict:
     """Load JSON from file."""
@@ -21,7 +22,7 @@ def load_json(filename: str) -> dict:
         with open(filename, encoding="utf-8") as fdesc:
             return json.loads(fdesc.read())  # type: ignore
     except (FileNotFoundError, ValueError, OSError) as error:
-        print("Loading %s failed: %s", filename, error)
+        LOGGER.debug("Loading %s failed: %s", filename, error)
         return {}
 
 
@@ -36,7 +37,7 @@ def save_json(filename: str, data: dict, backup: bool = True):
         with open(filename, "w") as file_obj:
             file_obj.write(json_data)
     except IOError:
-        print("Failed to serialize to JSON: %s", filename)
+        LOGGER.exception("Failed to serialize to JSON: %s", filename)
 
 
 def get_latest_version() -> int:
@@ -68,15 +69,17 @@ definitions = load_json(DEFINITIONS_FILE)
 latest_version = str(get_latest_version())
 
 current_version = definitions["bridge"]["basic"]["swversion"]
-logger.info(f"Current version: {current_version}, Latest version: {latest_version}")
+LOGGER.info(f"Current version: {current_version}, Latest version: {latest_version}")
 
 if current_version != latest_version:
-    logger.info(f"Current version is not equal to latest version! Commiting latest version: {latest_version}")
+    LOGGER.info(
+        f"Current version is not equal to latest version! Commiting latest version: {latest_version}"
+    )
     definitions["bridge"]["basic"]["swversion"] = latest_version
     save_json(DEFINITIONS_FILE, definitions, False)
     # Use failure code as need to commit
     exit(1)
 else:
-    logger.info(f"Current version is equal to latest version. Exiting...")
+    LOGGER.info(f"Current version is equal to latest version. Exiting...")
     # Success == No need to commit
     exit(0)
