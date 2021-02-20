@@ -3,9 +3,17 @@
 import json
 import os
 import re
+import logging
 
 import requests
 
+logger = logging.getLogger()
+logformat = logging.Formatter(
+    "%(asctime)-15s %(levelname)-5s %(name)s -- %(message)s"
+)
+consolehandler = logging.StreamHandler()
+consolehandler.setFormatter(logformat)
+logger.addHandler(consolehandler)
 
 def load_json(filename: str) -> dict:
     """Load JSON from file."""
@@ -60,12 +68,15 @@ definitions = load_json(DEFINITIONS_FILE)
 latest_version = str(get_latest_version())
 
 current_version = definitions["bridge"]["basic"]["swversion"]
+logger.info(f"Current version: {current_version}, Latest version: {latest_version}")
 
 if current_version != latest_version:
+    logger.info(f"Current version is not equal to latest version! Commiting latest version: {latest_version}")
     definitions["bridge"]["basic"]["swversion"] = latest_version
     save_json(DEFINITIONS_FILE, definitions, False)
     # Use failure code as need to commit
     exit(1)
 else:
+    logger.info(f"Current version is equal to latest version. Exiting...")
     # Success == No need to commit
     exit(0)

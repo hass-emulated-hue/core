@@ -15,8 +15,11 @@ jobs:
       - name: Update
         id: update
         run: |
+          set -x
           pip install requests
+          set +eo pipefail
           python3 -u actions/update-swversion.py
+          set -eo pipefail
           commit_needed=$?
           if [ $commit_needed -ne 0 ]; then
             export NEED_COMMIT=true
