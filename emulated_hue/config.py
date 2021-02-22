@@ -351,7 +351,7 @@ class Config:
             "title": "Emulated HUE Bridge",
             "message": msg,
         }
-        await self.hue.hass.async_call_service(
+        await self.hue.hass.call_service(
             "persistent_notification", "create", msg_details
         )
 
@@ -365,7 +365,7 @@ class Config:
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""
         self._link_mode_discovery_key = None
-        await self.hue.hass.async_call_service(
+        await self.hue.hass.call_service(
             "persistent_notification",
             "dismiss",
             {"notification_id": "hue_bridge_link_requested"},
