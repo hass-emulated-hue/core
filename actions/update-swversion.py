@@ -73,7 +73,7 @@ LOGGER.info(f"Current version: {current_version}, Latest version: {latest_versio
 
 if current_version != latest_version:
     LOGGER.info(
-        f"Current version is not equal to latest version! Commiting latest version: {latest_version}"
+        f"Current version is not equal to latest version! Committing latest version: {latest_version}"
     )
     definitions["bridge"]["basic"]["swversion"] = latest_version
     save_json(DEFINITIONS_FILE, definitions, False)
