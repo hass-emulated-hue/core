@@ -2,6 +2,7 @@ name: Update swversion
 
 on:
   push:
+    branches: [master]
   schedule:
     - cron: '0 0 * * *'
 
