@@ -26,6 +26,7 @@ class HueEmulator:
         """Create an instance of HueEmulator."""
         self._loop = None
         self._config = Config(self, data_path, http_port, https_port)
+        # the HA client is initialized in the async_start because it needs a running loop
         self._hass: Optional[HomeAssistantClient] = None
         self._hass_url = hass_url
         self._hass_token = hass_token
@@ -37,7 +38,7 @@ class HueEmulator:
         return self._config
 
     @property
-    def hass(self) -> HomeAssistantClient:
+    def hass(self) -> Optional[HomeAssistantClient]:
         """Return the Home Assistant instance."""
         return self._hass
 
