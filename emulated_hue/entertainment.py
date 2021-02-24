@@ -56,8 +56,11 @@ class EntertainmentAPI:
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
         LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
+        sensor_room = self.group_details["name"]
+        if not sensor_room:
+            sensor_room = self.group_details["class"]
         await self.hue.hass.async_set_state(
-            HASS_SENSOR, "on", {"room": self.group_details["name"]}
+            HASS_SENSOR, "on", {"room": sensor_room}
         )
         # length of each packet is dependent of how many lights we're serving in the group
         num_lights = len(self.group_details["lights"])

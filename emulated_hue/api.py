@@ -324,6 +324,10 @@ class HueApi:
     @check_request()
     async def async_create_group(self, request: web.Request, request_data: dict):
         """Handle requests to create a new group."""
+        if "class" not in request_data:
+            request_data["class"] = "Other"
+        if "name" not in request_data:
+            request_data["name"] = ""
         item_id = await self.__async_create_local_item(request_data, "groups")
         return send_json_response([{"success": {"id": item_id}}])
 
