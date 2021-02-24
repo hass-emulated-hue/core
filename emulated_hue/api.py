@@ -78,7 +78,9 @@ def check_request(check_user=True, log_request=True):
             if check_user:
                 username = request.match_info.get("username")
                 if not username or not await cls.config.async_get_user(username):
-                    return send_error_response(request.path, "unauthorized user", 1)
+                    return send_error_response(
+                        request.path, cls.hue.config.definitions["errors"]["1"], 1
+                    )
             # check and unpack (json) body if needed
             if request.method in ["PUT", "POST"]:
                 try:
@@ -183,10 +185,14 @@ class HueApi:
         if "devicetype" not in request_data:
             LOGGER.warning("devicetype not specified")
             # custom error message
-            return send_error_response(request.path, "devicetype not specified", 302)
+            return send_error_response(
+                request.path, self.hue.config.definitions["errors"]["302"], 302
+            )
         if not self.config.link_mode_enabled:
             await self.config.async_enable_link_mode_discovery()
-            return send_error_response(request.path, "link button not pressed", 101)
+            return send_error_response(
+                request.path, self.hue.config.definitions["errors"]["101"], 101
+            )
 
         userdetails = await self.config.async_create_user(request_data["devicetype"])
         response = [{"success": {"username": userdetails["username"]}}]
@@ -335,7 +341,13 @@ class HueApi:
         username = request.match_info["username"]
         group_conf = await self.config.async_get_storage_value("groups", group_id)
         if not group_conf:
-            return send_error_response(request.path, "no group config", 404)
+            return send_error_response(
+                request.path,
+                self.hue.config.definitions["errors"]["11"].format(
+                    error_code="no group config"
+                ),
+                11,
+            )
         update_dict(group_conf, request_data)
 
         # Hue entertainment support (experimental)
@@ -381,7 +393,13 @@ class HueApi:
         username = request.match_info["username"]
         light_conf = await self.config.async_get_storage_value("lights", light_id)
         if not light_conf:
-            return send_error_response(request.path, "no light config", 404)
+            return send_error_response(
+                request.path,
+                self.hue.config.definitions["errors"]["11"].format(
+                    error_code="no light config"
+                ),
+                11,
+            )
         update_dict(light_conf, request_data)
         return send_success_response(request.path, request_data, username)
 
@@ -420,7 +438,13 @@ class HueApi:
         username = request.match_info["username"]
         local_item = await self.config.async_get_storage_value(itemtype, item_id)
         if not local_item:
-            return send_error_response(request.path, "no localitem", 404)
+            return send_error_response(
+                request.path,
+                self.hue.config.definitions["errors"]["11"].format(
+                    error_code="no local item"
+                ),
+                11,
+            )
         update_dict(local_item, request_data)
         await self.config.async_set_storage_value(itemtype, item_id, local_item)
         return send_success_response(request.path, request_data, username)
@@ -600,7 +624,13 @@ class HueApi:
             LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
         else:
             LOGGER.warning("Invalid/unknown request: %s", request)
-        return send_error_response(request.path, "unknown request", 404)
+        return send_error_response(
+            request.path,
+            self.hue.config.definitions["errors"]["11"].format(
+                error_code="unknown request"
+            ),
+            11,
+        )
 
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
