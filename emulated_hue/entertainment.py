@@ -40,7 +40,6 @@ class EntertainmentAPI:
     def __init__(self, hue, group_details, user_details):
         """Initialize the class."""
         self.hue = hue
-        self.hass = hue.hass
         self.config = hue.config
         self.group_details = group_details
         self._interrupted = False
@@ -141,8 +140,8 @@ class EntertainmentAPI:
             svc_data[HASS_ATTR_TRANSITION] = throttle_ms / 1000
         else:
             svc_data[HASS_ATTR_TRANSITION] = 0
-        await self.hass.call_service("light", "turn_on", svc_data)
-        self.hass.states[entity_id]["attributes"].update(svc_data)
+        await self.hue.hass.call_service("light", "turn_on", svc_data)
+        self.hue.hass.states[entity_id]["attributes"].update(svc_data)
 
     def __update_allowed(
         self, light_id: str, light_data: bytes, throttle_ms: int
