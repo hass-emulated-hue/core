@@ -40,7 +40,6 @@ class EntertainmentAPI:
     def __init__(self, hue, group_details, user_details):
         """Initialize the class."""
         self.hue = hue
-        self.hass = hue.hass
         self.config = hue.config
         self.group_details = group_details
         self._interrupted = False
@@ -56,7 +55,7 @@ class EntertainmentAPI:
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
         LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
-        await self.hue.hass.async_set_state(
+        await self.hue.hass.set_state(
             HASS_SENSOR, "on", {"room": self.group_details["name"]}
         )
         # length of each packet is dependent of how many lights we're serving in the group
@@ -100,7 +99,7 @@ class EntertainmentAPI:
         self._interrupted = True
         if self._socket_daemon:
             self._socket_daemon.kill()
-        self.hue.loop.create_task(self.hue.hass.async_set_state(HASS_SENSOR, "off"))
+        self.hue.loop.create_task(self.hue.hass.set_state(HASS_SENSOR, "off"))
         LOGGER.info("HUE Entertainment Service stopped.")
 
     async def __async_process_light_packet(self, light_data, color_space):
@@ -141,8 +140,8 @@ class EntertainmentAPI:
             svc_data[HASS_ATTR_TRANSITION] = throttle_ms / 1000
         else:
             svc_data[HASS_ATTR_TRANSITION] = 0
-        await self.hass.async_call_service("light", "turn_on", svc_data)
-        self.hass.states[entity_id]["attributes"].update(svc_data)
+        await self.hue.hass.call_service("light", "turn_on", svc_data)
+        self.hue.hass.states[entity_id]["attributes"].update(svc_data)
 
     def __update_allowed(
         self, light_id: str, light_data: bytes, throttle_ms: int

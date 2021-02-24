@@ -103,7 +103,6 @@ class HueApi:
         """Initialize with Hue object."""
         self.streaming_api = None
         self.config = hue.config
-        self.hass = hue.hass
         self.hue = hue
         self.http_site = None
         self.https_site = None
@@ -222,7 +221,7 @@ class HueApi:
         self.hue.loop.call_later(60, auto_disable)
 
         # enable all disabled lights and groups
-        for entity in self.hass.lights:
+        for entity in self.hue.hass.lights:
             entity_id = entity["entity_id"]
             light_id = await self.config.async_entity_id_to_light_id(entity_id)
             light_config = await self.config.async_get_light_config(light_id)
@@ -674,7 +673,7 @@ class HueApi:
             )
 
         # execute service
-        await self.hass.async_call_service(const.HASS_DOMAIN_LIGHT, service, data)
+        await self.hue.hass.call_service(const.HASS_DOMAIN_LIGHT, service, data)
 
     def __update_allowed(
         self, entity: dict, light_data: dict, throttle_ms: int
@@ -853,9 +852,9 @@ class HueApi:
 
         # Get device type, model etc. from the Hass device registry
         entity_attr = entity["attributes"]
-        reg_entity = self.hass.entity_registry.get(entity["entity_id"])
+        reg_entity = self.hue.hass.entity_registry.get(entity["entity_id"])
         if reg_entity and reg_entity["device_id"] is not None:
-            device = self.hass.device_registry.get(reg_entity["device_id"])
+            device = self.hue.hass.device_registry.get(reg_entity["device_id"])
             if device:
                 retval["manufacturername"] = device["manufacturer"]
                 retval["modelid"] = device["model"]
@@ -887,7 +886,7 @@ class HueApi:
     async def __async_get_all_lights(self) -> dict:
         """Create a dict of all lights."""
         result = {}
-        for entity in self.hass.lights:
+        for entity in self.hue.hass.lights:
             entity_id = entity["entity_id"]
             light_id = await self.config.async_entity_id_to_light_id(entity_id)
             light_config = await self.config.async_get_light_config(light_id)
@@ -933,7 +932,7 @@ class HueApi:
                 result[group_id] = group_conf
 
         # Hass areas/rooms
-        for area in self.hass.area_registry.values():
+        for area in self.hue.hass.area_registry.values():
             area_id = area["area_id"]
             group_id = await self.config.async_area_id_to_group_id(area_id)
             group_conf = await self.config.async_get_group_config(group_id)
@@ -945,7 +944,7 @@ class HueApi:
             lights_on = 0
             # get all entities for this device
             async for entity in self.__async_get_group_lights(group_id):
-                entity = self.hass.get_state(entity["entity_id"], attribute=None)
+                entity = self.hue.hass.get_state(entity["entity_id"], attribute=None)
                 light_id = await self.config.async_entity_id_to_light_id(
                     entity["entity_id"]
                 )
@@ -983,7 +982,7 @@ class HueApi:
 
         # Hass group (area)
         if "area_id" in group_conf:
-            for entity in self.hass.entity_registry.values():
+            for entity in self.hue.hass.entity_registry.values():
                 if entity["disabled_by"]:
                     # do not include disabled devices
                     continue
@@ -991,7 +990,7 @@ class HueApi:
                     # for now only include lights
                     # TODO: include switches, sensors ?
                     continue
-                device = self.hass.device_registry.get(entity["device_id"])
+                device = self.hue.hass.device_registry.get(entity["device_id"])
                 # first check if area is defined on entity itself
                 if entity["area_id"] and entity["area_id"] != group_conf["area_id"]:
                     # different area id defined on entity so skip this entity
@@ -1011,7 +1010,7 @@ class HueApi:
                 light_conf = await self.config.async_get_light_config(light_id)
                 if not light_conf["enabled"]:
                     continue
-                entity = self.hass.get_state(entity["entity_id"], attribute=None)
+                entity = self.hue.hass.get_state(entity["entity_id"], attribute=None)
                 yield entity
 
         # Local group
