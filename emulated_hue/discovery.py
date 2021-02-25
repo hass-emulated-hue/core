@@ -67,32 +67,33 @@ class UPNPResponderThread(threading.Thread):
         resp_template = """HTTP/1.1 200 OK
 CACHE-CONTROL: max-age=60
 EXT:
-LOCATION: http://{0}:{1}/description.xml
+LOCATION: http://{ip_addr}:{port_num}/description.xml
 SERVER: Linux/3.14.0 UPnP/1.0 IpBridge/1.20.0
-hue-bridgeid: {2}
-ST: {3}
-USN: uuid:{4}
+hue-bridgeid: {bridge_id}
+ST: {device_type}
+USN: {bridge_uuid}
 
 """
 
         self.upnp_root_response = (
             resp_template.format(
-                config.ip_addr,
-                config.http_port,
-                config.bridge_id,
-                "upnp:rootdevice",
-                f"{config.bridge_uid}::upnp:rootdevice",
+                ip_addr=config.ip_addr,
+                port_num=config.http_port,
+                bridge_id=config.bridge_id,
+                device_type="upnp:rootdevice",
+                bridge_uuid=f"uuid:{config.bridge_uid}::upnp:rootdevice",
             )
             .replace("\n", "\r\n")
             .encode("utf-8")
         )
         self.upnp_device_response = (
             resp_template.format(
-                config.ip_addr,
-                config.http_port,
-                config.bridge_id,
-                "urn:schemas-upnp-org:device:basic:1",
-                config.bridge_uid,
+                ip_addr=config.ip_addr,
+                port_num=config.http_port,
+                bridge_id=config.bridge_id,
+                # device_type="urn:schemas-upnp-org:device:basic:1",
+                device_type=f"uuid:{config.bridge_uid}",
+                bridge_uuid=f"uuid:{config.bridge_uid}",
             )
             .replace("\n", "\r\n")
             .encode("utf-8")
@@ -145,16 +146,16 @@ USN: uuid:{4}
                 # because the data object has not been initialized
                 continue
 
-            decoded_data = data.decode("utf-8", errors="ignore")
-            if "M-SEARCH" in decoded_data:
+            if "M-SEARCH" in (decoded_data := data.decode("utf-8", errors="ignore")):
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
                 if "upnp:rootdevice" in decoded_data:
                     resp_socket.sendto(self.upnp_root_response, addr)
+                    LOGGER.debug("Serving root SSDP discovery info to %s", addr)
                 else:
                     resp_socket.sendto(self.upnp_device_response, addr)
-                LOGGER.debug("Serving SSDP discovery info to %s", addr)
+                    LOGGER.debug("Serving device SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):
