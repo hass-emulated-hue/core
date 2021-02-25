@@ -146,16 +146,13 @@ USN: {bridge_uuid}
                 # because the data object has not been initialized
                 continue
 
-            if "M-SEARCH" in (decoded_data := data.decode("utf-8", errors="ignore")):
+            if "M-SEARCH" in data.decode("utf-8", errors="ignore"):
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-                if "upnp:rootdevice" in decoded_data:
-                    resp_socket.sendto(self.upnp_root_response, addr)
-                    LOGGER.debug("Serving root SSDP discovery info to %s", addr)
-                else:
-                    resp_socket.sendto(self.upnp_device_response, addr)
-                    LOGGER.debug("Serving device SSDP discovery info to %s", addr)
+                resp_socket.sendto(self.upnp_root_response, addr)
+                resp_socket.sendto(self.upnp_device_response, addr)
+                LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):
