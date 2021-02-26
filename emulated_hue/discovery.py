@@ -150,7 +150,7 @@ USN: {bridge_uuid}
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-                resp_socket.sendto(self.upnp_device_response, addr)
+                resp_socket.sendto(self.upnp_root_response, addr)
                 LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
