@@ -91,8 +91,8 @@ USN: {bridge_uuid}
                 ip_addr=config.ip_addr,
                 port_num=config.http_port,
                 bridge_id=config.bridge_id,
-                device_type="urn:schemas-upnp-org:device:basic:1",
-                # device_type=f"uuid:{config.bridge_uid}",
+                # device_type="urn:schemas-upnp-org:device:basic:1",
+                device_type=f"uuid:{config.bridge_uid}",
                 bridge_uuid=f"uuid:{config.bridge_uid}",
             )
             .replace("\n", "\r\n")
