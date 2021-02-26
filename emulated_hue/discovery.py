@@ -75,24 +75,12 @@ USN: {bridge_uuid}
 
 """
 
-        self.upnp_root_response = (
-            resp_template.format(
-                ip_addr=config.ip_addr,
-                port_num=config.http_port,
-                bridge_id=config.bridge_id,
-                device_type="upnp:rootdevice",
-                bridge_uuid=f"uuid:{config.bridge_uid}::upnp:rootdevice",
-            )
-            .replace("\n", "\r\n")
-            .encode("utf-8")
-        )
         self.upnp_device_response = (
             resp_template.format(
                 ip_addr=config.ip_addr,
                 port_num=config.http_port,
                 bridge_id=config.bridge_id,
                 device_type="urn:schemas-upnp-org:device:basic:1",
-                # device_type=f"uuid:{config.bridge_uid}",
                 bridge_uuid=f"uuid:{config.bridge_uid}",
             )
             .replace("\n", "\r\n")
@@ -146,12 +134,12 @@ USN: {bridge_uuid}
                 # because the data object has not been initialized
                 continue
 
-            if "M-SEARCH" in (decoded_data := data.decode("utf-8", errors="ignore")):
+            if "M-SEARCH" in data.decode("utf-8", errors="ignore"):
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
                 resp_socket.sendto(self.upnp_device_response, addr)
-                LOGGER.debug("Serving SSDP discovery info to %s with request %s", addr, repr(decoded_data))
+                LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):
