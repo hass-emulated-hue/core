@@ -151,5 +151,5 @@ def entity_attributes_to_int(attributes: dict):
 
 def create_secure_string(length: int) -> str:
     """Create secure random string for username, client key, and tokens."""
-    character_array = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    character_array = "ABCDEFabcdef0123456789"
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
