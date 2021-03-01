@@ -149,7 +149,12 @@ USN: {bridge_uuid}
                     .encode("utf-8")
                 )
                 resp_socket.sendto(response, addr)
-                LOGGER.debug("Serving SSDP discovery info to %s", addr)
+                LOGGER.debug(
+                    "Serving SSDP discovery info to %s, received data %s, response data %s",
+                    addr,
+                    repr(decoded_data),
+                    repr(response),
+                )
                 resp_socket.close()
 
     def stop(self):
