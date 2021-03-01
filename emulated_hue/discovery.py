@@ -142,6 +142,8 @@ USN: {bridge_uuid}
                     "(?<=\\r\\nST: )(.*)(?=\\r)", decoded_data
                 ).group(0)
                 if decoded_st_field == "ssdp:all":
+                    decoded_st_field = "urn:schemas-upnp-org:device:basic:1"
+                else:
                     decoded_st_field = f"uuid:{self.config.bridge_uid}"
                 response = (
                     self.upnp_device_response.format(device_type=decoded_st_field)
