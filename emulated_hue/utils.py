@@ -26,6 +26,14 @@ LOCAL_NETWORKS = (
 )
 
 
+class Default(dict):
+    """Provide default strings for format."""
+
+    def __missing__(self, key):
+        """Append format string for missing keys."""
+        return "{" + key + "}"
+
+
 def is_local(address: Union[IPv4Address, IPv6Address]) -> bool:
     """Check if an address is local."""
     return address in LOCAL_IPS or any(address in network for network in LOCAL_NETWORKS)
