@@ -1,7 +1,6 @@
 """Support UPNP discovery method that mimics Hue hubs."""
 import asyncio
 import logging
-import re
 import select
 import socket
 import threading
@@ -9,7 +8,7 @@ import threading
 from zeroconf import InterfaceChoice, ServiceInfo, Zeroconf
 
 from .config import Config
-from .utils import Default, get_ip_pton
+from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +58,6 @@ class UPNPResponderThread(threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
 
-        self.config = config
         self.ip_addr = config.ip_addr
         self.listen_port = config.http_port
         self.upnp_bind_multicast = bind_multicast
@@ -77,13 +75,32 @@ USN: {bridge_uuid}
 
 """
 
-        self.upnp_device_response = resp_template.format_map(
-            Default(
-                ip_addr=config.ip_addr,
-                port_num=config.http_port,
-                bridge_id=config.bridge_id,
-                bridge_uuid=f"uuid:{config.bridge_uid}",
+        self.upnp_device_response = (
+            (
+                resp_template.format(
+                    ip_addr=config.ip_addr,
+                    port_num=config.http_port,
+                    bridge_id=config.bridge_id,
+                    device_type="urn:schemas-upnp-org:device:basic:1",
+                    bridge_uuid=f"uuid:{config.bridge_uid}",
+                )
             )
+            .replace("\n", "\r\n")
+            .encode("utf-8")
+        )
+
+        self.upnp_unique_response = (
+            (
+                resp_template.format(
+                    ip_addr=config.ip_addr,
+                    port_num=config.http_port,
+                    bridge_id=config.bridge_id,
+                    device_type=f"uuid:{config.bridge_uid}",
+                    bridge_uuid=f"uuid:{config.bridge_uid}",
+                )
+            )
+            .replace("\n", "\r\n")
+            .encode("utf-8")
         )
 
     def run(self):
@@ -138,25 +155,11 @@ USN: {bridge_uuid}
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-                decoded_st_field = re.search(
-                    "(?<=\\r\\nST: )(.*)(?=\\r)", decoded_data
-                ).group(0)
-                if decoded_st_field == "ssdp:all":
-                    decoded_st_field = "urn:schemas-upnp-org:device:basic:1"
+                if "ssdp:all" in decoded_data:
+                    resp_socket.sendto(self.upnp_device_response, addr)
                 else:
-                    decoded_st_field = f"uuid:{self.config.bridge_uid}"
-                response = (
-                    self.upnp_device_response.format(device_type=decoded_st_field)
-                    .replace("\n", "\r\n")
-                    .encode("utf-8")
-                )
-                resp_socket.sendto(response, addr)
-                LOGGER.debug(
-                    "Serving SSDP discovery info to %s, received data %s, response data %s",
-                    addr,
-                    repr(decoded_data),
-                    repr(response),
-                )
+                    resp_socket.sendto(self.upnp_unique_response, addr)
+                LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):
