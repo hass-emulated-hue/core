@@ -95,7 +95,7 @@ USN: {bridge_uuid}
                     ip_addr=config.ip_addr,
                     port_num=config.http_port,
                     bridge_id=config.bridge_id,
-                    device_type=f"uuid:{config.bridge_uid}",
+                    device_type=f"uuid:{config.bridge_id}",
                     bridge_uuid=f"uuid:{config.bridge_uid}",
                 )
             )
