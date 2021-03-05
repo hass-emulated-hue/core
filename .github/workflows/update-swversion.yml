@@ -1,7 +1,6 @@
 name: Update swversion
 
 on:
-  push:
   schedule:
     - cron: '0 0 * * *'
 
