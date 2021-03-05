@@ -2,7 +2,6 @@ name: Update swversion
 
 on:
   push:
-    branches: [master]
   schedule:
     - cron: '0 0 * * *'
 
@@ -14,25 +13,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Update
-        id: update
-        run: |
-          set -x
-          pip install requests
-          set +eo pipefail
-          python3 -u actions/update-swversion.py
-          commit_needed=$?
-          set -eo pipefail
-          if [ $commit_needed -ne 0 ]; then
-            export NEED_COMMIT=true
-          else
-            export NEED_COMMIT=false
-          fi
-          echo "::set-output name=needcommit::${NEED_COMMIT}"
-      - name: Commit
-        if: ${{ steps.update.outputs.needcommit == 'true' }}
-        run: |
-          git config user.name "${GITHUB_ACTOR}"
-          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git add .
-          git commit -m "Update swversion"
-          git push
+        id: swversionupdate
+        uses: hass-emulated-hue/update-swversion-action@master
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+            commit-message: Update swversion
+            branch: action/update-swversion
+            delete-branch: true
+            title: Bump swversion to ${{ steps.swversionupdate.outputs.version }}
+            body: Bumps swversion to ${{ steps.swversionupdate.outputs.version }}
+            labels: automated
