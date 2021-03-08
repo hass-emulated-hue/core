@@ -70,13 +70,13 @@ jobs:
       - name: Save tarball
         run: |
           set -x
-          docker save --output output.tar ci:${{ github.run_number }}
+          docker save --output ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz ci:${{ github.run_number }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar
-          path: output.tar
+          name: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz
+          path: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz
 
   publish:
     needs: build
@@ -106,7 +106,7 @@ jobs:
 
       - name: Import image
         run: |
-          docker load --input output.tar
+          docker load --input ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz
 
       - name: Docker login
         run: |
