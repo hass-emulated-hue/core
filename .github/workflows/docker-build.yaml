@@ -102,11 +102,11 @@ jobs:
       - name: Download container artifact
         uses: actions/download-artifact@v2
         with:
-          name: ci-${{ matrix.arch }}-${{ github.run_number }}.tar
+          name: ci-${{ matrix.arch }}-${{ github.run_number }}.tar.gz
 
       - name: Import image
         run: |
-          docker load --input ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz
+          docker load --input ci-${{ matrix.arch }}-${{ github.run_number }}.tar.gz
 
       - name: Docker login
         run: |
