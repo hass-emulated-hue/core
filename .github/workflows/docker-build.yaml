@@ -75,7 +75,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz
+          name: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}
           path: ci-${{ matrix.arch_friendly }}-${{ github.run_number }}.tar.gz
 
   publish:
@@ -102,7 +102,7 @@ jobs:
       - name: Download container artifact
         uses: actions/download-artifact@v2
         with:
-          name: ci-${{ matrix.arch }}-${{ github.run_number }}.tar.gz
+          name: ci-${{ matrix.arch }}-${{ github.run_number }}
 
       - name: Import image
         run: |
