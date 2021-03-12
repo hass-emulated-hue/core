@@ -58,6 +58,7 @@ jobs:
             --build-arg BUILD_VERSION=${GITHUB_REF##*/} \
             --tag ci:${{ github.run_number }} \
             --platform ${{ matrix.arch }} \
+            --progress plain \
             --file ./Dockerfile \
             --load \
             .
