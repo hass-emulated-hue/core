@@ -470,7 +470,6 @@ class HueApi:
 
     async def async_scene_to_full_state(self) -> dict:
         """Return scene data, removing lightstates and adds group lights instead."""
-        groups = await self.__async_get_all_groups()
         scenes = await self.config.async_get_storage_value("scenes", default={})
         scenes = copy.deepcopy(scenes)
         for scene_num, scene_data in scenes.items():
