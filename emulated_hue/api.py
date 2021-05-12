@@ -475,7 +475,8 @@ class HueApi:
         scenes = copy.deepcopy(scenes)
         for scene_num, scene_data in scenes.items():
             scenes_group = scene_data["group"]
-            del scene_data["lightstates"]
+            # Remove lightstates only if existing
+            scene_data.pop("lightstates", None)
             scene_data["lights"] = groups[scenes_group]["lights"]
         return scenes
 
