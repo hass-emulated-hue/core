@@ -477,7 +477,7 @@ class HueApi:
             scenes_group = scene_data["group"]
             # Remove lightstates only if existing
             scene_data.pop("lightstates", None)
-            scene_data["lights"] = groups[scenes_group]["lights"]
+            scene_data["lights"] = await self.__async_get_group_id(scenes_group)
         return scenes
 
     @routes.get("/api/{username}")
@@ -966,10 +966,8 @@ class HueApi:
 
         return result
 
-    async def __async_get_group_lights(
-        self, group_id: str
-    ) -> AsyncGenerator[dict, None]:
-        """Get all light entities for a group."""
+    async def __async_get_group_id(self, group_id: str) -> dict:
+        """Get group data for a group."""
         if group_id == "0":
             all_lights = await self.__async_get_all_lights()
             group_conf = {}
@@ -980,6 +978,13 @@ class HueApi:
             group_conf = await self.config.async_get_storage_value("groups", group_id)
         if not group_conf:
             raise RuntimeError("Invalid group id: %s" % group_id)
+        return group_conf
+
+    async def __async_get_group_lights(
+        self, group_id: str
+    ) -> AsyncGenerator[dict, None]:
+        """Get all light entities for a group."""
+        group_conf = await self.__async_get_group_id(group_id)
 
         # Hass group (area)
         if "area_id" in group_conf:
