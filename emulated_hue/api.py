@@ -290,14 +290,12 @@ class HueApi:
         # instead of directly getting groups should have a property
         # get groups instead so we can easily modify it
         group_conf = await self.config.async_get_storage_value("groups", group_id)
-        if group_id == "0" and "scene" in request_data:
+        if "scene" in request_data:
             # scene request
             scene = await self.config.async_get_storage_value(
                 "scenes", request_data["scene"], default={}
             )
-            for light_id, light_state in scene["lightstates"].items():
-                entity = await self.config.async_entity_by_light_id(light_id)
-                await self.__async_light_action(entity, light_state)
+            await self.__activate_scene(scene)
         else:
             # forward request to all group lights
             # may need refactor to make __async_get_group_lights not an
@@ -318,17 +316,6 @@ class HueApi:
                 self.streaming_api = None
         # Create success responses for all received keys
         return send_success_response(request.path, request_data, username)
-
-    @routes.post("/api/{username}/groups")
-    @check_request()
-    async def async_create_group(self, request: web.Request, request_data: dict):
-        """Handle requests to create a new group."""
-        if "class" not in request_data:
-            request_data["class"] = "Other"
-        if "name" not in request_data:
-            request_data["name"] = ""
-        item_id = await self.__async_create_local_item(request_data, "groups")
-        return send_json_response([{"success": {"id": item_id}}])
 
     @routes.put("/api/{username}/groups/{group_id}")
     @check_request()
@@ -406,12 +393,21 @@ class HueApi:
         result = items.get(item_id, {})
         return send_json_response(result)
 
-    @routes.post("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
+    @routes.post("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks|groups)}")
     @check_request()
     async def async_create_localitem(self, request: web.Request, request_data: dict):
         """Handle requests to create a new localitem."""
         itemtype = request.match_info["itemtype"]
-        item_id = await self.__async_create_local_item(request_data, itemtype)
+        await self.__normalize_local_item(request_data, itemtype)
+
+        # get first available id
+        local_items = await self.config.async_get_storage_value(itemtype, default={})
+        for i in range(1, 1000):
+            item_id = str(i)
+            if item_id not in local_items:
+                break
+        await self.config.async_set_storage_value(itemtype, item_id, request_data)
+
         return send_json_response([{"success": {"id": item_id}}])
 
     @routes.put("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
@@ -425,6 +421,7 @@ class HueApi:
         if not local_item:
             return send_error_response(request.path, "no localitem", 404)
         update_dict(local_item, request_data)
+        await self.__normalize_local_item(local_item, itemtype)
         await self.config.async_set_storage_value(itemtype, item_id, local_item)
         return send_success_response(request.path, request_data, username)
 
@@ -895,24 +892,32 @@ class HueApi:
             result[light_id] = await self.__async_entity_to_hue(entity, light_config)
         return result
 
-    async def __async_create_local_item(
-        self, data: Any, itemtype: str = "scenes"
+    async def __normalize_local_item(
+        self, data: Any, itemtype: str
     ) -> str:
-        """Create item in storage of given type (scenes etc.)."""
-        local_items = await self.config.async_get_storage_value(itemtype, default={})
-        # get first available id
-        for i in range(1, 1000):
-            item_id = str(i)
-            if item_id not in local_items:
-                break
-        if (
-            itemtype == "groups"
-            and data["type"] in ["LightGroup", "Room", "Zone"]
-            and "class" not in data
-        ):
-            data["class"] = "Other"
-        await self.config.async_set_storage_value(itemtype, item_id, data)
-        return item_id
+        """Apply any logic to data, before it is ready to be saved."""
+        if itemtype == "groups":
+            if "class" not in data and data["type"] in ["LightGroup", "Room", "Zone"]:
+                data["class"] = "Other"
+            if "name" not in data:
+                data["name"] = ""
+        elif itemtype == "scenes" and (data.get("storelightstate") or "lightstates" not in data) and data.get("group") != None:
+            if "storelightstate" in data:
+                del data["storelightstate"]
+                
+            groups = await self.__async_get_all_groups()
+            group = groups.get(data["group"])
+            data['lightstates'] = {}
+            for light_id in group["lights"]:
+                entity = await self.config.async_entity_by_light_id(light_id)
+                hue = await self.__async_entity_to_hue(entity)
+                data['lightstates'][light_id] = hue['state']
+
+    async def __activate_scene(self, scene: dict):
+        """Activate the light state for the given scene."""
+        for light_id, light_state in scene["lightstates"].items():
+            entity = await self.config.async_entity_by_light_id(light_id)
+            await self.__async_light_action(entity, light_state)
 
     async def __async_get_all_groups(self) -> dict:
         """Create a dict of all groups."""
