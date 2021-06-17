@@ -892,26 +892,28 @@ class HueApi:
             result[light_id] = await self.__async_entity_to_hue(entity, light_config)
         return result
 
-    async def __normalize_local_item(
-        self, data: Any, itemtype: str
-    ) -> str:
+    async def __normalize_local_item(self, data: Any, itemtype: str) -> None:
         """Apply any logic to data, before it is ready to be saved."""
         if itemtype == "groups":
             if "class" not in data and data["type"] in ["LightGroup", "Room", "Zone"]:
                 data["class"] = "Other"
             if "name" not in data:
                 data["name"] = ""
-        elif itemtype == "scenes" and (data.get("storelightstate") or "lightstates" not in data) and data.get("group") != None:
+        elif (
+            itemtype == "scenes"
+            and (data.get("storelightstate") or "lightstates" not in data)
+            and data.get("group") is not None
+        ):
             if "storelightstate" in data:
                 del data["storelightstate"]
-                
+
             groups = await self.__async_get_all_groups()
             group = groups.get(data["group"])
-            data['lightstates'] = {}
+            data["lightstates"] = {}
             for light_id in group["lights"]:
                 entity = await self.config.async_entity_by_light_id(light_id)
                 hue = await self.__async_entity_to_hue(entity)
-                data['lightstates'][light_id] = hue['state']
+                data["lightstates"][light_id] = hue["state"]
 
     async def __activate_scene(self, scene: dict):
         """Activate the light state for the given scene."""
