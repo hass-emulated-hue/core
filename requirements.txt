@@ -6,6 +6,6 @@ aiorun==2020.12.1
 getmac==0.8.2
 hass-client==0.1.2
 uvloop==0.15.2; sys_platform != 'win32'
-zeroconf==0.31.0
+zeroconf==0.32.0
 tzlocal==2.1
 cryptography==3.4.7
