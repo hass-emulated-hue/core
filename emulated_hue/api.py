@@ -734,7 +734,7 @@ class HueApi:
         self, entity: dict, light_config: Optional[dict] = None
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
-        entity_attr = entity_attributes_to_int(entity["attributes"])
+        entity_attr = entity_attributes_to_int(entity[const.HASS_ATTR])
         entity_color_modes = entity[const.HASS_ATTR].get(
             const.HASS_ATTR_SUPPORTED_COLOR_MODES, []
         )
@@ -751,7 +751,7 @@ class HueApi:
                 "mode": "homeautomation",
             },
             "name": light_config["name"]
-            or entity["attributes"].get("friendly_name", ""),
+            or entity[const.HASS_ATTR].get("friendly_name", ""),
             "uniqueid": light_config["uniqueid"],
             "swupdate": {
                 "state": "noupdates",
