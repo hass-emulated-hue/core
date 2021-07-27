@@ -11,16 +11,32 @@ HASS_ATTR_EFFECT = "effect"
 HASS_ATTR_TRANSITION = "transition"
 HASS_ATTR_FLASH = "flash"
 
+# Deprecated Bitfield features
 HASS_SUPPORT_BRIGHTNESS = 1
 HASS_SUPPORT_COLOR_TEMP = 2
-HASS_SUPPORT_EFFECT = 4
-HASS_SUPPORT_FLASH = 8
+HASS_SUPPORT_EFFECT = 4  # unused
+HASS_SUPPORT_FLASH = 8  # unused
 HASS_SUPPORT_COLOR = 16
-HASS_SUPPORT_TRANSITION = 32
-HASS_SUPPORT_WHITE_VALUE = 128
+HASS_SUPPORT_TRANSITION = 32  # unused
+HASS_SUPPORT_WHITE_VALUE = 128  # unused
 
+# New color modes
+# https://github.com/home-assistant/core/blob/2b3148296c7af2dd381b48bd6c5aa2af5fdfac1b/homeassistant/components/light/__init__.py#L55
+HASS_COLOR_MODE_UNKNOWN = "unknown"  # Ambiguous color mode
+HASS_COLOR_MODE_ONOFF = "onoff"  # Must be the only supported mode
+HASS_COLOR_MODE_BRIGHTNESS = "brightness"  # Must be the only supported mode
+HASS_COLOR_MODE_COLOR_TEMP = "color_temp"
+HASS_COLOR_MODE_HS = "hs"
+HASS_COLOR_MODE_XY = "xy"
+HASS_COLOR_MODE_RGB = "rgb"
+HASS_COLOR_MODE_RGBW = "rgbw"
+HASS_COLOR_MODE_RGBWW = "rgbww"
+HASS_COLOR_MODE_WHITE = "white"  # Must *NOT* be the only supported mode
+
+HASS_ATTR = "attributes"
 HASS_ATTR_ENTITY_ID = "entity_id"
 HASS_ATTR_SUPPORTED_FEATURES = "supported_features"
+HASS_ATTR_SUPPORTED_COLOR_MODES = "supported_color_modes"
 HASS_SERVICE_TURN_OFF = "turn_off"
 HASS_SERVICE_TURN_ON = "turn_on"
 HASS_STATE_OFF = "off"
