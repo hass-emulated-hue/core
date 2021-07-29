@@ -16,6 +16,7 @@ from aiohttp import web
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 from emulated_hue.utils import (
+    convert_color_mode,
     entity_attributes_to_int,
     send_error_response,
     send_json_response,
@@ -761,19 +762,25 @@ class HueApi:
         }
 
         # Determine correct Hue type from HA supported features
-        if {
-            const.HASS_COLOR_MODE_HS,
-            const.HASS_COLOR_MODE_XY,
-            const.HASS_COLOR_MODE_RGB,
-            const.HASS_COLOR_MODE_RGBW,
-            const.HASS_COLOR_MODE_RGBWW,
-        }.intersection(set(entity_color_modes)) and {
-            const.HASS_COLOR_MODE_COLOR_TEMP,
-            const.HASS_COLOR_MODE_RGBW,
-            const.HASS_COLOR_MODE_RGBWW,
-            const.HASS_COLOR_MODE_WHITE,
-        }.intersection(
-            set(entity_color_modes)
+        if any(
+            color_mode
+            in [
+                const.HASS_COLOR_MODE_HS,
+                const.HASS_COLOR_MODE_XY,
+                const.HASS_COLOR_MODE_RGB,
+                const.HASS_COLOR_MODE_RGBW,
+                const.HASS_COLOR_MODE_RGBWW,
+            ]
+            for color_mode in entity_color_modes
+        ) and any(
+            color_mode
+            in [
+                const.HASS_COLOR_MODE_COLOR_TEMP,
+                const.HASS_COLOR_MODE_RGBW,
+                const.HASS_COLOR_MODE_RGBWW,
+                const.HASS_COLOR_MODE_WHITE,
+            ]
+            for color_mode in entity_color_modes
         ):
             # Extended Color light (Zigbee Device ID: 0x0210)
             # Same as Color light, but which supports additional setting of color temperature
@@ -787,7 +794,9 @@ class HueApi:
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     # TODO: remember last command to set colormode
-                    const.HUE_ATTR_COLORMODE: const.HUE_ATTR_XY,
+                    const.HUE_ATTR_COLORMODE: convert_color_mode(
+                        entity_attr["color_mode"], const.HASS
+                    ),
                     # TODO: add hue/sat
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
@@ -805,18 +814,25 @@ class HueApi:
                     const.HUE_ATTR_ALERT: "none",
                 }
             )
-        elif {
-            const.HASS_COLOR_MODE_HS,
-            const.HASS_COLOR_MODE_XY,
-            const.HASS_COLOR_MODE_RGB,
-        }.intersection(set(entity_color_modes)):
+        elif any(
+            color_mode
+            in [
+                const.HASS_COLOR_MODE_HS,
+                const.HASS_COLOR_MODE_XY,
+                const.HASS_COLOR_MODE_RGB,
+            ]
+            for color_mode in entity_color_modes
+        ):
             # Color light (Zigbee Device ID: 0x0200)
             # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
             retval.update(self.hue.config.definitions["lights"]["Color light"])
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    const.HUE_ATTR_COLORMODE: "xy",  # TODO: remember last command to set colormode
+                    # TODO: remember last command to set colormode
+                    const.HUE_ATTR_COLORMODE: convert_color_mode(
+                        entity_attr["color_mode"], const.HASS
+                    ),
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
@@ -829,7 +845,7 @@ class HueApi:
                     const.HUE_ATTR_EFFECT: "none",
                 }
             )
-        elif {const.HASS_COLOR_MODE_COLOR_TEMP}.intersection(set(entity_color_modes)):
+        elif const.HASS_COLOR_MODE_COLOR_TEMP in entity_color_modes:
             # Color temperature light (Zigbee Device ID: 0x0220)
             # Supports groups, scenes, on/off, dimming, and setting of a color temperature
             retval.update(
@@ -843,11 +859,11 @@ class HueApi:
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    const.HUE_ATTR_COLORMODE: "ct",
+                    const.HUE_ATTR_COLORMODE: const.HUE_ATTR_CT,
                     const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
                 }
             )
-        elif {const.HASS_COLOR_MODE_BRIGHTNESS}.intersection(set(entity_color_modes)):
+        elif const.HASS_COLOR_MODE_BRIGHTNESS in entity_color_modes:
             # Dimmable light (Zigbee Device ID: 0x0100)
             # Supports groups, scenes, on/off and dimming
             brightness = entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0)

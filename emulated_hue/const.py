@@ -53,6 +53,7 @@ HUE_ATTR_COLORMODE = "colormode"
 HUE_ATTR_HUE = "hue"
 HUE_ATTR_SAT = "sat"
 HUE_ATTR_CT = "ct"
+HUE_ATTR_HS = "hs"
 HUE_ATTR_XY = "xy"
 HUE_ATTR_EFFECT = "effect"
 HUE_ATTR_TRANSITION = "transitiontime"
@@ -67,3 +68,6 @@ HUE_ATTR_SAT_MIN = 0  # Saturation
 HUE_ATTR_SAT_MAX = 254
 HUE_ATTR_CT_MIN = 153  # Color temp
 HUE_ATTR_CT_MAX = 500
+
+HASS = "hass"
+HUE = "hue"
