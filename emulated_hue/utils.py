@@ -156,6 +156,7 @@ def create_secure_string(length: int) -> str:
 
 
 def convert_color_mode(color_mode: str, intial_type: str) -> str:
+    """Convert color_mode names from initial_type to other type for xy, hs, and ct."""
     if intial_type == const.HASS:
         hass_color_modes = {
             const.HASS_COLOR_MODE_COLOR_TEMP: const.HUE_ATTR_CT,
