@@ -9,6 +9,7 @@ import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
 
+import const
 import slugify as unicode_slug
 from aiohttp import web
 
@@ -152,3 +153,21 @@ def create_secure_string(length: int) -> str:
     """Create secure random string for username, client key, and tokens."""
     character_array = "ABCDEFabcdef0123456789"
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
+
+
+def convert_color_mode(color_mode: str, intial_type: str) -> str:
+    """Convert color_mode names from initial_type to other type for xy, hs, and ct."""
+    if intial_type == const.HASS:
+        hass_color_modes = {
+            const.HASS_COLOR_MODE_COLOR_TEMP: const.HUE_ATTR_CT,
+            const.HASS_COLOR_MODE_XY: const.HUE_ATTR_XY,
+            const.HASS_COLOR_MODE_HS: const.HUE_ATTR_HS,
+        }
+        return hass_color_modes.get(color_mode, "xy")
+    else:
+        hue_color_modes = {
+            const.HUE_ATTR_CT: const.HASS_COLOR_MODE_COLOR_TEMP,
+            const.HUE_ATTR_XY: const.HASS_COLOR_MODE_XY,
+            const.HUE_ATTR_HS: const.HASS_COLOR_MODE_HS,
+        }
+        return hue_color_modes.get(color_mode, "xy")
