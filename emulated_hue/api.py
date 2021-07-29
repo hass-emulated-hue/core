@@ -979,10 +979,8 @@ class HueApi:
                         # set state of first light as group state
                         entity_obj = await self.__async_entity_to_hue(entity)
                         result[group_id]["action"] = entity_obj["state"]
-            if lights_on > 0:
-                result[group_id]["state"]["any_on"] = True
-            if lights_on == len(result[group_id]["lights"]):
-                result[group_id]["state"]["all_on"] = True
+            result[group_id]["state"]["any_on"] = lights_on > 0
+            result[group_id]["state"]["all_on"] = lights_on == len(result[group_id]["lights"])
             # do not return empty areas/rooms
             if len(result[group_id]["lights"]) == 0:
                 result.pop(group_id, None)
