@@ -234,7 +234,7 @@ class HueApi:
                 )
                 # add to new_lights for the app to show a special badge
                 self._new_lights[light_id] = await self.__async_entity_to_hue(
-                    entity, light_config
+                    entity, light_config, light_id
                 )
         groups = await self.config.async_get_storage_value("groups", default={})
         for group_id, group_conf in groups.items():
@@ -752,7 +752,7 @@ class HueApi:
         return False
 
     async def __async_entity_to_hue(
-        self, entity: dict, light_config: Optional[dict] = None
+        self, entity: dict, light_config: Optional[dict] = None, light_id: Optional[str] = None
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
         entity_attr = entity_attributes_to_int(entity[const.HASS_ATTR])
@@ -764,6 +764,14 @@ class HueApi:
                 entity["entity_id"]
             )
             light_config = await self.config.async_get_light_config(light_id)
+
+        # Obtain newest color mode if possible, prioritizing HASS
+        if color_mode := entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY):
+            latest_color_mode = convert_color_mode(color_mode, const.HASS_COLOR_MODE_XY)
+        elif color_mode := light_config.get(const.HUE_ATTR_COLORMODE):
+            latest_color_mode = color_mode
+        else:
+            latest_color_mode = None
 
         retval = {
             "state": {
@@ -813,13 +821,7 @@ class HueApi:
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    const.HUE_ATTR_COLORMODE: light_config.get(
-                        const.HUE_ATTR_COLORMODE,
-                        convert_color_mode(
-                            entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
-                            const.HASS,
-                        ),
-                    ),
+                    const.HUE_ATTR_COLORMODE: latest_color_mode if latest_color_mode else "xy",
                     # TODO: add hue/sat
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
@@ -852,13 +854,7 @@ class HueApi:
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    const.HUE_ATTR_COLORMODE: light_config.get(
-                        const.HUE_ATTR_COLORMODE,
-                        convert_color_mode(
-                            entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
-                            const.HASS,
-                        ),
-                    ),
+                    const.HUE_ATTR_COLORMODE: latest_color_mode if latest_color_mode else "xy",
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
@@ -930,6 +926,11 @@ class HueApi:
                             elif isinstance(identifier, str):
                                 retval["uniqueid"] = identifier
                                 break
+        if new_color_mode := retval.get("state").get(const.HUE_ATTR_COLORMODE) and light_id:
+            existing_color_mode = light_config.get(const.HUE_ATTR_COLORMODE)
+            if existing_color_mode != new_color_mode:
+                light_config[const.HUE_ATTR_COLORMODE] = new_color_mode
+                await self.config.async_set_storage_value("lights", light_id, light_config)
 
         return retval
 
@@ -942,7 +943,7 @@ class HueApi:
             light_config = await self.config.async_get_light_config(light_id)
             if not light_config["enabled"]:
                 continue
-            result[light_id] = await self.__async_entity_to_hue(entity, light_config)
+            result[light_id] = await self.__async_entity_to_hue(entity, light_config, light_id)
         return result
 
     async def __async_create_local_item(
