@@ -156,9 +156,9 @@ def create_secure_string(length: int) -> str:
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
 
 
-def convert_color_mode(color_mode: str, intial_type: str) -> str:
+def convert_color_mode(color_mode: str, initial_type: str) -> str:
     """Convert color_mode names from initial_type to other type for xy, hs, and ct."""
-    if intial_type == const.HASS:
+    if initial_type == const.HASS:
         hass_color_modes = {
             const.HASS_COLOR_MODE_COLOR_TEMP: const.HUE_ATTR_CT,
             const.HASS_COLOR_MODE_XY: const.HUE_ATTR_XY,
