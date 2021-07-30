@@ -12,7 +12,7 @@ from typing import Union
 import slugify as unicode_slug
 from aiohttp import web
 
-import emulated_hue.const as const
+from emulated_hue.const import SystemType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -156,11 +156,11 @@ def create_secure_string(length: int) -> str:
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
 
 
-def convert_color_mode(color_mode: str, initial_type: str) -> str:
+def convert_color_mode(color_mode: str, initial_type: const.SystemType) -> str:
     """Convert color_mode names from initial_type to other type for xy, hs, and ct."""
-    if initial_type == const.HASS:
+    if initial_type == initial_type.HASS:
         hass_color_modes = {
-            const.HASS_COLOR_MODE_COLOR_TEMP: const.HUE_ATTR_CT,
+            SystemType.HASS.COLOR_MODE.COLOR_TEMP: SystemType.HUE.ATTR.CT,
             const.HASS_COLOR_MODE_XY: const.HUE_ATTR_XY,
             const.HASS_COLOR_MODE_HS: const.HUE_ATTR_HS,
         }

@@ -773,7 +773,7 @@ class HueApi:
 
         # Obtain newest color mode if possible, prioritizing HASS
         if color_mode := entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY):
-            latest_color_mode = convert_color_mode(color_mode, const.HASS)
+            latest_color_mode = convert_color_mode(color_mode, const.SystemType.HASS)
         elif color_mode := light_config.get(const.HUE_ATTR_COLORMODE):
             latest_color_mode = color_mode
         else:
