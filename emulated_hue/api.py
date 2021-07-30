@@ -676,13 +676,22 @@ class HueApi:
 
         # execute service
         await self.hue.hass.call_service(const.HASS_DOMAIN_LIGHT, service, data)
-        if color_mode := next((color_mode for color_mode in [const.HUE_ATTR_HUE, const.HUE_ATTR_SAT, const.HUE_ATTR_CT, const.HUE_ATTR_XY] if color_mode in request_data)):
+        if color_mode := next(
+            (
+                color_mode
+                for color_mode in [
+                    const.HUE_ATTR_HUE,
+                    const.HUE_ATTR_SAT,
+                    const.HUE_ATTR_CT,
+                    const.HUE_ATTR_XY,
+                ]
+                if color_mode in request_data
+            )
+        ):
             if color_mode in [const.HUE_ATTR_HUE, const.HUE_ATTR_SAT]:
                 color_mode = const.HUE_ATTR_HS
             light_conf[const.HUE_ATTR_COLORMODE] = color_mode
-            await self.config.async_set_storage_value(
-                "lights", light_id, light_conf
-            )
+            await self.config.async_set_storage_value("lights", light_id, light_conf)
 
     def __update_allowed(
         self, entity: dict, light_data: dict, throttle_ms: int
@@ -802,10 +811,13 @@ class HueApi:
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     # TODO: remember last command to set colormode
-                    const.HUE_ATTR_COLORMODE: light_config.get(const.HUE_ATTR_COLORMODE, convert_color_mode(
-                        entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
-                        const.HASS,
-                    )),
+                    const.HUE_ATTR_COLORMODE: light_config.get(
+                        const.HUE_ATTR_COLORMODE,
+                        convert_color_mode(
+                            entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
+                            const.HASS,
+                        ),
+                    ),
                     # TODO: add hue/sat
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
@@ -839,10 +851,13 @@ class HueApi:
                 {
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     # TODO: remember last command to set colormode
-                    const.HUE_ATTR_COLORMODE: light_config.get(const.HUE_ATTR_COLORMODE, convert_color_mode(
-                        entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
-                        const.HASS,
-                    )),
+                    const.HUE_ATTR_COLORMODE: light_config.get(
+                        const.HUE_ATTR_COLORMODE,
+                        convert_color_mode(
+                            entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
+                            const.HASS,
+                        ),
+                    ),
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
                     ),
