@@ -169,5 +169,7 @@ def convert_color_mode(color_mode: str, intial_type: str) -> str:
             const.HUE_ATTR_CT: const.HASS_COLOR_MODE_COLOR_TEMP,
             const.HUE_ATTR_XY: const.HASS_COLOR_MODE_XY,
             const.HUE_ATTR_HS: const.HASS_COLOR_MODE_HS,
+            const.HUE_ATTR_HUE: const.HASS_COLOR_MODE_HS,
+            const.HUE_ATTR_SAT: const.HASS_COLOR_MODE_HS,
         }
         return hue_color_modes.get(color_mode, "xy")
