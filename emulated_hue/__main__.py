@@ -4,6 +4,7 @@ import logging
 import os
 
 from aiorun import run
+
 from emulated_hue import HueEmulator
 
 IS_SUPERVISOR = os.path.isfile("/data/options.json") and os.environ.get("HASSIO_TOKEN")

@@ -9,9 +9,10 @@ import socket
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
 
-import emulated_hue.const as const
 import slugify as unicode_slug
 from aiohttp import web
+
+import emulated_hue.const as const
 
 LOGGER = logging.getLogger(__name__)
 
