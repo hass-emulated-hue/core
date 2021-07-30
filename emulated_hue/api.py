@@ -795,7 +795,8 @@ class HueApi:
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     # TODO: remember last command to set colormode
                     const.HUE_ATTR_COLORMODE: convert_color_mode(
-                        entity_attr["color_mode"], const.HASS
+                        entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
+                        const.HASS,
                     ),
                     # TODO: add hue/sat
                     const.HUE_ATTR_XY: entity_attr.get(
@@ -831,7 +832,8 @@ class HueApi:
                     const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
                     # TODO: remember last command to set colormode
                     const.HUE_ATTR_COLORMODE: convert_color_mode(
-                        entity_attr["color_mode"], const.HASS
+                        entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY),
+                        const.HASS,
                     ),
                     const.HUE_ATTR_XY: entity_attr.get(
                         const.HASS_ATTR_XY_COLOR, [0, 0]
