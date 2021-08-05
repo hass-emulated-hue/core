@@ -9,6 +9,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509 import NameOID
+
 from emulated_hue.config import Config
 
 LOGGER = logging.getLogger(__name__)
