@@ -1,3 +1,5 @@
+<a href="https://github.com/hass-emulated-hue/core/actions"><img alt="GitHub Actions Build" src="https://github.com/hass-emulated-hue/core/actions/workflows/docker-build.yaml/badge.svg"></a>
+<a href="https://hub.docker.com/r/hassemulatedhue/core"><img alt="Docker Pulls" src="https://img.shields.io/docker/pulls/hassemulatedhue/core.svg"></a>
 # Hue Emulation for Home Assistant
 
 Convert your Home Assistant instance to a fully functional Philips HUE bridge!
