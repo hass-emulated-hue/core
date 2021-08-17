@@ -27,7 +27,12 @@ class Config:
     """Hold configuration variables for the emulated hue bridge."""
 
     def __init__(
-        self, hue: HueEmulator, data_path: str, http_port: int, https_port: int
+        self,
+        hue: HueEmulator,
+        data_path: str,
+        http_port: int,
+        https_port: int,
+        use_default_ports: bool,
     ):
         """Initialize the instance."""
         self.hue = hue
@@ -48,6 +53,7 @@ class Config:
         # so this is only usefull when running a reverse proxy on the same host
         self.http_port = http_port
         self.https_port = https_port
+        self.use_default_ports = use_default_ports
         if http_port != 80 or https_port != 443:
             LOGGER.warning(
                 "Non default http/https ports detected. Hue apps require the bridge at the default ports 80/443, use at your own risk."

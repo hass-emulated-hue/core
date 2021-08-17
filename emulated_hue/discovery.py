@@ -7,6 +7,8 @@ import threading
 
 from zeroconf import InterfaceChoice, ServiceInfo, Zeroconf
 
+from emulated_hue import const
+
 from .config import Config
 from .utils import get_ip_pton
 
@@ -59,7 +61,6 @@ class UPNPResponderThread(threading.Thread):
         self.daemon = True
 
         self.ip_addr = config.ip_addr
-        self.listen_port = config.http_port
         self.upnp_bind_multicast = bind_multicast
 
         # Note that the double newline at the end of
@@ -79,7 +80,9 @@ USN: {bridge_uuid}
             (
                 resp_template.format(
                     ip_addr=config.ip_addr,
-                    port_num=config.http_port,
+                    port_num=const.HUE_HTTP_PORT
+                    if config.use_default_ports
+                    else config.http_port,
                     bridge_id=config.bridge_id,
                     device_type="urn:schemas-upnp-org:device:basic:1",
                     bridge_uuid=f"uuid:{config.bridge_uid}",
@@ -93,7 +96,9 @@ USN: {bridge_uuid}
             (
                 resp_template.format(
                     ip_addr=config.ip_addr,
-                    port_num=config.http_port,
+                    port_num=const.HUE_HTTP_PORT
+                    if config.use_default_ports
+                    else config.http_port,
                     bridge_id=config.bridge_id,
                     device_type=f"uuid:{config.bridge_uid}",
                     bridge_uuid=f"uuid:{config.bridge_uid}",
