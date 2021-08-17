@@ -5,7 +5,7 @@ import os
 
 from aiorun import run
 
-from emulated_hue import HueEmulator
+from emulated_hue import HueEmulator, const
 
 IS_SUPERVISOR = os.path.isfile("/data/options.json") and os.environ.get("HASSIO_TOKEN")
 
@@ -56,13 +56,19 @@ if __name__ == "__main__":
         "--http-port",
         type=int,
         help="Port to run the HTTP server (for use with reverse proxy, use with care)",
-        default=os.getenv("HTTP_PORT", 80),
+        default=os.getenv("HTTP_PORT", const.HUE_HTTP_PORT),
     )
     parser.add_argument(
         "--https-port",
         type=int,
         help="Port to run the HTTPS server (for use with reverse proxy, use with care)",
-        default=os.getenv("HTTPS_PORT", 443),
+        default=os.getenv("HTTPS_PORT", const.HUE_HTTPS_PORT),
+    )
+    parser.add_argument(
+        "--use-default-ports-for-discovery",
+        action="store_true",
+        help=f"Always use HTTP port {const.HUE_HTTP_PORT} and HTTPS port {const.HUE_HTTPS_PORT} for discovery "
+        f"regardless of actual exposed ports. Useful with reverse proxy.",
     )
 
     args = parser.parse_args()
@@ -71,10 +77,18 @@ if __name__ == "__main__":
     token = args.token
     if args.verbose or os.getenv("VERBOSE", "").strip() == "true":
         logger.setLevel(logging.DEBUG)
+    use_default_ports = False
+    if (
+        args.use_default_ports_for_discovery
+        or os.getenv("USE_DEFAULT_PORTS", "").strip() == "true"
+    ):
+        use_default_ports = True
     # turn down logging for hass-client
     logging.getLogger("hass_client").setLevel(logging.INFO)
 
-    hue = HueEmulator(datapath, url, token, args.http_port, args.https_port)
+    hue = HueEmulator(
+        datapath, url, token, args.http_port, args.https_port, use_default_ports
+    )
 
     def on_shutdown(loop):
         """Call on loop shutdown."""

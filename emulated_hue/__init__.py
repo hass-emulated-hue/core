@@ -22,10 +22,11 @@ class HueEmulator:
         hass_token: str,
         http_port: int,
         https_port: int,
+        use_default_ports: bool,
     ) -> None:
         """Create an instance of HueEmulator."""
         self._loop = None
-        self._config = Config(self, data_path, http_port, https_port)
+        self._config = Config(self, data_path, http_port, https_port, use_default_ports)
         # the HA client is initialized in the async_start because it needs a running loop
         self._hass: Optional[HomeAssistantClient] = None
         self._hass_url = hass_url
