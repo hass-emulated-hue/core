@@ -58,6 +58,8 @@ class Config:
             LOGGER.warning(
                 "Non default http/https ports detected. Hue apps require the bridge at the default ports 80/443, use at your own risk."
             )
+            if self.use_default_ports:
+                LOGGER.warning("Using default HTTP port for discovery with non default HTTP/S ports. Are you using a reverse proxy?")
 
         mac_addr = str(get_mac_address(ip=self.ip_addr))
         if not mac_addr or len(mac_addr) < 16:
