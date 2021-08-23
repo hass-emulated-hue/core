@@ -773,7 +773,7 @@ class HueApi:
             )
         else:
             latest_color_mode = light_config.get(const.HUE_ATTR_COLORMODE)
-        last_light_state = light_config.get("state")
+        last_light_state = light_config.get("state", dict())
         latest_brightness = entity_attr.get(
             const.HASS_ATTR_BRIGHTNESS,
             last_light_state.get(const.HUE_ATTR_BRI, 0),
