@@ -660,6 +660,9 @@ class HueApi:
                     data[const.HASS_ATTR_FLASH] = "short"
                 elif request_data[const.HUE_ATTR_ALERT] == "lselect":
                     data[const.HASS_ATTR_FLASH] = "long"
+                # HASS now requires a color target to be sent when flashing
+                # Use white color to indicate the light
+                data[const.HASS_ATTR_HS_COLOR] = (0, 0)
 
         if const.HUE_ATTR_TRANSITION in request_data:
             # Duration of the transition from the light to the new state
