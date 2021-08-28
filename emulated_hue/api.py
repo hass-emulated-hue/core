@@ -660,6 +660,9 @@ class HueApi:
                     data[const.HASS_ATTR_FLASH] = "short"
                 elif request_data[const.HUE_ATTR_ALERT] == "lselect":
                     data[const.HASS_ATTR_FLASH] = "long"
+                # HASS now requires a color target to be sent when flashing
+                # Use white color to indicate the light
+                data[const.HASS_ATTR_HS_COLOR] = (0, 0)
 
         if const.HUE_ATTR_TRANSITION in request_data:
             # Duration of the transition from the light to the new state
@@ -676,27 +679,6 @@ class HueApi:
 
         # execute service
         await self.hue.hass.call_service(const.HASS_DOMAIN_LIGHT, service, data)
-
-        # Write last sent color mode to config
-        if color_mode := [
-            color_mode
-            for color_mode in [
-                const.HUE_ATTR_HUE,
-                const.HUE_ATTR_SAT,
-                const.HUE_ATTR_CT,
-                const.HUE_ATTR_XY,
-            ]
-            if color_mode in set(request_data)
-        ]:
-            new_color_mode = color_mode[0]
-            if new_color_mode in [const.HUE_ATTR_HUE, const.HUE_ATTR_SAT]:
-                new_color_mode = const.HUE_ATTR_HS
-            existing_color_mode = light_conf.get(const.HUE_ATTR_COLORMODE)
-            if existing_color_mode != new_color_mode:
-                light_conf[const.HUE_ATTR_COLORMODE] = new_color_mode
-                await self.config.async_set_storage_value(
-                    "lights", light_id, light_conf
-                )
 
     def __update_allowed(
         self, entity: dict, light_data: dict, throttle_ms: int
@@ -771,14 +753,6 @@ class HueApi:
         if not light_config:
             light_config = await self.config.async_get_light_config(light_id)
 
-        # Obtain newest color mode if possible, prioritizing HASS
-        if color_mode := entity_attr.get("color_mode", const.HASS_COLOR_MODE_XY):
-            latest_color_mode = convert_color_mode(color_mode, const.HASS)
-        elif color_mode := light_config.get(const.HUE_ATTR_COLORMODE):
-            latest_color_mode = color_mode
-        else:
-            latest_color_mode = None
-
         retval = {
             "state": {
                 const.HUE_ATTR_ON: entity["state"] == const.HASS_STATE_ON,
@@ -794,6 +768,33 @@ class HueApi:
             },
             "config": light_config["config"],
         }
+
+        # Obtain newest color mode if possible, prioritizing HASS
+        if entity_attr.get("color_mode"):
+            latest_color_mode = convert_color_mode(
+                entity_attr.get("color_mode"), const.HASS
+            )
+        else:
+            latest_color_mode = light_config.get(const.HUE_ATTR_COLORMODE)
+        last_light_state = light_config.get("state", dict())
+        latest_brightness = entity_attr.get(
+            const.HASS_ATTR_BRIGHTNESS,
+            last_light_state.get(const.HUE_ATTR_BRI, 0),
+        )
+        latest_xy = entity_attr.get(
+            const.HASS_ATTR_XY_COLOR, last_light_state.get(const.HUE_ATTR_XY, [0, 0])
+        )
+        latest_hue = entity_attr.get(const.HASS_ATTR_HS_COLOR, [0, 0])[0]
+        latest_hue = (
+            latest_hue if latest_hue else last_light_state.get(const.HUE_ATTR_HUE, 0)
+        )
+        latest_sat = entity_attr.get(const.HASS_ATTR_HS_COLOR, [0, 0])[1]
+        latest_sat = (
+            latest_sat if latest_sat else last_light_state.get(const.HUE_ATTR_SAT, 0)
+        )
+        latest_ct = entity_attr.get(
+            const.HASS_ATTR_COLOR_TEMP, last_light_state.get(const.HUE_ATTR_CT, 0)
+        )
 
         # Determine correct Hue type from HA supported features
         if any(
@@ -826,21 +827,15 @@ class HueApi:
             retval["capabilities"]["control"]["ct"]["max"] = ct_max
             retval["state"].update(
                 {
-                    const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
+                    const.HUE_ATTR_BRI: latest_brightness,
                     const.HUE_ATTR_COLORMODE: latest_color_mode
                     if latest_color_mode
                     else "xy",
                     # TODO: add hue/sat
-                    const.HUE_ATTR_XY: entity_attr.get(
-                        const.HASS_ATTR_XY_COLOR, [0, 0]
-                    ),
-                    const.HUE_ATTR_HUE: entity_attr.get(
-                        const.HASS_ATTR_HS_COLOR, [0, 0]
-                    )[0],
-                    const.HUE_ATTR_SAT: entity_attr.get(
-                        const.HASS_ATTR_HS_COLOR, [0, 0]
-                    )[1],
-                    const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
+                    const.HUE_ATTR_XY: latest_xy,
+                    const.HUE_ATTR_HUE: latest_hue,
+                    const.HUE_ATTR_SAT: latest_sat,
+                    const.HUE_ATTR_CT: latest_ct,
                     const.HUE_ATTR_EFFECT: entity_attr.get(
                         const.HASS_ATTR_EFFECT, "none"
                     ),
@@ -861,19 +856,13 @@ class HueApi:
             retval.update(self.hue.config.definitions["lights"]["Color light"])
             retval["state"].update(
                 {
-                    const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
+                    const.HUE_ATTR_BRI: latest_brightness,
                     const.HUE_ATTR_COLORMODE: latest_color_mode
                     if latest_color_mode
                     else "xy",
-                    const.HUE_ATTR_XY: entity_attr.get(
-                        const.HASS_ATTR_XY_COLOR, [0, 0]
-                    ),
-                    const.HUE_ATTR_HUE: entity_attr.get(
-                        const.HASS_ATTR_HS_COLOR, [0, 0]
-                    )[0],
-                    const.HUE_ATTR_SAT: entity_attr.get(
-                        const.HASS_ATTR_HS_COLOR, [0, 0]
-                    )[1],
+                    const.HUE_ATTR_XY: latest_xy,
+                    const.HUE_ATTR_HUE: latest_hue,
+                    const.HUE_ATTR_SAT: latest_sat,
                     const.HUE_ATTR_EFFECT: "none",
                 }
             )
@@ -890,18 +879,17 @@ class HueApi:
             retval["capabilities"]["control"]["ct"]["max"] = ct_max
             retval["state"].update(
                 {
-                    const.HUE_ATTR_BRI: entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0),
-                    const.HUE_ATTR_COLORMODE: const.HUE_ATTR_CT,
-                    const.HUE_ATTR_CT: entity_attr.get(const.HASS_ATTR_COLOR_TEMP, 0),
+                    const.HUE_ATTR_BRI: latest_brightness,
+                    const.HUE_ATTR_COLORMODE: latest_color_mode,
+                    const.HUE_ATTR_CT: latest_ct,
                 }
             )
         elif const.HASS_COLOR_MODE_BRIGHTNESS in entity_color_modes:
             # Dimmable light (Zigbee Device ID: 0x0100)
             # Supports groups, scenes, on/off and dimming
-            brightness = entity_attr.get(const.HASS_ATTR_BRIGHTNESS, 0)
             retval["type"] = "Dimmable light"
             retval.update(self.hue.config.definitions["lights"]["Dimmable light"])
-            retval["state"].update({const.HUE_ATTR_BRI: brightness})
+            retval["state"].update({const.HUE_ATTR_BRI: latest_brightness})
         else:
             # On/off light (Zigbee Device ID: 0x0000)
             # Supports groups, scenes, on/off control
@@ -937,14 +925,9 @@ class HueApi:
                                 retval["uniqueid"] = identifier
                                 break
 
-        # Write new color mode to light config if needed
-        if new_color_mode := retval.get("state").get(const.HUE_ATTR_COLORMODE):
-            existing_color_mode = light_config.get(const.HUE_ATTR_COLORMODE)
-            if existing_color_mode != new_color_mode:
-                light_config[const.HUE_ATTR_COLORMODE] = new_color_mode
-                await self.config.async_set_storage_value(
-                    "lights", light_id, light_config
-                )
+        # Write new state to light config
+        light_config["state"] = retval.get("state")
+        await self.config.async_set_storage_value("lights", light_id, light_config)
 
         return retval
 
