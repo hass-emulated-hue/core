@@ -13,6 +13,7 @@ services:
 # If host networking mode is undesired,
 # Hue requires these ports and there is no way to change them as most
 # applications do not support accessing the Hue api over different ports
+# Discovery will not operate with bridge mode and ip will need to be manually entered into the applications
 # port 80: http
 # port 443: https
 # port 1900: ssdp -> Does not work with bridged networking as multicast is not forwarded
