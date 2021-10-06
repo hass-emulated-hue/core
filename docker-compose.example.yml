@@ -1,0 +1,24 @@
+version: '3'
+services:
+  hass-emulated-hue:
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - HASS_TOKEN=xxxxxx
+      - HASS_URL=http://192.168.1.1:8123
+#      - VERBOSE=true
+    image: ghcr.io/hass-emulated-hue/core:0.2.9 # <<< Desired release version here
+    volumes:
+      - ./your-directory-here:/config/.emulated-hue
+# If host networking mode is undesired,
+# Hue requires these ports and there is no way to change them as most
+# applications do not support accessing the Hue api over different ports
+# Discovery will not operate with bridge mode and ip will need to be manually entered into the applications
+# port 80: http
+# port 443: https
+# port 1900: ssdp -> Does not work with bridged networking as multicast is not forwarded
+# port 2100: entertainment
+#    ports:
+#      - '80:80'
+#      - '443:443'
+#      - '2100:2100/udp'
