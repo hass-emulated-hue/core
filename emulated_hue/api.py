@@ -704,22 +704,7 @@ class HueApi:
 
         # check if data changed
         # when not using udp no need to send same light command again
-        if (
-            prev_data.get(const.HUE_ATTR_BRI, 0)
-            == light_data.get(const.HUE_ATTR_BRI, 0)
-            and prev_data.get(const.HUE_ATTR_HUE, 0)
-            == light_data.get(const.HUE_ATTR_HUE, 0)
-            and prev_data.get(const.HUE_ATTR_SAT, 0)
-            == light_data.get(const.HUE_ATTR_SAT, 0)
-            and prev_data.get(const.HUE_ATTR_CT, 0)
-            == light_data.get(const.HUE_ATTR_CT, 0)
-            and prev_data.get(const.HUE_ATTR_XY, [0, 0])
-            == light_data.get(const.HUE_ATTR_XY, [0, 0])
-            and prev_data.get(const.HUE_ATTR_EFFECT, "none")
-            == light_data.get(const.HUE_ATTR_EFFECT, "none")
-            and prev_data.get(const.HUE_ATTR_ALERT, "none")
-            == light_data.get(const.HUE_ATTR_ALERT, "none")
-        ):
+        if prev_data == light_data:
             return False
 
         self._prev_data[entity["entity_id"]].update(light_data)
@@ -1025,8 +1010,7 @@ class HueApi:
         """Get group data for a group."""
         if group_id == "0":
             all_lights = await self.__async_get_all_lights()
-            group_conf = {}
-            group_conf["lights"] = []
+            group_conf = {"lights": []}
             for light_id in all_lights:
                 group_conf["lights"].append(light_id)
         else:
