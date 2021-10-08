@@ -704,7 +704,7 @@ class HueApi:
 
         # check if data changed
         # when not using udp no need to send same light command again
-        if prev_data != light_data:
+        if prev_data == light_data:
             return False
 
         self._prev_data[entity["entity_id"]].update(light_data)
