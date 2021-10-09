@@ -34,5 +34,4 @@ curl -Lo /tmp/emulator.tar.gz "${full_url}"
 mkdir -p /tmp/emulator
 tar zxvf /tmp/emulator.tar.gz --strip 1 -C /tmp/emulator
 mv /tmp/emulator/emulated_hue .
-rm -rf /tmp/*
 bashio::log.info "Installed successfully!"

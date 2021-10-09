@@ -2,7 +2,7 @@
 ARG HASS_ARCH=amd64
 ARG S6_ARCH=amd64
 ARG RUST_ARCH=x86_64-unknown-linux-gnu
-ARG BUILD_VERSION
+ARG BUILD_VERSION=latest
 
 #####################################################################
 #                                                                   #
@@ -68,7 +68,7 @@ RUN set -x \
     && wget -O /tmp/bashio.tar.gz "https://github.com/hassio-addons/bashio/archive/v0.13.1.tar.gz" \
     && mkdir -p /tmp/bashio \
     && tar zxvf /tmp/bashio.tar.gz --strip 1 -C /tmp/bashio \
-    && mv /tmp/bashio/lib .
+    && mv /tmp/bashio/lib/* .
 
 #####################################################################
 #                                                                   #
@@ -81,8 +81,7 @@ ARG BUILD_VERSION
 ARG HASS_ARCH
 WORKDIR /app
 
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    DEBIAN_FRONTEND="noninteractive"
+ENV DEBIAN_FRONTEND="noninteractive"
 
 RUN set -x \
     && apt-get update \
@@ -98,10 +97,8 @@ RUN set -x \
     && rm -rf /var/lib/apt/lists/*
 
 # Install bashio
-RUN --mount=type=bind,target=/tmp/bashio,source=/bashio,from=bashiodownloader,rw \
-    set -x \
-    && mv /tmp/bashio/lib /usr/lib/bashio \
-    && ln -s /usr/lib/bashio/bashio /usr/bin/bashio
+COPY --from=bashiodownloader /bashio /usr/lib/bashio
+RUN ln -s /usr/lib/bashio/bashio /usr/bin/bashio
 
 # Install s6 overlay
 COPY --from=s6downloader /s6downloader /
@@ -118,9 +115,10 @@ COPY docker/rootfs /
 # Copy app
 COPY emulated_hue emulated_hue
 
-LABEL io.hass.version=${BUILD_VERSION}
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 LABEL \
+    io.hass.version=${BUILD_VERSION} \
     io.hass.name="Hass Emulated Hue" \
     io.hass.description="Hue Emulation for Home Assistant" \
     io.hass.arch="${HASS_ARCH}" \
