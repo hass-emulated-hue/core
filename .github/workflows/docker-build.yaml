@@ -65,6 +65,7 @@ jobs:
         run: |
           set -x
           docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
             --build-arg HASS_ARCH=${{ matrix.hass_arch }} \
             --build-arg S6_ARCH=${{ matrix.s6_arch }} \
             --build-arg RUST_ARCH=${{ matrix.rust_arch }} \
@@ -84,6 +85,10 @@ jobs:
         run: |
           set -x
           docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --build-arg HASS_ARCH=${{ matrix.hass_arch }} \
+            --build-arg S6_ARCH=${{ matrix.s6_arch }} \
+            --build-arg RUST_ARCH=${{ matrix.rust_arch }} \
             --build-arg BUILD_VERSION=${GITHUB_REF##*/} \
             --tag ci:${{ github.run_number }} \
             --platform ${{ matrix.arch }} \
