@@ -76,9 +76,6 @@ RUN set -x \
 #                                                                   #
 #####################################################################
 FROM python:3.9-slim AS final-build
-# Required to persist build arg
-ARG BUILD_VERSION
-ARG HASS_ARCH
 WORKDIR /app
 
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -117,6 +114,9 @@ COPY emulated_hue emulated_hue
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
+# Required to persist build arg
+ARG BUILD_VERSION
+ARG HASS_ARCH
 LABEL \
     io.hass.version=${BUILD_VERSION} \
     io.hass.name="Hass Emulated Hue" \
