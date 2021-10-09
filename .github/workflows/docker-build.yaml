@@ -14,14 +14,29 @@ jobs:
         include:
           - arch: linux/386
             arch_friendly: i386
+            hass_arch: i386
+            s6_arch: x86
+            rust_arch: i686-unknown-linux-gnu
           - arch: linux/amd64
             arch_friendly: amd64
+            hass_arch: amd64
+            s6_arch: amd64
+            rust_arch: x86_64-unknown-linux-gnu
           - arch: linux/arm/v6
             arch_friendly: armv6
+            hass_arch: armv6
+            s6_arch: arm
+            rust_arch: arm-unknown-linux-gnueabi
           - arch: linux/arm/v7
             arch_friendly: armv7
+            hass_arch: armv7
+            s6_arch: armhf
+            rust_arch: armv7-unknown-linux-gnueabihf
           - arch: linux/arm64
             arch_friendly: arm64
+            hass_arch: aarch64
+            s6_arch: aarch64
+            rust_arch: aarch64-unknown-linux-gnu
 
     steps:
       - name: Checkout
@@ -35,17 +50,31 @@ jobs:
         with:
           install: true
 
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        continue-on-error: true
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: |
+            ${{ matrix.arch }}-
+
       # label version as branch-run_number
       - name: Build Branch
         if: ${{ startsWith(github.ref, 'refs/heads/') }}
         run: |
           set -x
           docker build \
+            --build-arg HASS_ARCH=${{ matrix.hass_arch }} \
+            --build-arg S6_ARCH=${{ matrix.s6_arch }} \
+            --build-arg RUST_ARCH=${{ matrix.rust_arch }} \
             --build-arg BUILD_VERSION=${GITHUB_REF##*/}-${{ github.run_number }} \
             --tag ci:${{ github.run_number }} \
             --platform ${{ matrix.arch }} \
             --progress plain \
-            --file ./Dockerfile \
+            --file ./docker/Dockerfile \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new \
             --load \
             .
 
@@ -59,7 +88,9 @@ jobs:
             --tag ci:${{ github.run_number }} \
             --platform ${{ matrix.arch }} \
             --progress plain \
-            --file ./Dockerfile \
+            --file ./docker/Dockerfile \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new \
             --load \
             .
 
