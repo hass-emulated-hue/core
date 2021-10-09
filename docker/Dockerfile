@@ -75,7 +75,7 @@ RUN set -x \
 # Final Image                                                       #
 #                                                                   #
 #####################################################################
-FROM python:3.9-slim AS base-image
+FROM python:3.9-slim AS final-build
 # Required to persist build arg
 ARG BUILD_VERSION
 ARG HASS_ARCH
