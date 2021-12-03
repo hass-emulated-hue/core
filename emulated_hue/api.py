@@ -1092,7 +1092,7 @@ class HueApi:
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
                     "localtime": datetime.datetime.now().isoformat().split(".")[0],
                     "timezone": self.config.get_storage_value(
-                        "bridge_config", "timezone", tzlocal.get_localzone().zone
+                        "bridge_config", "timezone", tzlocal.get_localzone().key
                     ),
                     "whitelist": await self.__async_whitelist_to_bridge_config(),
                     "zigbeechannel": self.config.get_storage_value(
