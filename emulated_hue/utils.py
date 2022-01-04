@@ -124,13 +124,13 @@ async def async_save_json(filename: str, data: dict):
     loop = asyncio.get_running_loop()
     # Seems that await here doesn't actually wait since aiohttp
     # creates a new call with each request
-    # with SEMAPHORE:
     return await loop.run_in_executor(None, save_json, filename, data)
 
 
 def save_json(filename: str, data: dict):
     """Save JSON data to a file."""
     LOGGER.debug("Starting save_json")
+    # with SEMAPHORE:
     safe_copy = filename + ".backup"
     if os.path.isfile(filename):
         os.replace(filename, safe_copy)
