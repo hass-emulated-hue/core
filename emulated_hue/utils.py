@@ -26,6 +26,8 @@ LOCAL_NETWORKS = (
     ip_network("192.168.0.0/16"),
 )
 
+# SEMAPHORE = asyncio.Semaphore(1)
+
 
 def is_local(address: Union[IPv4Address, IPv6Address]) -> bool:
     """Check if an address is local."""
@@ -120,11 +122,15 @@ def load_json(filename: str) -> dict:
 async def async_save_json(filename: str, data: dict):
     """Save JSON data to a file."""
     loop = asyncio.get_running_loop()
+    # Seems that await here doesn't actually wait since aiohttp
+    # creates a new call with each request
+    # with SEMAPHORE:
     return await loop.run_in_executor(None, save_json, filename, data)
 
 
 def save_json(filename: str, data: dict):
     """Save JSON data to a file."""
+    LOGGER.debug("Starting save_json")
     safe_copy = filename + ".backup"
     if os.path.isfile(filename):
         os.replace(filename, safe_copy)
@@ -134,6 +140,7 @@ def save_json(filename: str, data: dict):
             file_obj.write(json_data)
     except IOError:
         LOGGER.exception("Failed to serialize to JSON: %s", filename)
+    LOGGER.debug("Exiting save_json")
 
 
 def entity_attributes_to_int(attributes: dict):
