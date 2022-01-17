@@ -8,7 +8,7 @@ import logging
 import os
 import ssl
 import time
-from typing import Any, AsyncGenerator, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
 
 import tzlocal
 from aiohttp import web
@@ -24,6 +24,11 @@ from emulated_hue.utils import (
     send_success_response,
     update_dict,
 )
+
+if TYPE_CHECKING:
+    from emulated_hue import HueEmulator
+else:
+    HueEmulator = "HueEmulator"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -101,13 +106,13 @@ class HueApi:
 
     runner = None
 
-    def __init__(self, hue):
+    def __init__(self, hue: HueEmulator):
         """Initialize with Hue object."""
-        self.streaming_api = None
-        self.config = hue.config
-        self.hue = hue
-        self.http_site = None
-        self.https_site = None
+        self.streaming_api = None  # type: EntertainmentAPI | None
+        self.config = hue.config  # type: HueEmulator.config
+        self.hue = hue  # type: HueEmulator
+        self.http_site = None  # type: web.TCPSite | None
+        self.https_site = None  # type: web.TCPSite | None
         self._new_lights = {}
         self._timestamps = {}
         self._prev_data = {}

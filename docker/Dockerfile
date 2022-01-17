@@ -3,13 +3,14 @@ ARG HASS_ARCH=amd64
 ARG S6_ARCH=amd64
 ARG RUST_ARCH=x86_64-unknown-linux-gnu
 ARG BUILD_VERSION=latest
+ARG PYTHON_VERSION=3.10
 
 #####################################################################
 #                                                                   #
 # Build Wheels                                                      #
 #                                                                   #
 #####################################################################
-FROM python:3.9-slim as wheels-builder
+FROM python:${PYTHON_VERSION}-slim as wheels-builder
 ARG RUST_ARCH
 
 ENV PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
@@ -75,7 +76,7 @@ RUN set -x \
 # Final Image                                                       #
 #                                                                   #
 #####################################################################
-FROM python:3.9-slim AS final-build
+FROM python:${PYTHON_VERSION}-slim AS final-build
 WORKDIR /app
 
 ENV DEBIAN_FRONTEND="noninteractive"
