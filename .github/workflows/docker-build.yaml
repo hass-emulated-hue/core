@@ -50,6 +50,24 @@ jobs:
         with:
           install: true
 
+      # https://github.com/crazy-max/ghaction-docker-buildx/issues/172
+      - name: Hack Docker FS to Build cryptography on armv6/armv7
+        if: ${{ matrix.arch_friendly == 'armv6' || matrix.arch_friendly == 'armv7' }}
+        run: |
+          set -x
+          df -h
+          sudo swapon --show
+          sudo dd if=/dev/zero of=/swapfile1 bs=1M count=6K
+          sudo chmod 600 /swapfile1
+          sudo mkswap /swapfile1
+          sudo swapon /swapfile1
+          sudo swapon --show
+          sudo free -h
+          sudo systemctl stop docker
+          sudo mount -t tmpfs -o size=9G tmpfs /var/lib/docker
+          df -h
+          sudo systemctl start docker
+
       - name: Cache Docker layers
         uses: actions/cache@v2
         continue-on-error: true
