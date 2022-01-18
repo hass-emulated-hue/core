@@ -142,6 +142,9 @@ jobs:
             repo: ghcr.io/hass-emulated-hue/core
           }
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Download container artifact
         uses: actions/download-artifact@v2
         with:
@@ -200,6 +203,9 @@ jobs:
             repo: ghcr.io/hass-emulated-hue/core
           }
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Enable Experimental Docker Features
         run: |
           export DOCKER_CLI_EXPERIMENTAL="enabled"
