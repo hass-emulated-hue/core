@@ -52,7 +52,7 @@ RUN set -x \
 #####################################################################
 FROM alpine:latest as s6downloader
 # Required to persist build arg
-ARG S6_ARCH
+ARG HASS_ARCH
 WORKDIR /s6downloader
 
 RUN set -x \
