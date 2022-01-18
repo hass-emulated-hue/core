@@ -216,8 +216,8 @@ def main():
             "docker",
             "manifest",
             "create",
-            *docker_names.manifest_cmd_base,
             manifest,
+            *docker_names.manifest_cmd_base,
         ]
         run_command(*cmd)
 
