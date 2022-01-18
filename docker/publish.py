@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Script to publish docker images and manifests."""
+from __future__ import annotations
+
 import argparse
 import shlex
 import subprocess
