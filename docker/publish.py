@@ -47,9 +47,7 @@ parser.add_argument(
     action="store_true",
     help="Print commands only",
 )
-parser.add_argument(
-    "--ci", type=bool, required=False, default=False, help="Running in CI"
-)
+parser.add_argument("--ci", required=False, action="store_true", help="Running in CI")
 parser.add_argument(
     "--run-number",
     type=str,
