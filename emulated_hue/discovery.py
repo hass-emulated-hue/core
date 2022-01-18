@@ -66,47 +66,43 @@ class UPNPResponderThread(threading.Thread):
         # Note that the double newline at the end of
         # this string is required per the SSDP spec
         resp_template = """HTTP/1.1 200 OK
-CACHE-CONTROL: max-age=60
+HOST: 239.255.255.250:1900
 EXT:
+CACHE-CONTROL: max-age=100
 LOCATION: http://{ip_addr}:{port_num}/description.xml
-SERVER: Linux/3.14.0 UPnP/1.0 IpBridge/1.20.0
+SERVER: Hue/1.0 UPnP/1.0 IpBridge/1.48.0
 hue-bridgeid: {bridge_id}
 ST: {device_type}
 USN: {bridge_uuid}
 
-"""
+""".replace(
+            "\n", "\r\n"
+        )
+        self._resp_format = resp_template.format(
+            ip_addr=config.ip_addr,
+            port_num=const.HUE_HTTP_PORT
+            if config.use_default_ports
+            else config.http_port,
+            bridge_id=config.bridge_id,
+            device_type="{device_type}",
+            bridge_uuid=f"uuid:{config.bridge_uid}",
+        )
 
         self.upnp_device_response = (
-            (
-                resp_template.format(
-                    ip_addr=config.ip_addr,
-                    port_num=const.HUE_HTTP_PORT
-                    if config.use_default_ports
-                    else config.http_port,
-                    bridge_id=config.bridge_id,
-                    device_type="urn:schemas-upnp-org:device:basic:1",
-                    bridge_uuid=f"uuid:{config.bridge_uid}",
-                )
+            self._resp_format.format(
+                device_type="urn:schemas-upnp-org:device:basic:1",
             )
-            .replace("\n", "\r\n")
-            .encode("utf-8")
-        )
+        ).encode("utf-8")
 
         self.upnp_unique_response = (
-            (
-                resp_template.format(
-                    ip_addr=config.ip_addr,
-                    port_num=const.HUE_HTTP_PORT
-                    if config.use_default_ports
-                    else config.http_port,
-                    bridge_id=config.bridge_id,
-                    device_type=f"uuid:{config.bridge_uid}",
-                    bridge_uuid=f"uuid:{config.bridge_uid}",
-                )
+            self._resp_format.format(
+                device_type=f"uuid:{config.bridge_uid}",
             )
-            .replace("\n", "\r\n")
-            .encode("utf-8")
-        )
+        ).encode("utf-8")
+
+        self.upnp_root_response = self._resp_format.format(
+            device_type="ST: upnp:rootdevice"
+        ).encode("utf-8")
 
     def run(self):
         """Run the server."""
@@ -160,10 +156,9 @@ USN: {bridge_uuid}
                 # SSDP M-SEARCH method received, respond to it with our info
                 resp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-                if "ssdp:all" in decoded_data:
-                    resp_socket.sendto(self.upnp_device_response, addr)
-                else:
-                    resp_socket.sendto(self.upnp_unique_response, addr)
+                resp_socket.sendto(self.upnp_root_response, addr)
+                resp_socket.sendto(self.upnp_unique_response, addr)
+                resp_socket.sendto(self.upnp_device_response, addr)
                 LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
