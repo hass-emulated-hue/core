@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:experimental
 ARG HASS_ARCH=amd64
-ARG S6_ARCH=amd64
-ARG RUST_ARCH=x86_64-unknown-linux-gnu
 ARG BUILD_VERSION=latest
 ARG PYTHON_VERSION=3.10
 
@@ -11,7 +9,7 @@ ARG PYTHON_VERSION=3.10
 #                                                                   #
 #####################################################################
 FROM python:${PYTHON_VERSION}-slim as wheels-builder
-ARG RUST_ARCH
+ARG HASS_ARCH
 
 ENV PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
 ENV PATH="${PATH}:/root/.cargo/bin"
@@ -29,6 +27,13 @@ RUN set -x \
         libssl-dev
 
 RUN set -x \
+    \
+    && if [ ${HASS_ARCH} = "i386" ]; then RUST_ARCH="i686-unknown-linux-gnu"; fi \
+    && if [ ${HASS_ARCH} = "amd64" ]; then RUST_ARCH="x86_64-unknown-linux-gnu"; fi \
+    && if [ ${HASS_ARCH} = "armv6" ]; then RUST_ARCH="arm-unknown-linux-gnueabi"; fi \
+    && if [ ${HASS_ARCH} = "armv7" ]; then RUST_ARCH="armv7-unknown-linux-gnueabihf"; fi \
+    && if [ ${HASS_ARCH} = "aarch64" ]; then RUST_ARCH="aarch64-unknown-linux-gnu"; fi \
+    \
     && curl -o rustup-init https://static.rust-lang.org/rustup/dist/${RUST_ARCH}/rustup-init \
     && chmod +x rustup-init \
     && ./rustup-init -y --no-modify-path --profile minimal --default-host ${RUST_ARCH}
@@ -51,6 +56,13 @@ ARG S6_ARCH
 WORKDIR /s6downloader
 
 RUN set -x \
+    \
+    && if [ ${HASS_ARCH} = "i386" ]; then S6_ARCH="x86"; fi \
+    && if [ ${HASS_ARCH} = "amd64" ]; then S6_ARCH="amd64"; fi \
+    && if [ ${HASS_ARCH} = "armv6" ]; then S6_ARCH="arm"; fi \
+    && if [ ${HASS_ARCH} = "armv7" ]; then S6_ARCH="armhf"; fi \
+    && if [ ${HASS_ARCH} = "aarch64" ]; then S6_ARCH="aarch64"; fi \
+    \
     && OVERLAY_VERSION=$(wget --no-check-certificate -qO - https://api.github.com/repos/just-containers/s6-overlay/releases/latest | awk '/tag_name/{print $4;exit}' FS='[""]') \
     && wget -O /tmp/s6-overlay.tar.gz "https://github.com/just-containers/s6-overlay/releases/download/${OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.gz" \
     && mkdir -p /tmp/s6 \
