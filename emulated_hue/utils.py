@@ -105,6 +105,8 @@ def send_error_response(address: str, description: str, type_num: int) -> web.Re
     if address.startswith("/"):
         # strip out username
         address = "/" + "/".join(address.split("/")[2:])
+    elif address == "":
+        pass
     else:
         address = f"/{address}"
     description = description.format(path=address)

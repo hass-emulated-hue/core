@@ -1,9 +1,9 @@
 {
   "bridge": {
     "basic": {
-      "datastoreversion": "98",
-      "swversion": "1946157000",
-      "apiversion": "1.41.0",
+      "datastoreversion": "113",
+      "swversion": "1948086000",
+      "apiversion": "1.48.0",
       "modelid": "BSB002",
       "factorynew": false,
       "replacesbridgeid": null,
@@ -64,7 +64,7 @@
       "capabilities": {
         "certified": true,
         "control": {
-          "mindimlevel": 1000,
+          "mindimlevel": 200,
           "maxlumen": 800,
           "colorgamut": [
             [

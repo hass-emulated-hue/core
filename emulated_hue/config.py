@@ -58,11 +58,13 @@ class Config:
         self.use_default_ports = use_default_ports
         if http_port != 80 or https_port != 443:
             LOGGER.warning(
-                "Non default http/https ports detected. Hue apps require the bridge at the default ports 80/443, use at your own risk."
+                "Non default http/https ports detected. "
+                "Hue apps require the bridge at the default ports 80/443, use at your own risk."
             )
             if self.use_default_ports:
                 LOGGER.warning(
-                    "Using default HTTP port for discovery with non default HTTP/S ports. Are you using a reverse proxy?"
+                    "Using default HTTP port for discovery with non default HTTP/S ports. "
+                    "Are you using a reverse proxy?"
                 )
 
         mac_addr = str(get_mac_address(ip=self.ip_addr))
@@ -199,7 +201,7 @@ class Config:
             raise Exception(f"Light {light_id} not found!")
         return conf
 
-    async def async_entity_by_light_id(self, light_id: str) -> str:
+    async def async_entity_by_light_id(self, light_id: str) -> dict:
         """Return the hass entity by supplying a light id."""
         light_config = await self.async_get_light_config(light_id)
         if not light_config:
@@ -342,7 +344,7 @@ class Config:
         }
         await self.async_set_storage_value("users", username, user_obj)
         # Disable link mode on creating user
-        self._link_mode_enabled = False
+        await self.async_disable_link_mode()
         return user_obj
 
     async def delete_user(self, username: str) -> None:

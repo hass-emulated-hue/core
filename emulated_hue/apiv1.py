@@ -50,11 +50,15 @@ def check_request(check_user=True, log_request=True):
                     return send_error_response(path, "unauthorized user", 1)
             # check and unpack (json) body if needed
             if request.method in ["PUT", "POST"]:
+                request_text = await request.text()
                 try:
                     request_data = await request.json()
                 except ValueError:
-                    request_data = await request.text()
-                LOGGER.debug(request_data)
+                    LOGGER.warning(
+                        "Invalid json in request: %s --> %s", request, request_text
+                    )
+                    return send_error_response("", "body contains invalid json", 2)
+                LOGGER.debug(request_text)
                 return await func(cls, request, request_data)
             return await func(cls, request)
 
