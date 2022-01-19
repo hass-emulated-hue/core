@@ -4,8 +4,8 @@ import json
 import logging
 import os
 import random
-import re
 import socket
+import string
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
 
@@ -76,7 +76,8 @@ def update_dict(dict1, dict2):
 def send_json_response(data) -> web.Response:
     """Send json response in unicode format instead of converting to ascii."""
     return web.Response(
-        text=json.dumps(data, ensure_ascii=False), content_type="application/json"
+        text=json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+        content_type="application/json",
     )
 
 
@@ -99,10 +100,11 @@ def send_success_response(
 
 def send_error_response(address: str, description: str, type: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
-    address = re.sub("(/api/)[^/]*", "", address)
-    address = "/" if address == "" else address
+    address = address.replace("/api", "").split("//")[0]
+    address = address if address.startswith("/") else f"/{address}"
+    description = description.format(path=address)
     response = [
-        {"error": {"address": address, "description": description, "type": type}}
+        {"error": {"type": type, "address": address, "description": description}}
     ]
     return send_json_response(response)
 
@@ -150,9 +152,12 @@ def entity_attributes_to_int(attributes: dict):
     return attributes
 
 
-def create_secure_string(length: int) -> str:
+def create_secure_string(length: int, hex_compatible: bool = False) -> str:
     """Create secure random string for username, client key, and tokens."""
-    character_array = "ABCDEFabcdef0123456789"
+    if hex_compatible:
+        character_array = string.hexdigits
+    else:
+        character_array = string.ascii_letters + string.digits + "-"
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
 
 

@@ -74,7 +74,7 @@ routes = ClassRouteTableDef()
 
 
 def check_request(check_user=True, log_request=True):
-    """Decorator: Some common logic to log and validate all requests."""
+    """Run some common logic to log and validate all requests (used as a decorator)."""
 
     def func_wrapper(func):
         @functools.wraps(func)
@@ -85,7 +85,8 @@ def check_request(check_user=True, log_request=True):
             if check_user:
                 username = request.match_info.get("username")
                 if not username or not await cls.config.async_get_user(username):
-                    return send_error_response(request.path, "unauthorized user", 1)
+                    path = request.path.replace(username, "")
+                    return send_error_response(path, "unauthorized user", 1)
             # check and unpack (json) body if needed
             if request.method in ["PUT", "POST"]:
                 try:
@@ -608,6 +609,17 @@ class HueApi:
             LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
         else:
             LOGGER.warning("Invalid/unknown request: %s", request)
+        if request.method == "GET":
+            address = request.match_info["tail"].split("//")[0]
+            if not address.startswith("/"):
+                username = address.split("/")[0]
+                if not await self.config.async_get_user(username):
+                    return send_error_response(
+                        address.split("/")[1], "unauthorized user", 1
+                    )
+            return send_error_response(
+                request.path, "method, GET, not available for resource, {path}", 4
+            )
         return send_error_response(request.path, "unknown request", 404)
 
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
@@ -764,7 +776,7 @@ class HueApi:
             )
         else:
             latest_color_mode = light_config.get(const.HUE_ATTR_COLORMODE)
-        last_light_state = light_config.get("state", dict())
+        last_light_state = light_config.get("state", {})
         latest_brightness = entity_attr.get(
             const.HASS_ATTR_BRIGHTNESS,
             last_light_state.get(const.HUE_ATTR_BRI, 0),

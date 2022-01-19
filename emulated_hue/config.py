@@ -308,7 +308,7 @@ class Config:
                 return item
         # create username and clientkey
         username = create_secure_string(40)
-        clientkey = create_secure_string(32).upper()
+        clientkey = create_secure_string(32, True).upper()
         user_obj = {
             "name": devicetype,
             "clientkey": clientkey,
@@ -316,6 +316,8 @@ class Config:
             "username": username,
         }
         await self.async_set_storage_value("users", username, user_obj)
+        # Disable link mode on creating user
+        self._link_mode_enabled = False
         return user_obj
 
     async def delete_user(self, username: str) -> None:
@@ -332,7 +334,9 @@ class Config:
             self.hue.loop.create_task(self.async_disable_link_mode())
 
         self.hue.loop.call_later(300, auto_disable)
-        LOGGER.info("Link mode is enabled for the next 5 minutes.")
+        LOGGER.info(
+            "Link mode is enabled for the next 5 minutes or until an api key is generated."
+        )
 
     async def async_disable_link_mode(self) -> None:
         """Disable link mode on the virtual bridge."""
