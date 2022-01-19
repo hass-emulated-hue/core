@@ -826,7 +826,7 @@ class HueApi:
         ):
             # Extended Color light (Zigbee Device ID: 0x0210)
             # Same as Color light, but which supports additional setting of color temperature
-            retval.update(self.hue.config.definitions["lights"]["Extended color light"])
+            retval.update(self.config.definitions["lights"]["Extended color light"])
             # get color temperature min/max values from HA attributes
             ct_min = entity_attr.get("min_mireds", 153)
             retval["capabilities"]["control"]["ct"]["min"] = ct_min
@@ -860,7 +860,7 @@ class HueApi:
         ):
             # Color light (Zigbee Device ID: 0x0200)
             # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
-            retval.update(self.hue.config.definitions["lights"]["Color light"])
+            retval.update(self.config.definitions["lights"]["Color light"])
             retval["state"].update(
                 {
                     const.HUE_ATTR_BRI: latest_brightness,
@@ -876,9 +876,7 @@ class HueApi:
         elif const.HASS_COLOR_MODE_COLOR_TEMP in entity_color_modes:
             # Color temperature light (Zigbee Device ID: 0x0220)
             # Supports groups, scenes, on/off, dimming, and setting of a color temperature
-            retval.update(
-                self.hue.config.definitions["lights"]["Color temperature light"]
-            )
+            retval.update(self.config.definitions["lights"]["Color temperature light"])
             # get color temperature min/max values from HA attributes
             ct_min = entity_attr.get("min_mireds", 153)
             retval["capabilities"]["control"]["ct"]["min"] = ct_min
@@ -895,12 +893,12 @@ class HueApi:
             # Dimmable light (Zigbee Device ID: 0x0100)
             # Supports groups, scenes, on/off and dimming
             retval["type"] = "Dimmable light"
-            retval.update(self.hue.config.definitions["lights"]["Dimmable light"])
+            retval.update(self.config.definitions["lights"]["Dimmable light"])
             retval["state"].update({const.HUE_ATTR_BRI: latest_brightness})
         else:
             # On/off light (Zigbee Device ID: 0x0000)
             # Supports groups, scenes, on/off control
-            retval.update(self.hue.config.definitions["lights"]["On/off light"])
+            retval.update(self.config.definitions["lights"]["On/off light"])
 
         # Get device type, model etc. from the Hass device registry
         reg_entity = self.hue.hass.entity_registry.get(entity["entity_id"])
@@ -1096,7 +1094,7 @@ class HueApi:
 
     async def __async_get_bridge_config(self, full_details: bool = False) -> dict:
         """Return the (virtual) bridge configuration."""
-        result = self.hue.config.definitions.get("bridge").get("basic").copy()
+        result = self.config.definitions.get("bridge").get("basic").copy()
         result.update(
             {
                 "name": self.config.bridge_name,
@@ -1105,7 +1103,7 @@ class HueApi:
             }
         )
         if full_details:
-            result.update(self.hue.config.definitions.get("bridge").get("full"))
+            result.update(self.config.definitions.get("bridge").get("full"))
             result.update(
                 {
                     "linkbutton": self.config.link_mode_enabled,
