@@ -2,11 +2,9 @@
 import copy
 import datetime
 import functools
-import inspect
 import json
 import logging
 import os
-import ssl
 import time
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
 
@@ -15,8 +13,8 @@ from aiohttp import web
 
 import emulated_hue.const as const
 from emulated_hue.entertainment import EntertainmentAPI
-from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 from emulated_hue.utils import (
+    ClassRouteTableDef,
     convert_color_mode,
     entity_attributes_to_int,
     send_error_response,
@@ -34,43 +32,6 @@ LOGGER = logging.getLogger(__name__)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_static")
 DESCRIPTION_FILE = os.path.join(STATIC_DIR, "description.xml")
-
-
-class ClassRouteTableDef(web.RouteTableDef):
-    """Allow decorators for route registering within class methods."""
-
-    def __repr__(self) -> str:
-        """Pretty-print Class."""
-        return "<ClassRouteTableDef count={}>".format(len(self._items))
-
-    def route(self, method: str, path: str, **kwargs):
-        """Add route handler."""
-
-        def inner(handler):
-            handler.route_info = (method, path, kwargs)
-            return handler
-
-        return inner
-
-    def add_class_routes(self, instance) -> None:
-        """Collect routes from class methods."""
-
-        def predicate(member) -> bool:
-            return all(
-                (inspect.iscoroutinefunction(member), hasattr(member, "route_info"))
-            )
-
-        for _, handler in inspect.getmembers(instance, predicate):
-            method, path, kwargs = handler.route_info
-            super().route(method, path, **kwargs)(handler)
-            # also add the route with trailing slash,
-            # the hue apps seem to be a bit inconsistent about that
-            super().route(method, path + "/", **kwargs)(handler)
-
-
-# pylint: disable=invalid-name
-routes = ClassRouteTableDef()
-# pylint: enable=invalid-name
 
 
 def check_request(check_user=True, log_request=True):
@@ -102,84 +63,51 @@ def check_request(check_user=True, log_request=True):
     return func_wrapper
 
 
-class HueApi:
-    """Support for a Hue API to control Home Assistant."""
+# pylint: disable=invalid-name
+routes = ClassRouteTableDef()
+# pylint: enable=invalid-name
 
-    runner = None
+
+class HueApiV1Endpoints:
+    """Hue API v1 endpoints."""
 
     def __init__(self, hue: HueEmulator):
-        """Initialize with Hue object."""
+        """Initialize the v1 api."""
+        self.hue = hue
+        self.config = hue.config
         self.streaming_api = None  # type: EntertainmentAPI | None
-        self.config = hue.config  # type: HueEmulator.config
-        self.hue = hue  # type: HueEmulator
-        self.http_site = None  # type: web.TCPSite | None
-        self.https_site = None  # type: web.TCPSite | None
         self._new_lights = {}
         self._timestamps = {}
         self._prev_data = {}
         with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
             self._description_xml = fdesc.read()
 
-    async def async_setup(self):
-        """Async set-up of the webserver."""
-        app = web.Application()
+    # pylint: disable=invalid-name
+    @property
+    def route(self):
+        """Return routes for external access."""
+        return routes
+
+    # pylint: enable=invalid-name
+
+    def add_routes(self):
+        """Add routes to the web server."""
         # add config routes
-        app.router.add_route(
+        routes.add_manual_route(
             "GET", "/api/{username}/config", self.async_get_bridge_config
         )
-        app.router.add_route("GET", "/api/config", self.async_get_bridge_config)
-        app.router.add_route(
+        routes.add_manual_route("GET", "/api/config", self.async_get_bridge_config)
+        routes.add_manual_route(
             "GET", "/api/{username}/config/", self.async_get_bridge_config
         )
-        app.router.add_route("GET", "/api/config/", self.async_get_bridge_config)
-        # add all routes defined with decorator
+        routes.add_manual_route("GET", "/api/config/", self.async_get_bridge_config)
+        # add class routes
         routes.add_class_routes(self)
-        app.add_routes(routes)
         # Add catch-all handler for unknown requests to api
-        app.router.add_route("*", "/api/{tail:.*}", self.async_unknown_request)
-        # static files hosting
-        app.router.add_static("/", STATIC_DIR, append_version=True)
-        self.runner = web.AppRunner(app, access_log=None)
-        await self.runner.setup()
-
-        # Create and start the HTTP webserver/api
-        self.http_site = web.TCPSite(self.runner, port=self.config.http_port)
-        try:
-            await self.http_site.start()
-            LOGGER.info("Started HTTP webserver on port %s", self.config.http_port)
-        except OSError as error:
-            LOGGER.error(
-                "Failed to create HTTP server at port %d: %s",
-                self.config.http_port,
-                error,
-            )
-
-        # create self signed certificate for HTTPS API
-        cert_file = self.config.get_path(".cert.pem")
-        key_file = self.config.get_path(".cert_key.pem")
-        if not check_certificate(cert_file, self.config):
-            await async_generate_selfsigned_cert(cert_file, key_file, self.config)
-        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(cert_file, key_file)
-
-        # Create and start the HTTPS webserver/API
-        self.https_site = web.TCPSite(
-            self.runner, port=self.config.https_port, ssl_context=ssl_context
-        )
-        try:
-            await self.https_site.start()
-            LOGGER.info("Started HTTPS webserver on port %s", self.config.https_port)
-        except OSError as error:
-            LOGGER.error(
-                "Failed to create HTTPS server at port %d: %s",
-                self.config.https_port,
-                error,
-            )
+        routes.add_manual_route("*", "/api/{tail:.*}", self.async_unknown_request)
 
     async def async_stop(self):
-        """Stop the webserver."""
-        await self.http_site.stop()
-        await self.https_site.stop()
+        """Stop the v1 api."""
         if self.streaming_api:
             self.streaming_api.stop()
 

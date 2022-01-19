@@ -5,9 +5,9 @@ from typing import Optional
 
 from hass_client import HomeAssistantClient
 
-from .api import HueApi
 from .config import Config
 from .discovery import async_setup_discovery
+from .web import HueWeb
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class HueEmulator:
         self._hass: Optional[HomeAssistantClient] = None
         self._hass_url = hass_url
         self._hass_token = hass_token
-        self._api = HueApi(self)
+        self._web = HueWeb(self)
 
     @property
     def config(self) -> Config:
@@ -54,7 +54,7 @@ class HueEmulator:
         self._hass = HomeAssistantClient(url=self._hass_url, token=self._hass_token)
         await self.config.async_start(self._loop)
         await self._hass.connect()
-        await self._api.async_setup()
+        await self._web.async_setup()
         self.loop.create_task(async_setup_discovery(self.config))
         # remove legacy light_ids config
         if await self.config.async_get_storage_value("light_ids"):
@@ -66,4 +66,4 @@ class HueEmulator:
         LOGGER.info("Application shutdown")
         await self.config.async_stop()
         await self._hass.disconnect()
-        await self._api.async_stop()
+        await self._web.async_stop()

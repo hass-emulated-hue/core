@@ -1,5 +1,6 @@
 """Emulated HUE Bridge for HomeAssistant - Helper utils."""
 import asyncio
+import inspect
 import json
 import logging
 import os
@@ -183,3 +184,39 @@ def convert_color_mode(color_mode: str, initial_type: str) -> str:
             const.HUE_ATTR_SAT: const.HASS_COLOR_MODE_HS,
         }
         return hue_color_modes.get(color_mode, "xy")
+
+
+class ClassRouteTableDef(web.RouteTableDef):
+    """Allow decorators for route registering within class methods."""
+
+    def __repr__(self) -> str:
+        """Pretty-print Class."""
+        return "<ClassRouteTableDef count={}>".format(len(self._items))
+
+    def route(self, method: str, path: str, **kwargs):
+        """Add route handler."""
+
+        def inner(handler):
+            handler.route_info = (method, path, kwargs)
+            return handler
+
+        return inner
+
+    def add_manual_route(self, method: str, path: str, handler, **kwargs) -> None:
+        """Add manual route handler."""
+        super().route(method, path, **kwargs)(handler)
+
+    def add_class_routes(self, instance) -> None:
+        """Collect routes from class methods."""
+
+        def predicate(member) -> bool:
+            return all(
+                (inspect.iscoroutinefunction(member), hasattr(member, "route_info"))
+            )
+
+        for _, handler in inspect.getmembers(instance, predicate):
+            method, path, kwargs = handler.route_info
+            super().route(method, path, **kwargs)(handler)
+            # also add the route with trailing slash,
+            # the hue apps seem to be a bit inconsistent about that
+            super().route(method, path + "/", **kwargs)(handler)
