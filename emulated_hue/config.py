@@ -92,9 +92,9 @@ class Config:
                 last_save = now
             await asyncio.sleep(1)
 
-    async def async_start(self, loop: asyncio.AbstractEventLoop) -> None:
+    async def async_start(self) -> None:
         """Start background saving task."""
-        self._saver_task = loop.create_task(self._background_saver())
+        self._saver_task = self.hue.loop.create_task(self._background_saver())
 
     async def async_stop(self) -> None:
         """Save the config."""

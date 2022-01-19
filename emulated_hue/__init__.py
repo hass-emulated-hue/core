@@ -52,7 +52,7 @@ class HueEmulator:
         """Start running the Hue emulation."""
         self._loop = asyncio.get_running_loop()
         self._hass = HomeAssistantClient(url=self._hass_url, token=self._hass_token)
-        await self.config.async_start(self._loop)
+        await self.config.async_start()
         await self._hass.connect()
         await self._web.async_setup()
         self.loop.create_task(async_setup_discovery(self.config))
