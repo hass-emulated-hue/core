@@ -26,8 +26,6 @@ LOCAL_NETWORKS = (
     ip_network("192.168.0.0/16"),
 )
 
-SEMAPHORE = asyncio.Semaphore(1)
-
 
 def is_local(address: Union[IPv4Address, IPv6Address]) -> bool:
     """Check if an address is local."""
@@ -122,10 +120,7 @@ def load_json(filename: str) -> dict:
 async def async_save_json(filename: str, data: dict):
     """Save JSON data to a file."""
     loop = asyncio.get_running_loop()
-    # Seems that await here doesn't actually wait since aiohttp
-    # creates a new call with each request
-    async with SEMAPHORE:
-        return await loop.run_in_executor(None, save_json, filename, data)
+    return await loop.run_in_executor(None, save_json, filename, data)
 
 
 def save_json(filename: str, data: dict):
