@@ -284,10 +284,19 @@ class HueApi:
     @check_request()
     async def async_get_group(self, request: web.Request):
         """Handle requests to retrieve info for a single group."""
-        group_id = request.match_info["group_id"]
-        groups = await self.__async_get_all_groups()
-        result = groups.get(group_id, {})
-        return send_json_response(result)
+        group_id = request.match_info["group_id"]  # type: str
+        result = None  # type: dict | None
+        if group_id.isdigit():
+            groups = await self.__async_get_all_groups()
+            result = groups.get(group_id)
+        # else:
+        # TODO: Return group 0 if group_id is not found
+        if result:
+            return send_json_response(result)
+        else:
+            return send_error_response(
+                request.path, "resource, {path}, not available", 3
+            )
 
     @routes.put("/api/{username}/groups/{group_id}/action")
     @check_request()
@@ -614,9 +623,7 @@ class HueApi:
             if not address.startswith("/"):
                 username = address.split("/")[0]
                 if not await self.config.async_get_user(username):
-                    return send_error_response(
-                        address.split("/")[1], "unauthorized user", 1
-                    )
+                    return send_error_response(request.path, "unauthorized user", 1)
             return send_error_response(
                 request.path, "method, GET, not available for resource, {path}", 4
             )

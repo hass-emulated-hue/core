@@ -98,13 +98,17 @@ def send_success_response(
     return send_json_response(json_response)
 
 
-def send_error_response(address: str, description: str, type: int) -> web.Response:
+def send_error_response(address: str, description: str, type_num: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
     address = address.replace("/api", "").split("//")[0]
-    address = address if address.startswith("/") else f"/{address}"
+    if address.startswith("/"):
+        # strip out username
+        address = "/" + "/".join(address.split("/")[2:])
+    else:
+        address = f"/{address}"
     description = description.format(path=address)
     response = [
-        {"error": {"type": type, "address": address, "description": description}}
+        {"error": {"type": type_num, "address": address, "description": description}}
     ]
     return send_json_response(response)
 
