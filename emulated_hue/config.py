@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from getmac import get_mac_address
 
-from .const import CONFIG_WRITE_INTERVAL_SECONDS
+from .const import CONFIG_WRITE_DELAY_SECONDS
 from .utils import async_save_json, create_secure_string, get_local_ip, load_json
 
 if TYPE_CHECKING:
@@ -80,28 +80,23 @@ class Config:
         self._bridge_serial = mac_str.lower()
         self._bridge_uid = f"2f402f80-da50-11e1-9b23-{mac_str}"
 
-        # Flag to initiate shutdown of background saving
-        self._interrupted = False
-        self._need_save = False
         self._saver_task = None  # type: asyncio.Task | None
 
-    async def _background_saver(self) -> None:
-        last_save = 0
-        while not self._interrupted:
-            now = datetime.datetime.now().timestamp()
-            if self._need_save and now - last_save > CONFIG_WRITE_INTERVAL_SECONDS:
-                await async_save_json(self.get_path(CONFIG_FILE), self._config)
-                last_save = now
-            await asyncio.sleep(1)
+    async def create_save_task(self) -> None:
+        """Create a task to save the config."""
+        if self._saver_task is None or self._saver_task.done():
+            self._saver_task = asyncio.create_task(self._commit_config())
 
-    async def async_start(self) -> None:
-        """Start background saving task."""
-        self._saver_task = self.hue.loop.create_task(self._background_saver())
+    async def _commit_config(self, immediate_commit: bool = False) -> None:
+        if not immediate_commit:
+            await asyncio.sleep(CONFIG_WRITE_DELAY_SECONDS)
+        await async_save_json(self.get_path(CONFIG_FILE), self._config)
 
     async def async_stop(self) -> None:
-        """Save the config."""
-        self._interrupted = True
-        await self._saver_task
+        """Save the config on shutdown."""
+        if self._saver_task is not None and not self._saver_task.done():
+            self._saver_task.cancel()
+            await self._commit_config(immediate_commit=True)
 
     @property
     def ip_addr(self) -> str:
@@ -279,7 +274,7 @@ class Config:
             needs_save = True
         # save config to file if changed
         if needs_save:
-            self._need_save = True
+            await self.create_save_task()
 
     async def async_delete_storage_value(self, key: str, subkey: str = None) -> None:
         """Delete a value in persistent storage."""
