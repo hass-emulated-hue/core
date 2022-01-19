@@ -601,11 +601,11 @@ class HueApi:
 
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
-        if request.method in ["PUT", "POST"]:
-            try:
-                request_data = await request.json()
-            except json.decoder.JSONDecodeError:
-                request_data = await request.text()
+        try:
+            request_data = await request.json()
+        except json.decoder.JSONDecodeError:
+            request_data = await request.text()
+        if request_data:
             LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
         else:
             LOGGER.warning("Invalid/unknown request: %s", request)
