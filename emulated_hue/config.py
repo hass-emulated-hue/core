@@ -338,8 +338,6 @@ class Config:
             "username": username,
         }
         await self.async_set_storage_value("users", username, user_obj)
-        # Disable link mode on creating user
-        await self.async_disable_link_mode()
         return user_obj
 
     async def delete_user(self, username: str) -> None:
@@ -356,9 +354,7 @@ class Config:
             self.hue.loop.create_task(self.async_disable_link_mode())
 
         self.hue.loop.call_later(300, auto_disable)
-        LOGGER.info(
-            "Link mode is enabled for the next 5 minutes or until an api key is generated."
-        )
+        LOGGER.info("Link mode is enabled for the next 5 minutes.")
 
     async def async_disable_link_mode(self) -> None:
         """Disable link mode on the virtual bridge."""
@@ -366,7 +362,7 @@ class Config:
         LOGGER.info("Link mode is disabled.")
 
     async def async_enable_link_mode_discovery(self) -> None:
-        """Enable link mode discovery for the duration of 5 minutes."""
+        """Enable link mode discovery (notification) for the duration of 5 minutes."""
 
         if self._link_mode_discovery_key:
             return  # already active

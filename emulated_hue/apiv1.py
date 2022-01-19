@@ -506,8 +506,14 @@ class HueApiV1Endpoints:
                 <body>
                     <h2>Link mode is enabled for 5 minutes.</h2>
                 </body>
+                <script>
+                  setTimeout(function() {
+                      window.close()
+                  }, 2000);
+                </script>
             </html>"""
         await self.config.async_enable_link_mode()
+        await self.config.async_disable_link_mode_discovery()
         return web.Response(text=html_template, content_type="text/html")
 
     @routes.get("/api/{username}/capabilities")
