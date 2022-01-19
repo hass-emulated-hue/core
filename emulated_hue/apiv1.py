@@ -96,15 +96,6 @@ class HueApiV1Endpoints:
 
     def add_routes(self):
         """Add routes to the web server."""
-        # add config routes
-        routes.add_manual_route(
-            "GET", "/api/{username}/config", self.async_get_bridge_config
-        )
-        routes.add_manual_route("GET", "/api/config", self.async_get_bridge_config)
-        routes.add_manual_route(
-            "GET", "/api/{username}/config/", self.async_get_bridge_config
-        )
-        routes.add_manual_route("GET", "/api/config/", self.async_get_bridge_config)
         # add class routes
         routes.add_class_routes(self)
         # Add catch-all handler for unknown requests to api
@@ -389,6 +380,7 @@ class HueApiV1Endpoints:
         result = [{"success": f"/{itemtype}/{item_id} deleted."}]
         return send_json_response(result)
 
+    @routes.get("/api/{username:[^/]+/{0,1}|}config{tail:.*}")
     @check_request(check_user=False)
     async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get (full or partial) config of this emulated bridge."""
@@ -557,9 +549,10 @@ class HueApiV1Endpoints:
         else:
             LOGGER.warning("Invalid/unknown request: %s", request)
         if request.method == "GET":
-            address = request.match_info["tail"].split("//")[0]
-            if not address.startswith("/"):
-                username = address.split("/")[0]
+            address = request.path.lstrip("/").split("/")
+            resource = address[2]
+            username = address[1]
+            if resource and username:
                 if not await self.config.async_get_user(username):
                     return send_error_response(request.path, "unauthorized user", 1)
             return send_error_response(
