@@ -52,7 +52,10 @@ def check_request(check_user=True, log_request=True):
             if request.method in ["PUT", "POST"]:
                 request_text = await request.text()
                 try:
-                    request_data = await request.json()
+                    request_data = await request.text()
+                    # clean request_data for weird apps like f.lux
+                    request_data = request_data.rstrip("\x00")
+                    request_data = json.loads(request_data)
                 except ValueError:
                     LOGGER.warning(
                         "Invalid json in request: %s --> %s", request, request_text
@@ -541,10 +544,7 @@ class HueApiV1Endpoints:
 
     async def async_unknown_request(self, request: web.Request):
         """Handle unknown requests (catch-all)."""
-        try:
-            request_data = await request.json()
-        except json.decoder.JSONDecodeError:
-            request_data = await request.text()
+        request_data = await request.text()
         if request_data:
             LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
         else:
