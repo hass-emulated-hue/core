@@ -79,6 +79,19 @@ def send_json_response(data) -> web.Response:
     return web.Response(
         text=json.dumps(data, ensure_ascii=False, separators=(",", ":")),
         content_type="application/json",
+        headers={
+            "server": "nginx",
+            "Access-Control-Max-Age": "3600",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE, HEAD",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "X-XSS-Protection": "1; mode=block",
+            "X-Frame-Options": "SAMEORIGIN",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'self'",
+            "Referrer-Policy": "no-referrer",
+        },
     )
 
 
