@@ -26,7 +26,7 @@ def check_certificate(cert_file: str, config: Config):
         names = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
         cert_cn = names[0].value
         # return if certificate CN matched the bridge id
-        return cert_cn == config.bridge_id
+        return cert_cn == config.bridge_id.lower()
     except x509.ExtensionNotFound:
         return False
 
@@ -44,14 +44,14 @@ async def async_generate_selfsigned_cert(
 def generate_selfsigned_cert(cert_file: str, key_file: str, config: Config) -> None:
     """Generate self signed certificate compatible with Philips HUE."""
 
-    dec_serial = int(config.bridge_id, 16)
+    dec_serial = int(config.bridge_id.lower(), 16)
 
     root_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
     subject = issuer = x509.Name(
         [
             x509.NameAttribute(NameOID.COUNTRY_NAME, u"NL"),
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Philips Hue"),
-            x509.NameAttribute(NameOID.COMMON_NAME, config.bridge_id),
+            x509.NameAttribute(NameOID.COMMON_NAME, config.bridge_id.lower()),
         ]
     )
     root_cert = (

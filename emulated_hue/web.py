@@ -56,8 +56,8 @@ class HueWeb:
             )
 
         # create self signed certificate for HTTPS API
-        cert_file = self.config.get_path(".cert.pem")
-        key_file = self.config.get_path(".cert_key.pem")
+        cert_file = self.config.get_path("cert.pem")
+        key_file = self.config.get_path("cert_key.pem")
         if not check_certificate(cert_file, self.config):
             await async_generate_selfsigned_cert(cert_file, key_file, self.config)
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)

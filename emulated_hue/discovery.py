@@ -1,6 +1,7 @@
 """Support UPNP discovery method that mimics Hue hubs."""
 import asyncio
 import logging
+import os
 import select
 import socket
 import threading
@@ -113,15 +114,16 @@ USN: {bridge_uuid}
         # Required for receiving multicast
         ssdp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        ssdp_socket.setsockopt(
-            socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.ip_addr)
-        )
+        if os.name != "nt":
+            ssdp_socket.setsockopt(
+                socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.ip_addr)
+            )
 
-        ssdp_socket.setsockopt(
-            socket.SOL_IP,
-            socket.IP_ADD_MEMBERSHIP,
-            socket.inet_aton("239.255.255.250") + socket.inet_aton(self.ip_addr),
-        )
+            ssdp_socket.setsockopt(
+                socket.SOL_IP,
+                socket.IP_ADD_MEMBERSHIP,
+                socket.inet_aton("239.255.255.250") + socket.inet_aton(self.ip_addr),
+            )
 
         if self.upnp_bind_multicast:
             ssdp_socket.bind(("", 1900))
