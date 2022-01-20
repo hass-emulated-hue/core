@@ -107,8 +107,11 @@ def send_error_response(address: str, description: str, type_num: int) -> web.Re
         if "//" in address:
             address = address.replace("/api/", "")
         else:
-            resource = address.lstrip("/").split("/")[2]
-            address = f"/{resource}"
+            address = address.lstrip("/").split("/")
+            if len(address) > 2:
+                address = f"/{address[2]}"
+            else:
+                address = "/"
     description = description.format(path=address)
     response = [
         {"error": {"type": type_num, "address": address, "description": description}}

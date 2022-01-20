@@ -96,6 +96,7 @@ class HueApiV1Endpoints:
 
     def add_routes(self):
         """Add routes to the web server."""
+        routes.add_manual_route("GET", "/api", self.async_unknown_request)
         # add class routes
         routes.add_class_routes(self)
         # Add catch-all handler for unknown requests to api
@@ -550,9 +551,9 @@ class HueApiV1Endpoints:
             LOGGER.warning("Invalid/unknown request: %s", request)
         if request.method == "GET":
             address = request.path.lstrip("/").split("/")
-            resource = address[2]
-            username = address[1]
-            if resource and username:
+            # Ensure a resource is requested
+            if len(address) > 2:
+                username = address[1]
                 if not await self.config.async_get_user(username):
                     return send_error_response(request.path, "unauthorized user", 1)
             return send_error_response(
