@@ -14,3 +14,4 @@ Code block to get esphome node IPs:
     LOGGER.info("IP: %s", ip)
 ```
 
+Verify entity is esphome using `/api/config/config_entries/entry`
