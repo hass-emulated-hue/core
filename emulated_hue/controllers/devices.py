@@ -1,9 +1,10 @@
 """Collection of devices controllable by Hue."""
 import logging
 
-from .models import DeviceState
-from .homeassistant import HomeAssistantController
 from emulated_hue.const import HASS_ATTR_ENTITY_ID, HASS_STATE_ON
+
+from .homeassistant import HomeAssistantController
+from .models import DeviceState
 
 LOGGER = logging.getLogger(__name__)
 
@@ -27,8 +28,12 @@ class OnOffDevice:
 
     async def async_update_state(self) -> None:
         """Update DeviceState object with Hass state."""
-        self._hass_state = await self._controller.async_get_entity_state(self._entity_id)
-        self._control_state = DeviceState(power_state=self._hass_state["state"] == HASS_STATE_ON)
+        self._hass_state = await self._controller.async_get_entity_state(
+            self._entity_id
+        )
+        self._control_state = DeviceState(
+            power_state=self._hass_state["state"] == HASS_STATE_ON
+        )
 
     def turn_on(self) -> None:
         self._control_state = DeviceState(power_state=True)
@@ -39,9 +44,13 @@ class OnOffDevice:
     async def execute(self) -> None:
         if self._control_state:
             if self._control_state.power_state:
-                await self._controller.async_turn_on(self._entity_id, self._control_state.to_hass_data())
+                await self._controller.async_turn_on(
+                    self._entity_id, self._control_state.to_hass_data()
+                )
             else:
-                await self._controller.async_turn_off(self._entity_id, self._control_state.to_hass_data())
+                await self._controller.async_turn_off(
+                    self._entity_id, self._control_state.to_hass_data()
+                )
         else:
             LOGGER.warning("No state to execute for device %s", self._entity_id)
         self._control_state = None
@@ -61,6 +70,7 @@ class BrightnessDevice(OnOffDevice):
             raise AttributeError("Call turn_on/off before setting brightness!")
         self._control_state.brightness = brightness
 
+
 class CTDevice(BrightnessDevice):
     def __init__(self, controller: HomeAssistantController, config: dict):
         super().__init__(controller, config)
@@ -69,6 +79,7 @@ class CTDevice(BrightnessDevice):
         if not self._control_state:
             raise AttributeError("Call turn_on/off before setting color_temperature!")
         self._control_state.color_temperature = color_temperature
+
 
 class RGBDevice(BrightnessDevice):
     def __init__(self, controller: HomeAssistantController, config: dict):
@@ -79,6 +90,7 @@ class RGBDevice(BrightnessDevice):
             raise AttributeError("Call turn_on/off before setting hue_sat!")
         self._control_state.hue = hue
         self._control_state.sat = sat
+
 
 class RGBWDevice(RGBDevice, CTDevice):
     def __init__(self, controller: HomeAssistantController, config: dict):

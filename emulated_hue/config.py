@@ -393,4 +393,6 @@ class Config:
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""
         self._link_mode_discovery_key = None
-        await self.hue.controller_hass.async_dismiss_notification("hue_bridge_link_requested")
+        await self.hue.controller_hass.async_dismiss_notification(
+            "hue_bridge_link_requested"
+        )

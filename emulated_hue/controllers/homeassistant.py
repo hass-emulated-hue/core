@@ -27,7 +27,9 @@ class HomeAssistantController:
             :param data: The service data.
         """
         data[HASS_ATTR_ENTITY_ID] = entity_id
-        await self._hass.call_service(HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_OFF, data)
+        await self._hass.call_service(
+            HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_OFF, data
+        )
 
     async def async_turn_on(self, entity_id: str, data: dict) -> None:
         """
@@ -37,9 +39,13 @@ class HomeAssistantController:
             :param data: The service data.
         """
         data[HASS_ATTR_ENTITY_ID] = entity_id
-        await self._hass.call_service(HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_ON, data)
+        await self._hass.call_service(
+            HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_ON, data
+        )
 
-    async def async_get_area_devices(self, area_id: str, domain_filter: list = None) -> list:
+    async def async_get_area_devices(
+        self, area_id: str, domain_filter: list = None
+    ) -> list:
         """
         Get the enabled devices in a Home Assistant area matching a domain filter.
 

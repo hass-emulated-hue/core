@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+
 from emulated_hue import const
 
 
