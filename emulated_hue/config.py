@@ -378,13 +378,9 @@ class Config:
         url = f"http://{self.ip_addr}/link/{self._link_mode_discovery_key}"
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
-        msg_details = {
-            "notification_id": "hue_bridge_link_requested",
-            "title": "Emulated HUE Bridge",
-            "message": msg,
-        }
-        await self.hue.hass.call_service(
-            "persistent_notification", "create", msg_details
+
+        await self.hue.controller_hass.create_notification(
+            msg, "hue_bridge_link_requested"
         )
 
         # make sure that the notification and link request are dismissed after 5 minutes
@@ -397,8 +393,4 @@ class Config:
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""
         self._link_mode_discovery_key = None
-        await self.hue.hass.call_service(
-            "persistent_notification",
-            "dismiss",
-            {"notification_id": "hue_bridge_link_requested"},
-        )
+        await self.hue.controller_hass.dismiss_notification("hue_bridge_link_requested")

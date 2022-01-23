@@ -978,28 +978,11 @@ class HueApiV1Endpoints:
         group_conf = await self.__async_get_group_id(group_id)
 
         # Hass group (area)
-        if "area_id" in group_conf:
-            for entity in self.hue.hass.entity_registry.values():
-                if entity["disabled_by"]:
-                    # do not include disabled devices
-                    continue
-                if not entity["entity_id"].startswith("light."):
-                    # for now only include lights
-                    # TODO: include switches, sensors ?
-                    continue
-                device = self.hue.hass.device_registry.get(entity["device_id"])
-                # first check if area is defined on entity itself
-                if entity["area_id"] and entity["area_id"] != group_conf["area_id"]:
-                    # different area id defined on entity so skip this entity
-                    continue
-                elif entity["area_id"] == group_conf["area_id"]:
-                    # our area_id is configured on the entity, use it
-                    pass
-                elif device and device["area_id"] == group_conf["area_id"]:
-                    # our area_id is configured on the entity's device, use it
-                    pass
-                else:
-                    continue
+        if group_area_id := group_conf.get("area_id"):
+            area_entities = await self.hue.controller_hass.get_area_devices(
+                group_area_id
+            )
+            for entity in area_entities:
                 # process the light entity
                 light_id = await self.config.async_entity_id_to_light_id(
                     entity["entity_id"]

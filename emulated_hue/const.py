@@ -36,11 +36,8 @@ HASS_COLOR_MODE_RGBWW = "rgbww"
 HASS_COLOR_MODE_WHITE = "white"  # Must *NOT* be the only supported mode
 
 HASS_ATTR = "attributes"
-HASS_ATTR_ENTITY_ID = "entity_id"
 HASS_ATTR_SUPPORTED_FEATURES = "supported_features"
 HASS_ATTR_SUPPORTED_COLOR_MODES = "supported_color_modes"
-HASS_SERVICE_TURN_OFF = "turn_off"
-HASS_SERVICE_TURN_ON = "turn_on"
 HASS_STATE_OFF = "off"
 HASS_STATE_ON = "on"
 HASS_STATE_UNAVAILABLE = "unavailable"
@@ -76,3 +73,10 @@ HUE = "hue"
 
 HUE_HTTP_PORT = 80
 HUE_HTTPS_PORT = 443
+
+
+# To remove
+HASS_SERVICE_TURN_OFF = "turn_off"
+HASS_SERVICE_TURN_ON = "turn_on"
+
+HASS_ATTR_ENTITY_ID = "entity_id"

@@ -6,6 +6,7 @@ from typing import Optional
 from hass_client import HomeAssistantClient
 
 from .config import Config
+from .controllers import HomeAssistantController
 from .discovery import async_setup_discovery
 from .web import HueWeb
 
@@ -33,6 +34,8 @@ class HueEmulator:
         self._hass_token = hass_token
         self._web = HueWeb(self)
 
+        self._controller_hass = None  # type: HomeAssistantController | None
+
     @property
     def config(self) -> Config:
         """Return the Config instance."""
@@ -41,7 +44,13 @@ class HueEmulator:
     @property
     def hass(self) -> Optional[HomeAssistantClient]:
         """Return the Home Assistant instance."""
+        # To be removed once controllers are implemented
         return self._hass
+
+    @property
+    def controller_hass(self) -> HomeAssistantController | None:
+        """Return the Home Assistant controller."""
+        return self._controller_hass
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -53,6 +62,8 @@ class HueEmulator:
         self._loop = asyncio.get_running_loop()
         self._hass = HomeAssistantClient(url=self._hass_url, token=self._hass_token)
         await self._hass.connect()
+        self._controller_hass = HomeAssistantController(self.hass)
+
         await self._web.async_setup()
         self.loop.create_task(async_setup_discovery(self.config))
         # remove legacy light_ids config
