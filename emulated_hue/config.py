@@ -80,7 +80,7 @@ class Config:
         self._bridge_serial = mac_str.lower()
         self._bridge_uid = f"2f402f80-da50-11e1-9b23-{mac_str}"
 
-        self._saver_task = None  # type: asyncio.Task | None
+        self._saver_task: asyncio.Task | None = None
 
     async def create_save_task(self) -> None:
         """Create a task to save the config."""

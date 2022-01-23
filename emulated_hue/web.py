@@ -26,11 +26,11 @@ class HueWeb:
 
     def __init__(self, hue: HueEmulator):
         """Initialize with Hue object."""
-        self.config = hue.config  # type: HueEmulator.config
-        self.hue = hue  # type: HueEmulator
+        self.config: HueEmulator.config = hue.config
+        self.hue: HueEmulator = hue
         self.v1_api = HueApiV1Endpoints(hue)
-        self.http_site = None  # type: web.TCPSite | None
-        self.https_site = None  # type: web.TCPSite | None
+        self.http_site: web.TCPSite | None = None
+        self.https_site: web.TCPSite | None = None
 
     async def async_setup(self):
         """Async set-up of the webserver."""

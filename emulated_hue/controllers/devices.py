@@ -1,6 +1,7 @@
 """Collection of devices controllable by Hue."""
-from .models import DeviceState
 import logging
+
+from .models import DeviceState
 
 LOGGER = logging.getLogger(__name__)
 

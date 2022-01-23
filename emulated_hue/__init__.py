@@ -34,7 +34,7 @@ class HueEmulator:
         self._hass_token = hass_token
         self._web = HueWeb(self)
 
-        self._controller_hass = None  # type: HomeAssistantController | None
+        self._controller_hass: HomeAssistantController | None = None
 
     @property
     def config(self) -> Config:

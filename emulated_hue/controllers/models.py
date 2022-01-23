@@ -8,5 +8,5 @@ class DeviceState(BaseModel):
     def to_homeassistant_service_data(self):
         data = {}
         if self.brightness:
-            data['brightness'] = self.brightness
+            data["brightness"] = self.brightness
         return data

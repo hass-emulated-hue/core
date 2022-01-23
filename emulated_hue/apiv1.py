@@ -82,7 +82,7 @@ class HueApiV1Endpoints:
         """Initialize the v1 api."""
         self.hue = hue
         self.config = hue.config
-        self.streaming_api = None  # type: EntertainmentAPI | None
+        self.streaming_api: EntertainmentAPI | None = None
         self._new_lights = {}
         self._timestamps = {}
         self._prev_data = {}
@@ -211,8 +211,8 @@ class HueApiV1Endpoints:
     @check_request()
     async def async_get_group(self, request: web.Request):
         """Handle requests to retrieve info for a single group."""
-        group_id = request.match_info["group_id"]  # type: str
-        result = None  # type: dict | None
+        group_id: str = request.match_info["group_id"]
+        result: dict | None = None
         if group_id.isdigit():
             groups = await self.__async_get_all_groups()
             result = groups.get(group_id)
