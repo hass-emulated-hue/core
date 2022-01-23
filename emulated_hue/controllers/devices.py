@@ -43,6 +43,7 @@ class OnOffDevice:
         self._hass_state_dict: dict = hass_state_dict  # state from Home Assistant
 
         self._config: dict = config
+        self._name = self._config.get("name", "")
 
         # throttling
         self._throttle_ms: int | None = self._config.get("throttle")
@@ -56,6 +57,11 @@ class OnOffDevice:
         self._config_state: None | DeviceState = (
             None  # Latest state and stored in config
         )
+
+    @property
+    def name(self) -> str:
+        """Return device name, prioritizing local config."""
+        return self._name or self._hass_state_dict.get("attributes", {}).get("friendly_name")
 
     @property
     def reachable(self) -> bool:
