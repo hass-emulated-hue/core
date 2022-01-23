@@ -2,8 +2,16 @@
 
 DEFAULT_THROTTLE_MS = 0
 
-CONFIG_WRITE_DELAY_SECONDS = 10
+CONFIG_WRITE_INTERVAL_SECONDS = 60
 
+HASS_ATTR_BRIGHTNESS = "brightness"
+HASS_ATTR_COLOR_TEMP = "color_temp"
+HASS_ATTR_XY_COLOR = "xy_color"
+HASS_ATTR_HS_COLOR = "hs_color"
+HASS_ATTR_RGB_COLOR = "rgb_color"
+HASS_ATTR_EFFECT = "effect"
+HASS_ATTR_TRANSITION = "transition"
+HASS_ATTR_FLASH = "flash"
 
 # Deprecated Bitfield features
 HASS_SUPPORT_BRIGHTNESS = 1
@@ -28,8 +36,11 @@ HASS_COLOR_MODE_RGBWW = "rgbww"
 HASS_COLOR_MODE_WHITE = "white"  # Must *NOT* be the only supported mode
 
 HASS_ATTR = "attributes"
+HASS_ATTR_ENTITY_ID = "entity_id"
 HASS_ATTR_SUPPORTED_FEATURES = "supported_features"
 HASS_ATTR_SUPPORTED_COLOR_MODES = "supported_color_modes"
+HASS_SERVICE_TURN_OFF = "turn_off"
+HASS_SERVICE_TURN_ON = "turn_on"
 HASS_STATE_OFF = "off"
 HASS_STATE_ON = "on"
 HASS_STATE_UNAVAILABLE = "unavailable"
@@ -66,17 +77,8 @@ HUE = "hue"
 HUE_HTTP_PORT = 80
 HUE_HTTPS_PORT = 443
 
-
-# To remove
-HASS_SERVICE_TURN_OFF = "turn_off"
-HASS_SERVICE_TURN_ON = "turn_on"
-
-HASS_ATTR_ENTITY_ID = "entity_id"
-HASS_ATTR_BRIGHTNESS = "brightness"
-HASS_ATTR_COLOR_TEMP = "color_temp"
-HASS_ATTR_XY_COLOR = "xy_color"
-HASS_ATTR_HS_COLOR = "hs_color"
-HASS_ATTR_RGB_COLOR = "rgb_color"
-HASS_ATTR_EFFECT = "effect"
-HASS_ATTR_TRANSITION = "transition"
-HASS_ATTR_FLASH = "flash"
+# New const
+HASS_DOMAIN_HOMEASSISTANT = "homeassistant"
+HASS_DOMAIN_PERSISTENT_NOTIFICATION = "persistent_notification"
+HASS_SERVICE_PERSISTENT_NOTIFICATION_CREATE = "create"
+HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS = "dismiss"

@@ -379,7 +379,7 @@ class Config:
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
 
-        await self.hue.controller_hass.create_notification(
+        await self.hue.controller_hass.async_create_notification(
             msg, "hue_bridge_link_requested"
         )
 
@@ -393,4 +393,4 @@ class Config:
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""
         self._link_mode_discovery_key = None
-        await self.hue.controller_hass.dismiss_notification("hue_bridge_link_requested")
+        await self.hue.controller_hass.async_dismiss_notification("hue_bridge_link_requested")

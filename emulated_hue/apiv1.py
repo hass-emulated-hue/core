@@ -979,7 +979,7 @@ class HueApiV1Endpoints:
 
         # Hass group (area)
         if group_area_id := group_conf.get("area_id"):
-            area_entities = await self.hue.controller_hass.get_area_devices(
+            area_entities = await self.hue.controller_hass.async_get_area_devices(
                 group_area_id
             )
             for entity in area_entities:

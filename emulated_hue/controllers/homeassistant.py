@@ -1,14 +1,14 @@
 """Controller for Home Assistant communication."""
 from hass_client import HomeAssistantClient
 
-from .const import (
-    ATTR_ENTITY_ID,
-    DOMAIN_HOMEASSISTANT,
-    DOMAIN_PERSISTENT_NOTIFICATION,
-    SERVICE_PERSISTENT_NOTIFICATION_CREATE,
-    SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
-    SERVICE_TURN_OFF,
-    SERVICE_TURN_ON,
+from emulated_hue.const import (
+    HASS_ATTR_ENTITY_ID,
+    HASS_DOMAIN_HOMEASSISTANT,
+    HASS_DOMAIN_PERSISTENT_NOTIFICATION,
+    HASS_SERVICE_PERSISTENT_NOTIFICATION_CREATE,
+    HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
+    HASS_SERVICE_TURN_OFF,
+    HASS_SERVICE_TURN_ON,
 )
 
 
@@ -19,27 +19,27 @@ class HomeAssistantController:
         """Initialize the Home Assistant controller."""
         self._hass = hass
 
-    async def turn_off(self, entity_id: str, data: dict) -> None:
+    async def async_turn_off(self, entity_id: str, data: dict) -> None:
         """
         Turn off a generic entity in Home Assistant.
 
             :param entity_id: The ID of the entity.
             :param data: The service data.
         """
-        data[ATTR_ENTITY_ID] = entity_id
-        await self._hass.call_service(DOMAIN_HOMEASSISTANT, SERVICE_TURN_OFF, data)
+        data[HASS_ATTR_ENTITY_ID] = entity_id
+        await self._hass.call_service(HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_OFF, data)
 
-    async def turn_on(self, entity_id: str, data: dict) -> None:
+    async def async_turn_on(self, entity_id: str, data: dict) -> None:
         """
         Turn on a generic entity in Home Assistant.
 
             :param entity_id: The ID of the entity.
             :param data: The service data.
         """
-        data[ATTR_ENTITY_ID] = entity_id
-        await self._hass.call_service(DOMAIN_HOMEASSISTANT, SERVICE_TURN_ON, data)
+        data[HASS_ATTR_ENTITY_ID] = entity_id
+        await self._hass.call_service(HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_ON, data)
 
-    async def get_area_devices(self, area_id: str, domain_filter: list = None) -> list:
+    async def async_get_area_devices(self, area_id: str, domain_filter: list = None) -> list:
         """
         Get the enabled devices in a Home Assistant area matching a domain filter.
 
@@ -66,7 +66,7 @@ class HomeAssistantController:
                 area_entities.append(entity)
         return area_entities
 
-    async def get_entity_state(self, entity_id: str) -> dict:
+    async def async_get_entity_state(self, entity_id: str) -> dict:
         """
         Get the state of an entity in Home Assistant.
 
@@ -74,7 +74,7 @@ class HomeAssistantController:
         """
         return self._hass.get_state(entity_id, attribute=None)
 
-    async def create_notification(
+    async def async_create_notification(
         self,
         msg: str,
         notification_id: str,
@@ -88,8 +88,8 @@ class HomeAssistantController:
             :param title: The title of the notification.
         """
         await self._hass.call_service(
-            DOMAIN_PERSISTENT_NOTIFICATION,
-            SERVICE_PERSISTENT_NOTIFICATION_CREATE,
+            HASS_DOMAIN_PERSISTENT_NOTIFICATION,
+            HASS_SERVICE_PERSISTENT_NOTIFICATION_CREATE,
             {
                 "notification_id": notification_id,
                 "title": title,
@@ -97,14 +97,14 @@ class HomeAssistantController:
             },
         )
 
-    async def dismiss_notification(self, notification_id: str) -> None:
+    async def async_dismiss_notification(self, notification_id: str) -> None:
         """
         Dismisses a notification in Home Assistant.
 
             :param notification_id: The ID of the notification.
         """
         await self._hass.call_service(
-            DOMAIN_PERSISTENT_NOTIFICATION,
-            SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
+            HASS_DOMAIN_PERSISTENT_NOTIFICATION,
+            HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
             {"notification_id": notification_id},
         )

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from . import const
+from emulated_hue import const
 
 
 class DeviceState(BaseModel):
