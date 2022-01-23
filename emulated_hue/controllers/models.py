@@ -8,6 +8,7 @@ BRIGHTNESS = "brightness"
 COLOR_TEMP = "color_temp"
 HUE_SATURATION = "hue_saturation"
 XY_COLOR = "xy_color"
+RGB_COLOR = "rgb_color"
 FLASH_STATE = "flash_state"
 
 ALL_STATES = [
@@ -16,6 +17,7 @@ ALL_STATES = [
     COLOR_TEMP,
     HUE_SATURATION,
     XY_COLOR,
+    RGB_COLOR,
     FLASH_STATE,
 ]
 
@@ -28,6 +30,7 @@ class DeviceState(BaseModel):
     color_temp: int | None = None
     hue_saturation: list[int] | None = None
     xy_color: list[float] | None = None
+    rgb_color: list[int] | None = None
     flash_state: bool = None
 
     class Config:
@@ -46,6 +49,8 @@ class DeviceState(BaseModel):
             data[const.HASS_ATTR_HS_COLOR] = self.hue_saturation
         if self.xy_color:
             data[const.HASS_ATTR_XY_COLOR] = self.xy_color
+        if self.rgb_color:
+            data[const.HASS_ATTR_RGB_COLOR] = self.rgb_color
         if self.flash_state:
             data[const.HASS_ATTR_FLASH] = self.flash_state
         return data
