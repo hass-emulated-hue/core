@@ -571,7 +571,7 @@ class HueApiV1Endpoints:
             self.hue.controller_hass, self.hue.config, entity["entity_id"]
         )
 
-        if request_data.get(const.HUE_ATTR_ON) == False:  # noqa: E712
+        if const.HUE_ATTR_ON in request_data and not request_data[const.HUE_ATTR_ON]:
             device.turn_off()
             # Don't error if we attempt to set an attribute that doesn't exist
             with contextlib.suppress(AttributeError):
