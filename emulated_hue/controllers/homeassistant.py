@@ -4,7 +4,6 @@ from hass_client import HomeAssistantClient
 from .const import (
     ATTR_ENTITY_ID,
     DOMAIN_HOMEASSISTANT,
-    DOMAIN_LIGHT,
     DOMAIN_PERSISTENT_NOTIFICATION,
     SERVICE_PERSISTENT_NOTIFICATION_CREATE,
     SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
@@ -20,8 +19,24 @@ class HomeAssistantController:
         """Initialize the Home Assistant controller."""
         self._hass = hass
 
-    async def turn_on(self, entity_id: str) -> None:
-        data = {ATTR_ENTITY_ID: entity_id}
+    async def turn_off(self, entity_id: str, data: dict) -> None:
+        """
+        Turn off a generic entity in Home Assistant.
+
+            :param entity_id: The ID of the entity.
+            :param data: The service data.
+        """
+        data[ATTR_ENTITY_ID] = entity_id
+        await self._hass.call_service(DOMAIN_HOMEASSISTANT, SERVICE_TURN_OFF, data)
+
+    async def turn_on(self, entity_id: str, data: dict) -> None:
+        """
+        Turn on a generic entity in Home Assistant.
+
+            :param entity_id: The ID of the entity.
+            :param data: The service data.
+        """
+        data[ATTR_ENTITY_ID] = entity_id
         await self._hass.call_service(DOMAIN_HOMEASSISTANT, SERVICE_TURN_ON, data)
 
     async def get_area_devices(self, area_id: str, domain_filter: list = None) -> list:

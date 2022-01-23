@@ -4,14 +4,6 @@ DEFAULT_THROTTLE_MS = 0
 
 CONFIG_WRITE_DELAY_SECONDS = 10
 
-HASS_ATTR_BRIGHTNESS = "brightness"
-HASS_ATTR_COLOR_TEMP = "color_temp"
-HASS_ATTR_XY_COLOR = "xy_color"
-HASS_ATTR_HS_COLOR = "hs_color"
-HASS_ATTR_RGB_COLOR = "rgb_color"
-HASS_ATTR_EFFECT = "effect"
-HASS_ATTR_TRANSITION = "transition"
-HASS_ATTR_FLASH = "flash"
 
 # Deprecated Bitfield features
 HASS_SUPPORT_BRIGHTNESS = 1
@@ -80,3 +72,11 @@ HASS_SERVICE_TURN_OFF = "turn_off"
 HASS_SERVICE_TURN_ON = "turn_on"
 
 HASS_ATTR_ENTITY_ID = "entity_id"
+HASS_ATTR_BRIGHTNESS = "brightness"
+HASS_ATTR_COLOR_TEMP = "color_temp"
+HASS_ATTR_XY_COLOR = "xy_color"
+HASS_ATTR_HS_COLOR = "hs_color"
+HASS_ATTR_RGB_COLOR = "rgb_color"
+HASS_ATTR_EFFECT = "effect"
+HASS_ATTR_TRANSITION = "transition"
+HASS_ATTR_FLASH = "flash"
