@@ -1,17 +1,18 @@
 """Support for a Hue API to control Home Assistant."""
+import contextlib
 import copy
 import datetime
 import functools
 import json
 import logging
 import os
-import time
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
 
 import tzlocal
 from aiohttp import web
 
 import emulated_hue.const as const
+from emulated_hue.controllers import async_get_device
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.utils import (
     ClassRouteTableDef,
@@ -72,6 +73,8 @@ def check_request(check_user=True, log_request=True):
 
 # pylint: disable=invalid-name
 routes = ClassRouteTableDef()
+
+
 # pylint: enable=invalid-name
 
 
@@ -564,115 +567,60 @@ class HueApiV1Endpoints:
     async def __async_light_action(self, entity: dict, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
 
-        light_id = await self.config.async_entity_id_to_light_id(entity["entity_id"])
-        light_conf = await self.config.async_get_light_config(light_id)
-        throttle_ms = light_conf.get("throttle", const.DEFAULT_THROTTLE_MS)
-
-        # Construct what we need to send to the service
-        data = {const.HASS_ATTR_ENTITY_ID: entity["entity_id"]}
-
-        power_on = request_data.get(const.HASS_STATE_ON, True)
-
-        # throttle command to light
-        data_with_power = request_data.copy()
-        data_with_power[const.HASS_STATE_ON] = power_on
-        if not self.__update_allowed(entity, data_with_power, throttle_ms):
-            return
-
-        service = (
-            const.HASS_SERVICE_TURN_ON if power_on else const.HASS_SERVICE_TURN_OFF
+        device = await async_get_device(
+            self.hue.controller_hass, self.hue.config, entity["entity_id"]
         )
-        if power_on:
 
-            # set the brightness, hue, saturation and color temp
-            if const.HUE_ATTR_BRI in request_data:
-                # Prevent 0 brightness from turning light off
-                request_bri = request_data[const.HUE_ATTR_BRI]
-                if request_bri < const.HASS_ATTR_BRI_MIN:
-                    request_bri = const.HASS_ATTR_BRI_MIN
-                data[const.HASS_ATTR_BRIGHTNESS] = request_bri
+        if request_data.get(const.HUE_ATTR_ON) == False:  # noqa: E712
+            device.turn_off()
+            # Don't error if we attempt to set an attribute that doesn't exist
+            with contextlib.suppress(AttributeError):
+                device.set_transition_ms(400)
+        else:
+            device.turn_on()
 
-            if const.HUE_ATTR_HUE in request_data or const.HUE_ATTR_SAT in request_data:
-                hue = request_data.get(const.HUE_ATTR_HUE, 0)
-                sat = request_data.get(const.HUE_ATTR_SAT, 0)
+            if bri := request_data.get(const.HUE_ATTR_BRI):
+                with contextlib.suppress(AttributeError):
+                    device.set_brightness(bri)
+
+            sat = request_data.get(const.HUE_ATTR_SAT)
+            hue = request_data.get(const.HUE_ATTR_HUE)
+            if sat and hue:
                 # Convert hs values to hass hs values
                 hue = int((hue / const.HUE_ATTR_HUE_MAX) * 360)
                 sat = int((sat / const.HUE_ATTR_SAT_MAX) * 100)
-                data[const.HASS_ATTR_HS_COLOR] = (hue, sat)
+                with contextlib.suppress(AttributeError):
+                    device.set_hue_sat(hue, sat)
 
-            if const.HUE_ATTR_CT in request_data:
-                data[const.HASS_ATTR_COLOR_TEMP] = request_data[const.HUE_ATTR_CT]
+            if color_temp := request_data.get(const.HUE_ATTR_CT):
+                device.set_color_temperature(color_temp)
 
-            if const.HUE_ATTR_XY in request_data:
-                data[const.HASS_ATTR_XY_COLOR] = request_data[const.HUE_ATTR_XY]
+            if xy := request_data.get(const.HUE_ATTR_XY):
+                if type(xy) is list and len(xy) == 2:
+                    with contextlib.suppress(AttributeError):
+                        device.set_xy(xy[0], xy[1])
 
-            if const.HUE_ATTR_EFFECT in request_data:
-                data[const.HASS_ATTR_EFFECT] = request_data[const.HUE_ATTR_EFFECT]
-
-            if const.HUE_ATTR_ALERT in request_data:
-                if request_data[const.HUE_ATTR_ALERT] == "select":
-                    data[const.HASS_ATTR_FLASH] = "short"
-                elif request_data[const.HUE_ATTR_ALERT] == "lselect":
-                    data[const.HASS_ATTR_FLASH] = "long"
-                # HASS now requires a color target to be sent when flashing
-                # Use white color to indicate the light
-                data[const.HASS_ATTR_HS_COLOR] = (0, 0)
-
-        if const.HUE_ATTR_TRANSITION in request_data:
-            # Duration of the transition from the light to the new state
-            # is given as a multiple of 100ms and defaults to 4 (400ms).
-            if request_data[const.HUE_ATTR_TRANSITION] * 100 <= throttle_ms:
-                transitiontime = throttle_ms / 1000
+            # effects probably don't work
+            if effect := request_data.get(const.HUE_ATTR_EFFECT):
+                with contextlib.suppress(AttributeError):
+                    device.set_effect(effect)
+            if alert := request_data.get(const.HUE_ATTR_ALERT):
+                if alert == "select":
+                    with contextlib.suppress(AttributeError):
+                        device.set_flash("short")
+                elif alert == "lselect":
+                    with contextlib.suppress(AttributeError):
+                        device.set_flash("long")
+            if transition := request_data.get(const.HUE_ATTR_TRANSITION):
+                # Duration of the transition from the light to the new state
+                # is given as a multiple of 100ms and defaults to 4 (400ms).
+                with contextlib.suppress(AttributeError):
+                    device.set_transition_ms(transition * 100)
             else:
-                transitiontime = request_data[const.HUE_ATTR_TRANSITION] / 10
-            data[const.HASS_ATTR_TRANSITION] = transitiontime
-        else:
-            data[const.HASS_ATTR_TRANSITION] = (
-                0.4 if throttle_ms <= 400 else throttle_ms / 1000
-            )
+                with contextlib.suppress(AttributeError):
+                    device.set_transition_ms(400)
 
-        # execute service
-        await self.hue.hass.call_service(const.HASS_DOMAIN_LIGHT, service, data)
-
-    def __update_allowed(
-        self, entity: dict, light_data: dict, throttle_ms: int
-    ) -> bool:
-        """Minimalistic form of throttling, only allow updates to a light within a timespan."""
-
-        if not throttle_ms:
-            return True
-
-        prev_data = self._prev_data.get(entity["entity_id"], {})
-
-        # pass initial request to light
-        if not prev_data:
-            self._prev_data[entity["entity_id"]] = light_data.copy()
-            return True
-
-        # force to update if power state changed
-        if (entity["state"] == const.HASS_STATE_ON) != light_data.get(
-            const.HASS_STATE_ON, True
-        ):
-            self._prev_data[entity["entity_id"]].update(light_data)
-            return True
-
-        # check if data changed
-        # when not using udp no need to send same light command again
-        if prev_data == light_data:
-            return False
-
-        self._prev_data[entity["entity_id"]].update(light_data)
-
-        # check throttle timestamp so light commands are only sent once every X milliseconds
-        # this is to not overload a light implementation in Home Assistant
-        prev_timestamp = self._timestamps.get(entity["entity_id"], 0)
-        cur_timestamp = int(time.time() * 1000)
-        time_diff = abs(cur_timestamp - prev_timestamp)
-        if time_diff >= throttle_ms:
-            # change allowed only if within throttle limit
-            self._timestamps[entity["entity_id"]] = cur_timestamp
-            return True
-        return False
+        await device.async_execute()
 
     async def __async_entity_to_hue(
         self,

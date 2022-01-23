@@ -28,6 +28,11 @@ LOCAL_NETWORKS = (
 )
 
 
+def clamp(value: float, min_value: float, max_value: float) -> float:
+    """Clamp a value between a min and max value."""
+    return min(max(value, min_value), max_value)
+
+
 def is_local(address: Union[IPv4Address, IPv6Address]) -> bool:
     """Check if an address is local."""
     return address in LOCAL_IPS or any(address in network for network in LOCAL_NETWORKS)

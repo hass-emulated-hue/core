@@ -3,24 +3,6 @@ from pydantic import BaseModel
 
 from emulated_hue import const
 
-POWER_STATE = "power_state"
-BRIGHTNESS = "brightness"
-COLOR_TEMP = "color_temp"
-HUE_SATURATION = "hue_saturation"
-XY_COLOR = "xy_color"
-RGB_COLOR = "rgb_color"
-FLASH_STATE = "flash_state"
-
-ALL_STATES = [
-    POWER_STATE,
-    BRIGHTNESS,
-    COLOR_TEMP,
-    HUE_SATURATION,
-    XY_COLOR,
-    RGB_COLOR,
-    FLASH_STATE,
-]
-
 
 class DeviceState(BaseModel):
     """Store device state."""
@@ -31,7 +13,10 @@ class DeviceState(BaseModel):
     hue_saturation: list[int] | None = None
     xy_color: list[float] | None = None
     rgb_color: list[int] | None = None
-    flash_state: bool = None
+    flash_state: str | None = None
+    transition_seconds: float = None
+    effect: str | None = None
+    reachable: bool = True
 
     class Config:
         """Pydantic config."""
@@ -53,4 +38,10 @@ class DeviceState(BaseModel):
             data[const.HASS_ATTR_RGB_COLOR] = self.rgb_color
         if self.flash_state:
             data[const.HASS_ATTR_FLASH] = self.flash_state
+        if self.effect:
+            data[const.HASS_ATTR_EFFECT] = self.effect
+        data[const.HASS_ATTR_TRANSITION] = self.transition_seconds
         return data
+
+
+ALL_STATES: list = list(vars(DeviceState).get("__fields__"))

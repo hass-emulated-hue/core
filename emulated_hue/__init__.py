@@ -5,6 +5,7 @@ from typing import Optional
 
 from hass_client import HomeAssistantClient
 
+from . import controllers
 from .config import Config
 from .controllers import HomeAssistantController
 from .discovery import async_setup_discovery
@@ -69,11 +70,13 @@ class HueEmulator:
         # remove legacy light_ids config
         if await self.config.async_get_storage_value("light_ids"):
             await self.config.async_delete_storage_value("light_ids")
+
         # TODO: periodic search for renamed/deleted entities/areas
 
     async def async_stop(self) -> None:
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
+        await controllers.async_stop()
         await self.config.async_stop()
         await self._hass.disconnect()
         await self._web.async_stop()
