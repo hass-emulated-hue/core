@@ -180,7 +180,7 @@ class OnOffDevice:
         await self._async_save_config()
 
     def _update_device_state(self, full_update: bool) -> None:
-        """Update EntityState object."""
+        """Update EntityState object. Do not set defaults or last state will not work. Set @property."""
         if full_update:
             self._hass_state = EntityState(
                 power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
@@ -288,22 +288,17 @@ class BrightnessDevice(OnOffDevice):
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
         super()._update_device_state(full_update)
-        self._hass_state.brightness = int(
-            (
-                (
-                    self._hass_state_dict.get(const.HASS_ATTR, {}).get(
-                        const.HASS_ATTR_BRIGHTNESS, 0
-                    )
-                    / 100
-                )
-                * 255
-            )
+        brightness = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+            const.HASS_ATTR_BRIGHTNESS
         )
+        if brightness is not None:
+            brightness = int(brightness / 100 * 255)
+        self._hass_state.brightness = brightness
 
     @property
     def brightness(self) -> int:
         """Return brightness."""
-        return self._config_state.brightness
+        return self._config_state.brightness or 0
 
     def set_brightness(self, brightness: int) -> None:
         """Set brightness from 0-255."""
