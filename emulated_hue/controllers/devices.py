@@ -338,7 +338,7 @@ class BrightnessDevice(OnOffDevice):
         """
         if not self._control_state:
             self._control_state = self._new_control_state()
-        self._control_state.flash = flash
+        self._control_state.flash_state = flash
 
 
 class CTDevice(BrightnessDevice):
