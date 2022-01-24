@@ -60,6 +60,7 @@ def remove_all_schedulers() -> None:
         task.cancel()
     _schedules.clear()
 
+
 async def async_stop() -> None:
     """Stop all schedulers."""
     remove_all_schedulers()

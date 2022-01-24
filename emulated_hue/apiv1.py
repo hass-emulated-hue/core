@@ -657,6 +657,7 @@ class HueApiV1Endpoints:
             },
         }
         current_state = {}
+
         def get_device_attrs():
             nonlocal device
             device_type = type(device)
@@ -680,19 +681,34 @@ class HueApiV1Endpoints:
                 retval.update(self.config.definitions["lights"]["Dimmable light"])
                 return
             device = cast(controllers.devices.CTDevice, device)
-            capabilities = {"capabilities": {"control": {"ct":{"min": device.min_mireds or 153, "max": device.max_mireds or 500}}}}
+            capabilities = {
+                "capabilities": {
+                    "control": {
+                        "ct": {
+                            "min": device.min_mireds or 153,
+                            "max": device.max_mireds or 500,
+                        }
+                    }
+                }
+            }
             retval.update(capabilities)
             current_state[const.HUE_ATTR_CT] = device.color_temp
             if device_type == controllers.devices.CTDevice:
                 # Color temperature light (Zigbee Device ID: 0x0220)
                 # Supports groups, scenes, on/off, dimming, and setting of a color temperature
-                retval.update(self.config.definitions["lights"]["Color temperature light"])
+                retval.update(
+                    self.config.definitions["lights"]["Color temperature light"]
+                )
                 return
             device = cast(controllers.devices.RGBDevice, device)
             current_state[const.HUE_ATTR_XY] = device.xy_color
             # Convert hass hs values to hue hs values
-            current_state[const.HUE_ATTR_HUE] = int(device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX)
-            current_state[const.HUE_ATTR_SAT] = int(device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX)
+            current_state[const.HUE_ATTR_HUE] = int(
+                device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX
+            )
+            current_state[const.HUE_ATTR_SAT] = int(
+                device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX
+            )
             if device_type == controllers.devices.RGBDevice:
                 # Color light (Zigbee Device ID: 0x0200)
                 # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
@@ -728,12 +744,12 @@ class HueApiV1Endpoints:
         result = {}
         for entity in self.hue.hass.lights:
             entity_id = entity["entity_id"]
-            device = await async_get_device(self.hue.controller_hass, self.config, entity_id)
+            device = await async_get_device(
+                self.hue.controller_hass, self.config, entity_id
+            )
             if not device.enabled:
                 continue
-            result[device.light_id] = await self.__async_entity_to_hue(
-                entity
-            )
+            result[device.light_id] = await self.__async_entity_to_hue(entity)
         return result
 
     async def __async_create_local_item(

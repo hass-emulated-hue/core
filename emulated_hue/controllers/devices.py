@@ -171,9 +171,7 @@ class OnOffDevice:
         save_state = {}
         for state in ALL_STATES:
             # prioritize our last command if exists, then hass then last saved state
-            if (
-                    self._control_state and getattr(self._control_state, state) is not None
-            ):
+            if self._control_state and getattr(self._control_state, state) is not None:
                 best_value = getattr(self._control_state, state)
             elif self._hass_state and getattr(self._hass_state, state) is not None:
                 best_value = getattr(self._hass_state, state)
@@ -296,9 +294,9 @@ class BrightnessDevice(OnOffDevice):
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
         super()._update_device_state(full_update)
-        self._hass_state.brightness = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
-            const.HASS_ATTR_BRIGHTNESS
-        )
+        self._hass_state.brightness = self._hass_state_dict.get(
+            const.HASS_ATTR, {}
+        ).get(const.HASS_ATTR_BRIGHTNESS)
 
     @property
     def brightness(self) -> int:
