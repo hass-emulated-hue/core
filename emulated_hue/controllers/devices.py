@@ -172,10 +172,10 @@ class OnOffDevice:
             ):
                 best_value = getattr(self._control_state, state)
             else:
-                best_value = self._config.get("hass_state", {}).get(state, None)
+                best_value = self._config.get("state", {}).get(state, None)
             save_state[state] = best_value
 
-        self._config["hass_state"] = save_state
+        self._config["state"] = save_state
         self._config_state = EntityState(**save_state)
         await self._async_save_config()
 
