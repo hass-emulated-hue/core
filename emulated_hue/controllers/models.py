@@ -37,11 +37,12 @@ class EntityState(BaseModel):
             data[const.HASS_ATTR_XY_COLOR] = self.xy_color
         if self.rgb_color:
             data[const.HASS_ATTR_RGB_COLOR] = self.rgb_color
-        if self.flash_state:
-            data[const.HASS_ATTR_FLASH] = self.flash_state
         if self.effect:
             data[const.HASS_ATTR_EFFECT] = self.effect
-        data[const.HASS_ATTR_TRANSITION] = self.transition_seconds
+        if self.flash_state:
+            data[const.HASS_ATTR_FLASH] = self.flash_state
+        else:
+            data[const.HASS_ATTR_TRANSITION] = self.transition_seconds
         return data
 
 
