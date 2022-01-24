@@ -292,6 +292,7 @@ class BrightnessDevice(OnOffDevice):
             ctrl_hass, ctrl_config, light_id, entity_id, config, hass_state_dict
         )
 
+    # Override
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
         super()._update_device_state(full_update)
@@ -358,6 +359,7 @@ class CTDevice(BrightnessDevice):
             ctrl_hass, ctrl_config, light_id, entity_id, config, hass_state_dict
         )
 
+    # Override
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
         super()._update_device_state(full_update)
@@ -371,7 +373,7 @@ class CTDevice(BrightnessDevice):
     @property
     def color_mode(self) -> str:
         """Return color mode."""
-        return self._config_state.color_mode or "ct"
+        return self._config_state.color_mode or const.HASS_ATTR_COLOR_TEMP
 
     @property
     def min_mireds(self) -> int:
@@ -394,6 +396,12 @@ class CTDevice(BrightnessDevice):
             self._control_state = self._new_control_state()
         self._control_state.color_temp = color_temperature
         self._control_state.color_mode = const.HASS_COLOR_MODE_COLOR_TEMP
+
+    # Override
+    def set_flash(self, flash: str) -> None:
+        """Set flash with color_temp."""
+        super().set_flash(flash)
+        self.set_color_temperature(self.color_temp)
 
 
 class RGBDevice(BrightnessDevice):
@@ -432,7 +440,7 @@ class RGBDevice(BrightnessDevice):
     @property
     def color_mode(self) -> str:
         """Return color mode."""
-        return self._config_state.color_mode or "xy"
+        return self._config_state.color_mode or const.HASS_COLOR_MODE_XY
 
     @property
     def hue_sat(self) -> list[int]:
@@ -470,12 +478,13 @@ class RGBDevice(BrightnessDevice):
         self._control_state.rgb_color = [int(r), int(g), int(b)]
         self._control_state.color_mode = const.HASS_COLOR_MODE_RGB
 
+    # Override
     def set_flash(self, flash: str) -> None:
         """Set flash."""
         super().set_flash(flash)
         # HASS now requires a color target to be sent when flashing
         # Use white color to indicate the light
-        self.set_hue_sat(0, 0)
+        self.set_hue_sat(self.hue_sat[0], self.hue_sat[1])
 
 
 class RGBWDevice(CTDevice, RGBDevice):
@@ -499,6 +508,14 @@ class RGBWDevice(CTDevice, RGBDevice):
         """Update EntityState object."""
         CTDevice._update_device_state(self, True)
         RGBDevice._update_device_state(self, False)
+
+    # Override
+    def set_flash(self, flash: str) -> None:
+        """Set flash."""
+        if self.color_mode == const.HASS_ATTR_COLOR_TEMP:
+            CTDevice.set_flash(self, flash)
+        else:
+            RGBDevice.set_flash(self, flash)
 
 
 async def async_get_device(
