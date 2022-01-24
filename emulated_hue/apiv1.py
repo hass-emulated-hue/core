@@ -6,7 +6,7 @@ import functools
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, cast
 
 import tzlocal
 from aiohttp import web
@@ -656,53 +656,60 @@ class HueApiV1Endpoints:
                 }
             },
         }
-
-        if isinstance(device, controllers.devices.RGBWDevice):
-            # Extended Color light (Zigbee Device ID: 0x0210)
-            # Same as Color light, but which supports additional setting of color temperature
-            retval.update(self.config.definitions["lights"]["Extended color light"])
-        elif isinstance(device, controllers.devices.RGBDevice):
-            # Color light (Zigbee Device ID: 0x0200)
-            # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
-            retval.update(self.config.definitions["lights"]["Color light"])
-        elif isinstance(device, controllers.devices.CTDevice):
-            # Color temperature light (Zigbee Device ID: 0x0220)
-            # Supports groups, scenes, on/off, dimming, and setting of a color temperature
-            retval.update(self.config.definitions["lights"]["Color temperature light"])
-        elif isinstance(device, controllers.devices.BrightnessDevice):
-            # Dimmable light (Zigbee Device ID: 0x0100)
-            # Supports groups, scenes, on/off and dimming
-            retval["type"] = "Dimmable light"
-            retval.update(self.config.definitions["lights"]["Dimmable light"])
-        else:
-            # On/off light (Zigbee Device ID: 0x0000)
-            # Supports groups, scenes, on/off control
-            retval.update(self.config.definitions["lights"]["On/off light"])
-        retval["capabilities"]["control"]["ct"]["min"] = device.min_mireds
-        retval["capabilities"]["control"]["ct"]["max"] = device.max_mireds
         current_state = {}
-        with contextlib.suppress(AttributeError):
+        def get_device_attrs():
+            nonlocal device
+            device_type = type(device)
+            if device_type == controllers.devices.OnOffDevice:
+                # On/off light (Zigbee Device ID: 0x0000)
+                # Supports groups, scenes, on/off control
+                retval.update(self.config.definitions["lights"]["On/off light"])
+                return
+            device = cast(controllers.devices.BrightnessDevice, device)
             current_state[const.HUE_ATTR_BRI] = device.brightness
-        with contextlib.suppress(AttributeError):
-            current_state[const.HUE_ATTR_COLORMODE] = convert_color_mode(
-                device.color_mode, const.HASS
-            )
-        with contextlib.suppress(AttributeError):
-            current_state[const.HUE_ATTR_XY] = device.xy_color
-        with contextlib.suppress(AttributeError):
-            # Convert hass hs values to hue hs values
-            current_state[const.HUE_ATTR_HUE] = int(device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX)
-            current_state[const.HUE_ATTR_SAT] = int(device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX)
-        with contextlib.suppress(AttributeError):
-            current_state[const.HUE_ATTR_CT] = device.color_temp
-        with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
-        with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_ALERT] = (
                 convert_flash_state(device.flash_state, const.HASS)
                 if device.flash_state
                 else "none"
             )
+            if device_type == controllers.devices.BrightnessDevice:
+                # Dimmable light (Zigbee Device ID: 0x0100)
+                # Supports groups, scenes, on/off and dimming
+                retval["type"] = "Dimmable light"
+                retval.update(self.config.definitions["lights"]["Dimmable light"])
+                return
+            device = cast(controllers.devices.CTDevice, device)
+            capabilities = {"capabilities": {"control": {"ct":{"min": device.min_mireds or 153, "max": device.max_mireds or 500}}}}
+            retval.update(capabilities)
+            current_state[const.HUE_ATTR_CT] = device.color_temp
+            if device_type == controllers.devices.CTDevice:
+                # Color temperature light (Zigbee Device ID: 0x0220)
+                # Supports groups, scenes, on/off, dimming, and setting of a color temperature
+                retval.update(self.config.definitions["lights"]["Color temperature light"])
+                return
+            device = cast(controllers.devices.RGBDevice, device)
+            current_state[const.HUE_ATTR_XY] = device.xy_color
+            # Convert hass hs values to hue hs values
+            current_state[const.HUE_ATTR_HUE] = int(device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX)
+            current_state[const.HUE_ATTR_SAT] = int(device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX)
+            if device_type == controllers.devices.RGBDevice:
+                # Color light (Zigbee Device ID: 0x0200)
+                # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
+                retval.update(self.config.definitions["lights"]["Color light"])
+                # rgb only light doesn't have ct
+                del retval["capabilities"]["control"]["ct"]
+                return
+
+            current_state[const.HUE_ATTR_COLORMODE] = convert_color_mode(
+                device.color_mode, const.HASS
+            )
+            # Extended Color light (Zigbee Device ID: 0x0210)
+            # Same as Color light, but which supports additional setting of color temperature
+            retval.update(self.config.definitions["lights"]["Extended color light"])
+            return
+
+        get_device_attrs()
         retval["state"].update(current_state)
 
         # attempt to update from hass device attributes

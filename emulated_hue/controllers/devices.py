@@ -376,14 +376,14 @@ class CTDevice(BrightnessDevice):
         return self._config_state.color_mode or const.HASS_ATTR_COLOR_TEMP
 
     @property
-    def min_mireds(self) -> int:
+    def min_mireds(self) -> int | None:
         """Return min_mireds from hass."""
-        return self._hass_state_dict.get(const.HASS_ATTR, {}).get("min_mireds", 153)
+        return self._hass_state_dict.get(const.HASS_ATTR, {}).get("min_mireds")
 
     @property
-    def max_mireds(self) -> int:
+    def max_mireds(self) -> int | None:
         """Return max_mireds from hass."""
-        return self._hass_state_dict.get(const.HASS_ATTR, {}).get("max_mireds", 500)
+        return self._hass_state_dict.get(const.HASS_ATTR, {}).get("max_mireds")
 
     @property
     def color_temp(self) -> int:
