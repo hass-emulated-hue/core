@@ -224,7 +224,7 @@ class OnOffDevice:
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update EntityState object with Hass state."""
-        if self._enabled:
+        if self._enabled or not self._config_state:
             self._hass_state_dict = self._ctrl_hass.get_entity_state(self._entity_id)
             # Cascades up the inheritance chain to update the state
             self._update_device_state(full_update)
