@@ -644,7 +644,7 @@ class HueApiV1Endpoints:
             "uniqueid": device.unique_id,
             "swupdate": {
                 "state": "noupdates",
-                "lastinstall": datetime.datetime.utcnow().isoformat().split(".")[0],
+                "lastinstall": datetime.datetime.now().isoformat().split(".")[0],
             },
             "config": {"config": {
                 "archetype": "sultanbulb",
@@ -698,35 +698,12 @@ class HueApiV1Endpoints:
             current_state[const.HUE_ATTR_ALERT] = convert_flash_state(device.flash_state, const.HASS) if device.flash_state else "none"
         retval["state"] = current_state
 
-        # Get device type, model etc. from the Hass device registry
-        reg_entity = self.hue.hass.entity_registry.get(entity_id)
-        if reg_entity and reg_entity["device_id"] is not None:
-            device = self.hue.hass.device_registry.get(reg_entity["device_id"])
-            if device:
-                retval["manufacturername"] = device["manufacturer"]
-                retval["modelid"] = device["model"]
-                retval["productname"] = device["name"]
-                if device["sw_version"]:
-                    retval["swversion"] = device["sw_version"]
-                if device["identifiers"]:
-                    identifiers = device["identifiers"]
-                    if isinstance(identifiers, dict):
-                        # prefer real zigbee address if we have that
-                        # might come in handy later when we want to
-                        # send entertainment packets to the zigbee mesh
-                        for key, value in device["identifiers"]:
-                            if key == "zha":
-                                retval["uniqueid"] = value
-                    elif isinstance(identifiers, list):
-                        # simply grab the first available identifier for now
-                        # may inprove this in the future
-                        for identifier in identifiers:
-                            if isinstance(identifier, list):
-                                retval["uniqueid"] = identifier[-1]
-                                break
-                            elif isinstance(identifier, str):
-                                retval["uniqueid"] = identifier
-                                break
+        # attempt to update from hass device attributes
+        retval["manufacturername"] = device.DeviceProperties.manufacturer or retval["manufacturername"]
+        retval["modelid"] = device.DeviceProperties.model or retval["modelid"]
+        retval["productname"] = device.DeviceProperties.name or retval["productname"]
+        retval["swversion"] = device.DeviceProperties.sw_version or retval["swversion"]
+        retval["uniqueid"] = device.DeviceProperties.unique_id or retval["uniqueid"]
 
         return retval
 

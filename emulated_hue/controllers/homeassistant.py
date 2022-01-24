@@ -72,13 +72,22 @@ class HomeAssistantController:
                 area_entities.append(entity)
         return area_entities
 
-    async def async_get_entity_state(self, entity_id: str) -> dict:
+    def get_entity_state(self, entity_id: str) -> dict:
         """
         Get the state of an entity in Home Assistant.
 
             :param entity_id: The ID of the entity.
         """
         return self._hass.get_state(entity_id, attribute=None)
+
+    def get_device_attributes(self, device_id: str) -> dict:
+        """Get the attributes of a device in Home Assistant."""
+        return self._hass.device_registry.get(device_id)
+
+    def get_device_id_from_entity_id(self, entity_id: str) -> str | None:
+        """Get the device ID from an entity ID."""
+        reg_entity = self._hass.entity_registry.get(entity_id)
+        return reg_entity.get("device_id")
 
     async def async_create_notification(
         self,

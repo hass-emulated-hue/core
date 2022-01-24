@@ -14,12 +14,62 @@ LOGGER = logging.getLogger(__name__)
 
 __device_cache = {}
 
+class Device:
+    def __init__(self, ctrl_hass: HomeAssistantController, entity_id: str):
+        self._ctrl_hass: HomeAssistantController = ctrl_hass
+        self._entity_id: str = entity_id
 
-async def async_get_hass_state(
-    ctrl_hass: HomeAssistantController, entity_id: str
-) -> dict:
-    """Get Home Assistant state for entity."""
-    return await ctrl_hass.async_get_entity_state(entity_id)
+        self._device_id: str = self._ctrl_hass.get_device_id_from_entity_id(self._entity_id)
+        self._device_attributes: dict = {}
+        if self._device_id:
+            self._device_attributes = self._ctrl_hass.get_device_attributes(self._device_id)
+
+        self._unique_id: str | None = None
+        if identifiers := self._device_attributes.get("identifiers"):
+            if isinstance(identifiers, dict):
+                # prefer real zigbee address if we have that
+                # might come in handy later when we want to
+                # send entertainment packets to the zigbee mesh
+                for key, value in identifiers:
+                    if key == "zha":
+                        self._unique_id = value
+            elif isinstance(identifiers, list):
+                # simply grab the first available identifier for now
+                # may inprove this in the future
+                for identifier in identifiers:
+                    if isinstance(identifier, list):
+                        self._unique_id = identifier[-1]
+                        break
+                    elif isinstance(identifier, str):
+                        self._unique_id = identifier
+                        break
+
+
+    @property
+    def manufacturer(self) -> str | None:
+        """Return manufacturer."""
+        return self._device_attributes.get("manufacturer")
+
+    @property
+    def model(self) -> str | None:
+        """Return device model."""
+        return self._device_attributes.get("model")
+
+    @property
+    def name(self) -> str | None:
+        """Return device name."""
+        return self._device_attributes.get("name")
+
+    @property
+    def sw_version(self) -> str | None:
+        """Return software version."""
+        return self._device_attributes.get("sw_version")
+
+    @property
+    def unique_id(self) -> str | None:
+        """Return unique id."""
+        return self._unique_id
+
 
 
 class OnOffDevice:
@@ -37,8 +87,10 @@ class OnOffDevice:
         """Initialize OnOffDevice."""
         self._ctrl_hass: HomeAssistantController = ctrl_hass
         self._ctrl_config: Config = ctrl_config
-        self._light_id = light_id
-        self._entity_id = entity_id
+        self._light_id: str = light_id
+        self._entity_id: str = entity_id
+
+        self._device = Device(ctrl_hass, entity_id)
 
         self._hass_state_dict: dict = hass_state_dict  # state from Home Assistant
 
@@ -58,6 +110,11 @@ class OnOffDevice:
         self._config_state: None | EntityState = (
             None  # Latest state and stored in config
         )
+
+    @property
+    def DeviceProperties(self) -> Device:
+        """Return device object."""
+        return self._device
 
     @property
     def unique_id(self) -> str:
@@ -147,9 +204,7 @@ class OnOffDevice:
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update EntityState object with Hass state."""
-        self._hass_state_dict = await async_get_hass_state(
-            self._ctrl_hass, self._entity_id
-        )
+        self._hass_state_dict = self._ctrl_hass.get_entity_state(self._entity_id)
         # Cascades up the inheritance chain to update the state
         self._update_device_state(full_update)
         await self._async_update_config_states()
@@ -433,7 +488,7 @@ async def async_get_device(
     light_id: str = await ctrl_config.async_entity_id_to_light_id(entity_id)
     config: dict = await ctrl_config.async_get_light_config(light_id)
 
-    hass_state_dict = await async_get_hass_state(ctrl_hass, entity_id)
+    hass_state_dict = ctrl_hass.get_entity_state(entity_id)
     entity_color_modes = hass_state_dict[const.HASS_ATTR].get(
         const.HASS_ATTR_SUPPORTED_COLOR_MODES, []
     )
