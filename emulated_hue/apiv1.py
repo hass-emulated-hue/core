@@ -726,12 +726,11 @@ class HueApiV1Endpoints:
                     entity,
                 )
                 continue
-            light_id = await self.config.async_entity_id_to_light_id(entity_id)
-            light_config = await self.config.async_get_light_config(light_id)
-            if not light_config["enabled"]:
+            device = await async_get_device(self.hue.controller_hass, self.config, entity_id)
+            if not device.enabled:
                 continue
-            result[light_id] = await self.__async_entity_to_hue(
-                entity, light_config, light_id
+            result[device.light_id] = await self.__async_entity_to_hue(
+                entity
             )
         return result
 

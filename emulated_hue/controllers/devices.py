@@ -103,6 +103,7 @@ class OnOffDevice:
         self._config: dict = config
         self._name: str = self._config.get("name", "")
         self._unique_id: str = self._config.get("uniqueid", "")
+        self._enabled: bool = self._config.get("enabled")
 
         # throttling
         self._throttle_ms: int | None = self._config.get("throttle")
@@ -116,6 +117,11 @@ class OnOffDevice:
         self._config_state: None | EntityState = (
             None  # Latest state and stored in config
         )
+
+    @property
+    def enabled(self) -> bool:
+        """Return enabled state."""
+        return self._enabled
 
     @property
     def DeviceProperties(self) -> Device:
@@ -218,10 +224,11 @@ class OnOffDevice:
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update EntityState object with Hass state."""
-        self._hass_state_dict = self._ctrl_hass.get_entity_state(self._entity_id)
-        # Cascades up the inheritance chain to update the state
-        self._update_device_state(full_update)
-        await self._async_update_config_states()
+        if self._enabled:
+            self._hass_state_dict = self._ctrl_hass.get_entity_state(self._entity_id)
+            # Cascades up the inheritance chain to update the state
+            self._update_device_state(full_update)
+            await self._async_update_config_states()
 
     @property
     def transition_seconds(self) -> float:
