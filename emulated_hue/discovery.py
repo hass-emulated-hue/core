@@ -161,7 +161,7 @@ USN: {bridge_uuid}
                 resp_socket.sendto(self.upnp_root_response, addr)
                 resp_socket.sendto(self.upnp_unique_response, addr)
                 resp_socket.sendto(self.upnp_device_response, addr)
-                LOGGER.debug("Serving SSDP discovery info to %s", addr)
+                # LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):

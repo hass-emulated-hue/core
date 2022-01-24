@@ -719,13 +719,7 @@ class HueApiV1Endpoints:
         """Create a dict of all lights."""
         result = {}
         for entity in self.hue.hass.lights:
-            entity_id = entity.get("entity_id")
-            if not entity_id:
-                LOGGER.warning(
-                    "Found an entity without an entity id! Skipping this entity, but please report this error to #210. %s",
-                    entity,
-                )
-                continue
+            entity_id = entity["entity_id"]
             device = await async_get_device(self.hue.controller_hass, self.config, entity_id)
             if not device.enabled:
                 continue
