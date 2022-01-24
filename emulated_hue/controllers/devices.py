@@ -241,7 +241,7 @@ class OnOffDevice:
             self._control_state = self._new_control_state()
         if transition_ms < self._throttle_ms:
             transition_ms = self._throttle_ms
-        self._config_state.transition_seconds = transition_ms / 1000
+        self._control_state.transition_seconds = transition_ms / 1000
 
     def set_transition_seconds(self, transition_seconds: float) -> None:
         """Set transition in seconds."""
@@ -295,12 +295,9 @@ class BrightnessDevice(OnOffDevice):
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
         super()._update_device_state(full_update)
-        brightness = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+        self._hass_state.brightness = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
             const.HASS_ATTR_BRIGHTNESS
         )
-        if brightness is not None:
-            brightness = int(brightness / 100 * 255)
-        self._hass_state.brightness = brightness
 
     @property
     def brightness(self) -> int:
@@ -311,7 +308,7 @@ class BrightnessDevice(OnOffDevice):
         """Set brightness from 0-255."""
         if not self._control_state:
             self._control_state = self._new_control_state()
-        self._control_state.brightness = int(clamp(brightness, 0, 255) / 255 * 100)
+        self._control_state.brightness = int(clamp(brightness, 1, 255))
 
     @property
     def effect(self) -> str | None:
