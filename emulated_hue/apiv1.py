@@ -690,8 +690,9 @@ class HueApiV1Endpoints:
         with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_XY] = device.xy_color
         with contextlib.suppress(AttributeError):
-            current_state[const.HUE_ATTR_HUE] = device.hue_sat[0]
-            current_state[const.HUE_ATTR_SAT] = device.hue_sat[1]
+            # Convert hass hs values to hue hs values
+            current_state[const.HUE_ATTR_HUE] = int(device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX)
+            current_state[const.HUE_ATTR_SAT] = int(device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX)
         with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_CT] = device.color_temp
         with contextlib.suppress(AttributeError):
