@@ -702,7 +702,7 @@ class HueApiV1Endpoints:
                 if device.flash_state
                 else "none"
             )
-        retval["state"] = current_state
+        retval["state"].update(current_state)
 
         # attempt to update from hass device attributes
         retval["manufacturername"] = (
