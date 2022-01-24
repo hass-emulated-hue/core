@@ -164,13 +164,13 @@ class OnOffDevice:
         """Update config states."""
         save_state = {}
         for state in ALL_STATES:
-            # prioritize state from hass, then last command, then last saved state
-            if self._hass_state and getattr(self._hass_state, state) is not None:
-                best_value = getattr(self._hass_state, state)
-            elif (
-                self._control_state and getattr(self._control_state, state) is not None
+            # prioritize our last command if exists, then hass then last saved state
+            if (
+                    self._control_state and getattr(self._control_state, state) is not None
             ):
                 best_value = getattr(self._control_state, state)
+            elif self._hass_state and getattr(self._hass_state, state) is not None:
+                best_value = getattr(self._hass_state, state)
             else:
                 best_value = self._config.get("state", {}).get(state, None)
             save_state[state] = best_value

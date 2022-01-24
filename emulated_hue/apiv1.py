@@ -710,8 +710,8 @@ class HueApiV1Endpoints:
         )
         retval["modelid"] = device.DeviceProperties.model or retval["modelid"]
         retval["productname"] = device.DeviceProperties.name or retval["productname"]
-        retval["swversion"] = device.DeviceProperties.sw_version or retval["swversion"]
         retval["uniqueid"] = device.DeviceProperties.unique_id or retval["uniqueid"]
+        retval["swversion"] = device.DeviceProperties.sw_version or retval["swversion"]
 
         return retval
 
