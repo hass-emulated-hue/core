@@ -385,7 +385,7 @@ class CTDevice(BrightnessDevice):
     @property
     def color_temp(self) -> int:
         """Return color temp."""
-        return self._config_state.color_temp
+        return self._config_state.color_temp or 153
 
     def set_color_temperature(self, color_temperature: int) -> None:
         """Set color temperature."""
