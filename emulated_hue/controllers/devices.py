@@ -289,12 +289,14 @@ class BrightnessDevice(OnOffDevice):
         """Update EntityState object."""
         super()._update_device_state(full_update)
         self._hass_state.brightness = int(
-            clamp(
-                self._hass_state_dict.get(const.HASS_ATTR, {}).get(
-                    const.HASS_ATTR_BRIGHTNESS, 0
-                ),
-                0,
-                255,
+            (
+                (
+                    self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+                        const.HASS_ATTR_BRIGHTNESS, 0
+                    )
+                    / 100
+                )
+                * 255
             )
         )
 
@@ -304,10 +306,10 @@ class BrightnessDevice(OnOffDevice):
         return self._config_state.brightness
 
     def set_brightness(self, brightness: int) -> None:
-        """Set brightness."""
+        """Set brightness from 0-255."""
         if not self._control_state:
             self._control_state = self._new_control_state()
-        self._control_state.brightness = clamp(brightness, 0, 255)
+        self._control_state.brightness = int(clamp(brightness, 0, 255) / 255)
 
     @property
     def effect(self) -> str | None:
