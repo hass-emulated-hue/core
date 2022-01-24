@@ -188,6 +188,20 @@ def create_secure_string(length: int, hex_compatible: bool = False) -> str:
         character_array = string.ascii_letters + string.digits + "-"
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
 
+def convert_flash_state(state: str, initial_type: str) -> str:
+    """Convert flash state between hass and hue."""
+    flash_states = {
+        "select": "short",
+        "lselect": "long",
+    }
+    for hue_state, hass_state in flash_states.items():
+        if initial_type == const.HASS:
+            if state == hass_state:
+                return hue_state
+        else:
+            if state == hue_state:
+                return hass_state
+    return state
 
 def convert_color_mode(color_mode: str, initial_type: str) -> str:
     """Convert color_mode names from initial_type to other type for xy, hs, and ct."""

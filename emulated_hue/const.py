@@ -26,6 +26,7 @@ HASS_SUPPORT_WHITE_VALUE = 128  # unused
 
 # New color modes
 # https://github.com/home-assistant/core/blob/2b3148296c7af2dd381b48bd6c5aa2af5fdfac1b/homeassistant/components/light/__init__.py#L55
+HASS_COLOR_MODE = "color_mode"
 HASS_COLOR_MODE_UNKNOWN = "unknown"  # Ambiguous color mode
 HASS_COLOR_MODE_ONOFF = "onoff"  # Must be the only supported mode
 HASS_COLOR_MODE_BRIGHTNESS = "brightness"  # Must be the only supported mode

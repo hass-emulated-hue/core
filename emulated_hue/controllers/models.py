@@ -8,15 +8,16 @@ class DeviceState(BaseModel):
     """Store device state."""
 
     power_state: bool
+    transition_seconds: float
     brightness: int | None = None
     color_temp: int | None = None
     hue_saturation: list[int] | None = None
     xy_color: list[float] | None = None
     rgb_color: list[int] | None = None
     flash_state: str | None = None
-    transition_seconds: float = None
     effect: str | None = None
     reachable: bool = True
+    color_mode: str | None = None
 
     class Config:
         """Pydantic config."""

@@ -43,7 +43,8 @@ class OnOffDevice:
         self._hass_state_dict: dict = hass_state_dict  # state from Home Assistant
 
         self._config: dict = config
-        self._name = self._config.get("name", "")
+        self._name: str = self._config.get("name", "")
+        self._unique_id: str = self._config.get("unique_id", "")
 
         # throttling
         self._throttle_ms: int | None = self._config.get("throttle")
@@ -59,9 +60,14 @@ class OnOffDevice:
         )
 
     @property
+    def unique_id(self) -> str:
+        """Return hue unique id."""
+        return self._unique_id
+
+    @property
     def name(self) -> str:
         """Return device name, prioritizing local config."""
-        return self._name or self._hass_state_dict.get("attributes", {}).get("friendly_name")
+        return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get("friendly_name")
 
     @property
     def reachable(self) -> bool:
@@ -114,7 +120,7 @@ class OnOffDevice:
             self._hass_state = DeviceState(
                 power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
                 reachable=self._hass_state_dict["state"]
-                != const.HASS_STATE_UNAVAILABLE,
+                != const.HASS_STATE_UNAVAILABLE, transition_seconds = self._default_transition
             )
 
     async def _async_update_allowed(self) -> bool:
@@ -132,9 +138,12 @@ class OnOffDevice:
         self._last_update = now_timestamp
         return True
 
-    def _new_control_state(self) -> DeviceState:
+    def _new_control_state(self, power_state: bool = None) -> DeviceState:
         """Create new control state based on last known power state."""
-        return DeviceState(power_state=self._config_state.power_state)
+        if power_state is None:
+            return DeviceState(power_state=self._config_state.power_state, transition_seconds=self._default_transition)
+        else:
+            return DeviceState(power_state=power_state, transition_seconds=self._default_transition)
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update DeviceState object with Hass state."""
@@ -164,15 +173,11 @@ class OnOffDevice:
 
     def turn_on(self) -> None:
         """Turn on light."""
-        self._control_state = DeviceState(
-            power_state=True, transition_seconds=self._default_transition
-        )
+        self._control_state = self._new_control_state(power_state=True)
 
     def turn_off(self) -> None:
         """Turn off light."""
-        self._control_state = DeviceState(
-            power_state=False, transition_seconds=self._default_transition
-        )
+        self._control_state = self._new_control_state(power_state=False)
 
     async def async_execute(self) -> None:
         """Execute control state."""
@@ -214,9 +219,9 @@ class BrightnessDevice(OnOffDevice):
     def _update_device_state(self, full_update: bool) -> None:
         """Update DeviceState object."""
         super()._update_device_state(full_update)
-        self._hass_state.brightness = self._hass_state_dict.get(
+        self._hass_state.brightness = int(clamp(self._hass_state_dict.get(
             const.HASS_ATTR, {}
-        ).get(const.HASS_ATTR_BRIGHTNESS)
+        ).get(const.HASS_ATTR_BRIGHTNESS, 0), 0, 255))
 
     @property
     def brightness(self) -> int:
@@ -230,7 +235,7 @@ class BrightnessDevice(OnOffDevice):
         self._control_state.brightness = clamp(brightness, 0, 255)
 
     @property
-    def effect(self) -> str:
+    def effect(self) -> str | None:
         """Return effect."""
         return self._config_state.effect
 
@@ -241,12 +246,18 @@ class BrightnessDevice(OnOffDevice):
         self._control_state.effect = effect
 
     @property
-    def flash_state(self) -> str:
-        """Return flash state."""
+    def flash_state(self) -> str | None:
+        """
+        Return flash state.
+            :return: flash state, one of "short", "long", None
+        """
         return self._config_state.flash_state
 
     def set_flash(self, flash: str) -> None:
-        """Set flash."""
+        """
+        Set flash.
+            :param flash: Can be one of "short" or "long"
+        """
         if not self._control_state:
             self._control_state = self._new_control_state()
         self._control_state.flash = flash
@@ -275,6 +286,24 @@ class CTDevice(BrightnessDevice):
         self._hass_state.color_temp = self._hass_state_dict.get(
             const.HASS_ATTR, {}
         ).get(const.HASS_ATTR_COLOR_TEMP)
+        self._hass_state.color_mode = self._hass_state_dict.get(
+            const.HASS_ATTR, {}
+        ).get(const.HASS_COLOR_MODE)
+
+    @property
+    def color_mode(self) -> str:
+        """Return color mode."""
+        return self._config_state.color_mode or "ct"
+
+    @property
+    def min_mireds(self) -> int:
+        """Return min_mireds from hass."""
+        return self._hass_state_dict.get(const.HASS_ATTR, {}).get("min_mireds", 153)
+
+    @property
+    def max_mireds(self) -> int:
+        """Return max_mireds from hass."""
+        return self._hass_state_dict.get(const.HASS_ATTR, {}).get("max_mireds", 500)
 
     @property
     def color_temp(self) -> int:
@@ -286,6 +315,7 @@ class CTDevice(BrightnessDevice):
         if not self._control_state:
             self._control_state = self._new_control_state()
         self._control_state.color_temp = color_temperature
+        self._control_state.color_mode = const.HASS_COLOR_MODE_COLOR_TEMP
 
 
 class RGBDevice(BrightnessDevice):
@@ -317,28 +347,38 @@ class RGBDevice(BrightnessDevice):
         self._hass_state.rgb_color = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
             const.HASS_ATTR_RGB_COLOR
         )
+        self._hass_state.color_mode = self._hass_state_dict.get(
+            const.HASS_ATTR, {}
+        ).get(const.HASS_COLOR_MODE)
+
+    @property
+    def color_mode(self) -> str:
+        """Return color mode."""
+        return self._config_state.color_mode or "xy"
 
     @property
     def hue_sat(self) -> list[int]:
         """Return hue_saturation."""
-        return self._config_state.hue_saturation
+        return self._config_state.hue_saturation or [0, 0]
 
     def set_hue_sat(self, hue: int | float, sat: int | float) -> None:
         """Set hue and saturation colors."""
         if not self._control_state:
             self._control_state = self._new_control_state()
         self._control_state.hue_saturation = [int(hue), int(sat)]
+        self._control_state.color_mode = const.HASS_COLOR_MODE_HS
 
     @property
     def xy_color(self) -> list[float]:
         """Return xy_color."""
-        return self._config_state.xy_color
+        return self._config_state.xy_color or [0, 0]
 
     def set_xy(self, x: float, y: float) -> None:
         """Set xy colors."""
         if not self._control_state:
             self._control_state = self._new_control_state()
         self._control_state.xy_color = [float(x), float(y)]
+        self._control_state.color_mode = const.HASS_COLOR_MODE_XY
 
     @property
     def rgb_color(self) -> list[int]:
@@ -350,6 +390,7 @@ class RGBDevice(BrightnessDevice):
         if not self._control_state:
             self._control_state = self._new_control_state()
         self._control_state.rgb_color = [int(r), int(g), int(b)]
+        self._control_state.color_mode = const.HASS_COLOR_MODE_RGB
 
     def set_flash(self, flash: str) -> None:
         """Set flash."""
@@ -397,7 +438,6 @@ async def async_get_device(
         const.HASS_ATTR_SUPPORTED_COLOR_MODES, []
     )
 
-    device_obj = None
     if any(
         color_mode
         in [
