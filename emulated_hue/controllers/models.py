@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from emulated_hue import const
 
 
-class DeviceState(BaseModel):
+class EntityState(BaseModel):
     """Store device state."""
 
     power_state: bool
@@ -45,4 +45,4 @@ class DeviceState(BaseModel):
         return data
 
 
-ALL_STATES: list = list(vars(DeviceState).get("__fields__"))
+ALL_STATES: list = list(vars(EntityState).get("__fields__"))

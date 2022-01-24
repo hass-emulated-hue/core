@@ -7,7 +7,7 @@ from emulated_hue.config import Config
 from emulated_hue.utils import clamp
 
 from .homeassistant import HomeAssistantController
-from .models import ALL_STATES, DeviceState
+from .models import ALL_STATES, EntityState
 from .scheduler import add_scheduler
 
 LOGGER = logging.getLogger(__name__)
@@ -53,9 +53,9 @@ class OnOffDevice:
         if self._throttle_ms > self._default_transition:
             self._default_transition = self._throttle_ms / 1000
 
-        self._hass_state: None | DeviceState = None  # DeviceState from Home Assistant
-        self._control_state: None | DeviceState = None  # Control state
-        self._config_state: None | DeviceState = (
+        self._hass_state: None | EntityState = None  # EntityState from Home Assistant
+        self._control_state: None | EntityState = None  # Control state
+        self._config_state: None | EntityState = (
             None  # Latest state and stored in config
         )
 
@@ -111,13 +111,13 @@ class OnOffDevice:
             save_state[state] = best_value
 
         self._config["hass_state"] = save_state
-        self._config_state = DeviceState(**save_state)
+        self._config_state = EntityState(**save_state)
         await self._async_save_config()
 
     def _update_device_state(self, full_update: bool) -> None:
-        """Update DeviceState object."""
+        """Update EntityState object."""
         if full_update:
-            self._hass_state = DeviceState(
+            self._hass_state = EntityState(
                 power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
                 reachable=self._hass_state_dict["state"]
                 != const.HASS_STATE_UNAVAILABLE, transition_seconds = self._default_transition
@@ -138,15 +138,15 @@ class OnOffDevice:
         self._last_update = now_timestamp
         return True
 
-    def _new_control_state(self, power_state: bool = None) -> DeviceState:
+    def _new_control_state(self, power_state: bool = None) -> EntityState:
         """Create new control state based on last known power state."""
         if power_state is None:
-            return DeviceState(power_state=self._config_state.power_state, transition_seconds=self._default_transition)
+            return EntityState(power_state=self._config_state.power_state, transition_seconds=self._default_transition)
         else:
-            return DeviceState(power_state=power_state, transition_seconds=self._default_transition)
+            return EntityState(power_state=power_state, transition_seconds=self._default_transition)
 
     async def async_update_state(self, full_update: bool = True) -> None:
-        """Update DeviceState object with Hass state."""
+        """Update EntityState object with Hass state."""
         self._hass_state_dict = await async_get_hass_state(
             self._ctrl_hass, self._entity_id
         )
@@ -217,7 +217,7 @@ class BrightnessDevice(OnOffDevice):
         )
 
     def _update_device_state(self, full_update: bool) -> None:
-        """Update DeviceState object."""
+        """Update EntityState object."""
         super()._update_device_state(full_update)
         self._hass_state.brightness = int(clamp(self._hass_state_dict.get(
             const.HASS_ATTR, {}
@@ -281,7 +281,7 @@ class CTDevice(BrightnessDevice):
         )
 
     def _update_device_state(self, full_update: bool) -> None:
-        """Update DeviceState object."""
+        """Update EntityState object."""
         super()._update_device_state(full_update)
         self._hass_state.color_temp = self._hass_state_dict.get(
             const.HASS_ATTR, {}
@@ -336,7 +336,7 @@ class RGBDevice(BrightnessDevice):
         )
 
     def _update_device_state(self, full_update: bool = True) -> None:
-        """Update DeviceState object."""
+        """Update EntityState object."""
         super()._update_device_state(full_update)
         self._hass_state.hue_saturation = self._hass_state_dict.get(
             const.HASS_ATTR, {}
@@ -418,7 +418,7 @@ class RGBWDevice(CTDevice, RGBDevice):
         )
 
     def _update_device_state(self, full_update: bool = True) -> None:
-        """Update DeviceState object."""
+        """Update EntityState object."""
         CTDevice._update_device_state(self, True)
         RGBDevice._update_device_state(self, False)
 
