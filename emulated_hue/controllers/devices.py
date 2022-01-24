@@ -311,7 +311,7 @@ class BrightnessDevice(OnOffDevice):
         """Set brightness from 0-255."""
         if not self._control_state:
             self._control_state = self._new_control_state()
-        self._control_state.brightness = int(clamp(brightness, 0, 255) / 255)
+        self._control_state.brightness = int(clamp(brightness, 0, 255) / 255 * 100)
 
     @property
     def effect(self) -> str | None:
