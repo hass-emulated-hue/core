@@ -70,16 +70,6 @@ class OnOffDevice:
         return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get("friendly_name")
 
     @property
-    def reachable(self) -> bool:
-        """Return if device is reachable."""
-        return self._config_state.reachable
-
-    @property
-    def power_state(self) -> bool:
-        """Return power state."""
-        return self._config_state.power_state
-
-    @property
     def light_id(self) -> str:
         """Return light id."""
         return self._light_id
@@ -88,6 +78,16 @@ class OnOffDevice:
     def entity_id(self) -> str:
         """Return entity id."""
         return self._entity_id
+
+    @property
+    def reachable(self) -> bool:
+        """Return if device is reachable."""
+        return self._config_state.reachable
+
+    @property
+    def power_state(self) -> bool:
+        """Return power state."""
+        return self._config_state.power_state
 
     async def _async_save_config(self) -> None:
         """Save config to file."""
