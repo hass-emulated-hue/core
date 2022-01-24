@@ -166,20 +166,6 @@ def save_json(filename: str, data: dict):
         LOGGER.exception("Failed to serialize to JSON: %s", filename)
 
 
-def entity_attributes_to_int(attributes: dict):
-    """Convert entity attribute floats to int."""
-    for attr_name, attr_data in attributes.items():
-        if attr_name == "xy_color":
-            continue
-        if isinstance(attr_data, float):
-            attributes[attr_name] = int(attr_data)
-        elif isinstance(attr_data, list):
-            for i, value in enumerate(attr_data):
-                if isinstance(value, float):
-                    attr_data[i] = int(value)
-    return attributes
-
-
 def create_secure_string(length: int, hex_compatible: bool = False) -> str:
     """Create secure random string for username, client key, and tokens."""
     if hex_compatible:
@@ -187,6 +173,7 @@ def create_secure_string(length: int, hex_compatible: bool = False) -> str:
     else:
         character_array = string.ascii_letters + string.digits + "-"
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
+
 
 def convert_flash_state(state: str, initial_type: str) -> str:
     """Convert flash state between hass and hue."""
@@ -202,6 +189,7 @@ def convert_flash_state(state: str, initial_type: str) -> str:
             if state == hue_state:
                 return hass_state
     return state
+
 
 def convert_color_mode(color_mode: str, initial_type: str) -> str:
     """Convert color_mode names from initial_type to other type for xy, hs, and ct."""

@@ -1,8 +1,8 @@
 """Controllers for emulated_hue."""
+from . import devices  # noqa
 from .devices import async_get_device  # noqa
 from .homeassistant import HomeAssistantController  # noqa
 from .scheduler import add_scheduler, remove_scheduler  # noqa
-from . import devices  # noqa
 
 
 async def async_start() -> None:

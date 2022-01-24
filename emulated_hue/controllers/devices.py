@@ -14,15 +14,23 @@ LOGGER = logging.getLogger(__name__)
 
 __device_cache = {}
 
+
 class Device:
+    """Get device properties from an entity id."""
+
     def __init__(self, ctrl_hass: HomeAssistantController, entity_id: str):
+        """Initialize device."""
         self._ctrl_hass: HomeAssistantController = ctrl_hass
         self._entity_id: str = entity_id
 
-        self._device_id: str = self._ctrl_hass.get_device_id_from_entity_id(self._entity_id)
+        self._device_id: str = self._ctrl_hass.get_device_id_from_entity_id(
+            self._entity_id
+        )
         self._device_attributes: dict = {}
         if self._device_id:
-            self._device_attributes = self._ctrl_hass.get_device_attributes(self._device_id)
+            self._device_attributes = self._ctrl_hass.get_device_attributes(
+                self._device_id
+            )
 
         self._unique_id: str | None = None
         if identifiers := self._device_attributes.get("identifiers"):
@@ -43,7 +51,6 @@ class Device:
                     elif isinstance(identifier, str):
                         self._unique_id = identifier
                         break
-
 
     @property
     def manufacturer(self) -> str | None:
@@ -69,7 +76,6 @@ class Device:
     def unique_id(self) -> str | None:
         """Return unique id."""
         return self._unique_id
-
 
 
 class OnOffDevice:
@@ -124,7 +130,9 @@ class OnOffDevice:
     @property
     def name(self) -> str:
         """Return device name, prioritizing local config."""
-        return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get("friendly_name")
+        return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+            "friendly_name"
+        )
 
     @property
     def light_id(self) -> str:
@@ -177,7 +185,8 @@ class OnOffDevice:
             self._hass_state = EntityState(
                 power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
                 reachable=self._hass_state_dict["state"]
-                != const.HASS_STATE_UNAVAILABLE, transition_seconds = self._default_transition
+                != const.HASS_STATE_UNAVAILABLE,
+                transition_seconds=self._default_transition,
             )
 
     async def _async_update_allowed(self) -> bool:
@@ -198,9 +207,14 @@ class OnOffDevice:
     def _new_control_state(self, power_state: bool = None) -> EntityState:
         """Create new control state based on last known power state."""
         if power_state is None:
-            return EntityState(power_state=self._config_state.power_state, transition_seconds=self._default_transition)
+            return EntityState(
+                power_state=self._config_state.power_state,
+                transition_seconds=self._default_transition,
+            )
         else:
-            return EntityState(power_state=power_state, transition_seconds=self._default_transition)
+            return EntityState(
+                power_state=power_state, transition_seconds=self._default_transition
+            )
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update EntityState object with Hass state."""
@@ -274,9 +288,15 @@ class BrightnessDevice(OnOffDevice):
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
         super()._update_device_state(full_update)
-        self._hass_state.brightness = int(clamp(self._hass_state_dict.get(
-            const.HASS_ATTR, {}
-        ).get(const.HASS_ATTR_BRIGHTNESS, 0), 0, 255))
+        self._hass_state.brightness = int(
+            clamp(
+                self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+                    const.HASS_ATTR_BRIGHTNESS, 0
+                ),
+                0,
+                255,
+            )
+        )
 
     @property
     def brightness(self) -> int:
@@ -304,6 +324,7 @@ class BrightnessDevice(OnOffDevice):
     def flash_state(self) -> str | None:
         """
         Return flash state.
+
             :return: flash state, one of "short", "long", None
         """
         return self._config_state.flash_state
@@ -311,6 +332,7 @@ class BrightnessDevice(OnOffDevice):
     def set_flash(self, flash: str) -> None:
         """
         Set flash.
+
             :param flash: Can be one of "short" or "long"
         """
         if not self._control_state:

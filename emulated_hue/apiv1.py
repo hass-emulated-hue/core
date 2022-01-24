@@ -12,14 +12,13 @@ import tzlocal
 from aiohttp import web
 
 import emulated_hue.const as const
-from emulated_hue.controllers import async_get_device
 from emulated_hue import controllers
+from emulated_hue.controllers import async_get_device
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.utils import (
     ClassRouteTableDef,
     convert_color_mode,
     convert_flash_state,
-    entity_attributes_to_int,
     send_error_response,
     send_json_response,
     send_success_response,
@@ -632,7 +631,9 @@ class HueApiV1Endpoints:
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
         entity_id = entity["entity_id"]
-        device = await async_get_device(self.hue.controller_hass, self.hue.config, entity_id)
+        device = await async_get_device(
+            self.hue.controller_hass, self.hue.config, entity_id
+        )
 
         retval = {
             "state": {
@@ -646,15 +647,14 @@ class HueApiV1Endpoints:
                 "state": "noupdates",
                 "lastinstall": datetime.datetime.now().isoformat().split(".")[0],
             },
-            "config": {"config": {
-                "archetype": "sultanbulb",
-                "direction": "omnidirectional",
-                "function": "mixed",
-                "startup": {
-                    "configured": True,
-                    "mode": "safety"
+            "config": {
+                "config": {
+                    "archetype": "sultanbulb",
+                    "direction": "omnidirectional",
+                    "function": "mixed",
+                    "startup": {"configured": True, "mode": "safety"},
                 }
-            }},
+            },
         }
 
         if isinstance(device, controllers.devices.RGBWDevice):
@@ -684,7 +684,9 @@ class HueApiV1Endpoints:
         with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_BRI] = device.brightness
         with contextlib.suppress(AttributeError):
-            current_state[const.HUE_ATTR_COLORMODE] = device.color_temp
+            current_state[const.HUE_ATTR_COLORMODE] = convert_color_mode(
+                device.color_mode, const.HASS
+            )
         with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_XY] = device.xy_color
         with contextlib.suppress(AttributeError):
@@ -695,11 +697,17 @@ class HueApiV1Endpoints:
         with contextlib.suppress(AttributeError):
             current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
         with contextlib.suppress(AttributeError):
-            current_state[const.HUE_ATTR_ALERT] = convert_flash_state(device.flash_state, const.HASS) if device.flash_state else "none"
+            current_state[const.HUE_ATTR_ALERT] = (
+                convert_flash_state(device.flash_state, const.HASS)
+                if device.flash_state
+                else "none"
+            )
         retval["state"] = current_state
 
         # attempt to update from hass device attributes
-        retval["manufacturername"] = device.DeviceProperties.manufacturer or retval["manufacturername"]
+        retval["manufacturername"] = (
+            device.DeviceProperties.manufacturer or retval["manufacturername"]
+        )
         retval["modelid"] = device.DeviceProperties.model or retval["modelid"]
         retval["productname"] = device.DeviceProperties.name or retval["productname"]
         retval["swversion"] = device.DeviceProperties.sw_version or retval["swversion"]
