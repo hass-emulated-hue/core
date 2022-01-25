@@ -28,6 +28,11 @@ LOCAL_NETWORKS = (
 )
 
 
+def wrap_number(value: float, start_value: float, max_value: float) -> float:
+    """Wrap a number between start and end value."""
+    return (value - start_value) % (max_value - start_value) + start_value
+
+
 def clamp(value: float, min_value: float, max_value: float) -> float:
     """Clamp a value between a min and max value."""
     return min(max(value, min_value), max_value)

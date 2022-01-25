@@ -23,6 +23,7 @@ from emulated_hue.utils import (
     send_json_response,
     send_success_response,
     update_dict,
+    wrap_number,
 )
 
 if TYPE_CHECKING:
@@ -572,14 +573,19 @@ class HueApiV1Endpoints:
             self.hue.controller_hass, self.hue.config, entity["entity_id"]
         )
 
+        if transition := request_data.get(const.HUE_ATTR_TRANSITION):
+            # Duration of the transition from the light to the new state
+            # is given as a multiple of 100ms and defaults to 4 (400ms).
+            device.set_transition_ms(transition * 100)
+        else:
+            device.set_transition_ms(400)
+
         if const.HUE_ATTR_ON in request_data and not request_data[const.HUE_ATTR_ON]:
             device.turn_off()
-            # Don't error if we attempt to set an attribute that doesn't exist
-            with contextlib.suppress(AttributeError):
-                device.set_transition_ms(400)
         else:
             device.turn_on()
 
+            # Don't error if we attempt to set an attribute that doesn't exist
             if bri := request_data.get(const.HUE_ATTR_BRI):
                 with contextlib.suppress(AttributeError):
                     device.set_brightness(bri)
@@ -587,6 +593,8 @@ class HueApiV1Endpoints:
             sat = request_data.get(const.HUE_ATTR_SAT)
             hue = request_data.get(const.HUE_ATTR_HUE)
             if sat and hue:
+                hue = wrap_number(hue, 0, const.HUE_ATTR_HUE_MAX)
+                sat = wrap_number(sat, 0, const.HUE_ATTR_SAT_MAX)
                 # Convert hs values to hass hs values
                 hue = int((hue / const.HUE_ATTR_HUE_MAX) * 360)
                 sat = int((sat / const.HUE_ATTR_SAT_MAX) * 100)
@@ -612,14 +620,6 @@ class HueApiV1Endpoints:
                 elif alert == "lselect":
                     with contextlib.suppress(AttributeError):
                         device.set_flash("long")
-            if transition := request_data.get(const.HUE_ATTR_TRANSITION):
-                # Duration of the transition from the light to the new state
-                # is given as a multiple of 100ms and defaults to 4 (400ms).
-                with contextlib.suppress(AttributeError):
-                    device.set_transition_ms(transition * 100)
-            else:
-                with contextlib.suppress(AttributeError):
-                    device.set_transition_ms(400)
 
         await device.async_execute()
 
@@ -668,7 +668,6 @@ class HueApiV1Endpoints:
                 return
             device = cast(controllers.devices.BrightnessDevice, device)
             current_state[const.HUE_ATTR_BRI] = device.brightness
-            current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
             current_state[const.HUE_ATTR_ALERT] = (
                 convert_flash_state(device.flash_state, const.HASS)
                 if device.flash_state
@@ -701,6 +700,7 @@ class HueApiV1Endpoints:
                 )
                 return
             device = cast(controllers.devices.RGBDevice, device)
+            current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
             current_state[const.HUE_ATTR_XY] = device.xy_color
             # Convert hass hs values to hue hs values
             current_state[const.HUE_ATTR_HUE] = int(

@@ -247,11 +247,17 @@ class OnOffDevice:
 
     def turn_on(self) -> None:
         """Turn on light."""
-        self._control_state = self._new_control_state(power_state=True)
+        if not self._control_state:
+            self._control_state = self._new_control_state(power_state=True)
+        else:
+            self._control_state.power_state = True
 
     def turn_off(self) -> None:
         """Turn off light."""
-        self._control_state = self._new_control_state(power_state=False)
+        if not self._control_state:
+            self._control_state = self._new_control_state(power_state=False)
+        else:
+            self._control_state.power_state = False
 
     async def async_execute(self) -> None:
         """Execute control state."""
@@ -308,17 +314,6 @@ class BrightnessDevice(OnOffDevice):
         if not self._control_state:
             self._control_state = self._new_control_state()
         self._control_state.brightness = int(clamp(brightness, 1, 255))
-
-    @property
-    def effect(self) -> str | None:
-        """Return effect."""
-        return self._config_state.effect
-
-    def set_effect(self, effect: str) -> None:
-        """Set effect."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.effect = effect
 
     @property
     def flash_state(self) -> str | None:
@@ -483,6 +478,17 @@ class RGBDevice(BrightnessDevice):
         # HASS now requires a color target to be sent when flashing
         # Use white color to indicate the light
         self.set_hue_sat(self.hue_sat[0], self.hue_sat[1])
+
+    @property
+    def effect(self) -> str | None:
+        """Return effect."""
+        return self._config_state.effect
+
+    def set_effect(self, effect: str) -> None:
+        """Set effect."""
+        if not self._control_state:
+            self._control_state = self._new_control_state()
+        self._control_state.effect = effect
 
 
 class RGBWDevice(CTDevice, RGBDevice):
