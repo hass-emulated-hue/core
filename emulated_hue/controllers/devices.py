@@ -282,20 +282,6 @@ class OnOffDevice:
 class BrightnessDevice(OnOffDevice):
     """BrightnessDevice class."""
 
-    def __init__(
-        self,
-        ctrl_hass: HomeAssistantController,
-        ctrl_config: Config,
-        light_id: str,
-        entity_id: str,
-        config: dict,
-        hass_state_dict: dict,
-    ):
-        """Initialize BrightnessDevice."""
-        super().__init__(
-            ctrl_hass, ctrl_config, light_id, entity_id, config, hass_state_dict
-        )
-
     # Override
     def _update_device_state(self, full_update: bool) -> None:
         """Update EntityState object."""
@@ -337,20 +323,6 @@ class BrightnessDevice(OnOffDevice):
 
 class CTDevice(BrightnessDevice):
     """CTDevice class."""
-
-    def __init__(
-        self,
-        ctrl_hass: HomeAssistantController,
-        ctrl_config: Config,
-        light_id: str,
-        entity_id: str,
-        config: dict,
-        hass_state_dict: dict,
-    ):
-        """Initialize CTDevice."""
-        super().__init__(
-            ctrl_hass, ctrl_config, light_id, entity_id, config, hass_state_dict
-        )
 
     # Override
     def _update_device_state(self, full_update: bool) -> None:
@@ -399,20 +371,6 @@ class CTDevice(BrightnessDevice):
 
 class RGBDevice(BrightnessDevice):
     """RGBDevice class."""
-
-    def __init__(
-        self,
-        ctrl_hass: HomeAssistantController,
-        ctrl_config: Config,
-        light_id: str,
-        entity_id: str,
-        config: dict,
-        hass_state_dict: dict,
-    ):
-        """Initialize RGBDevice."""
-        super().__init__(
-            ctrl_hass, ctrl_config, light_id, entity_id, config, hass_state_dict
-        )
 
     def _update_device_state(self, full_update: bool = True) -> None:
         """Update EntityState object."""
@@ -493,20 +451,6 @@ class RGBDevice(BrightnessDevice):
 
 class RGBWDevice(CTDevice, RGBDevice):
     """RGBWDevice class."""
-
-    def __init__(
-        self,
-        ctrl_hass: HomeAssistantController,
-        ctrl_config: Config,
-        light_id: str,
-        entity_id: str,
-        config: dict,
-        hass_state_dict: dict,
-    ):
-        """Initialize RGBWDevice."""
-        super().__init__(
-            ctrl_hass, ctrl_config, light_id, entity_id, config, hass_state_dict
-        )
 
     def _update_device_state(self, full_update: bool = True) -> None:
         """Update EntityState object."""
