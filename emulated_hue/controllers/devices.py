@@ -10,9 +10,33 @@ from .homeassistant import HomeAssistantController
 from .models import ALL_STATES, EntityState
 from .scheduler import add_scheduler
 
+import functools
+from typing import Any
+
 LOGGER = logging.getLogger(__name__)
 
 __device_cache = {}
+
+def ensure_control_state(func):
+    """Ensure that the control state exists and create one if it doesn't."""
+
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        """Wrapped function."""
+        cls = args[0] or kwargs.get('cls')  # type: OnOffDevice
+        setting: Any = args[1] or kwargs.get('setting')
+        control_id: int | None = args[2] or kwargs.get('control_id')
+        if control_id is None:
+            # control id is None or invalid
+            control_id = cls._new_control_state()
+        elif not cls._control_state.get(control_id):
+            # control id is valid but control state doesn't exist
+            LOGGER.warning("Control id %s is not valid, creating a new one", control_id)
+            cls._new_control_state(control_id)
+        return func(cls, setting, control_id, cls._control_state.get(control_id))
+
+
+    return wrapped_func
 
 
 class Device:
@@ -82,13 +106,13 @@ class OnOffDevice:
     """OnOffDevice class."""
 
     def __init__(
-        self,
-        ctrl_hass: HomeAssistantController,
-        ctrl_config: Config,
-        light_id: str,
-        entity_id: str,
-        config: dict,
-        hass_state_dict: dict,
+            self,
+            ctrl_hass: HomeAssistantController,
+            ctrl_config: Config,
+            light_id: str,
+            entity_id: str,
+            config: dict,
+            hass_state_dict: dict,
     ):
         """Initialize OnOffDevice."""
         self._ctrl_hass: HomeAssistantController = ctrl_hass
@@ -113,10 +137,14 @@ class OnOffDevice:
             self._default_transition = self._throttle_ms / 1000
 
         self._hass_state: None | EntityState = None  # EntityState from Home Assistant
-        self._control_state: None | EntityState = None  # Control state
-        self._config_state: None | EntityState = (
-            None  # Latest state and stored in config
-        )
+        self._config_state: None | EntityState = None  # Latest state and stored in config
+        self._control_state: dict[int: EntityState] = {}  # Control state
+
+    def __next_control_state_id(self):
+        """Return next control state id."""
+        if self._control_state:
+            return max(self._control_state.keys()) + 1
+        return 0
 
     @property
     def enabled(self) -> bool:
@@ -166,13 +194,13 @@ class OnOffDevice:
             "lights", self._light_id, self._config
         )
 
-    async def _async_update_config_states(self) -> None:
+    async def _async_update_config_states(self, control_state: EntityState | None = None) -> None:
         """Update config states."""
         save_state = {}
         for state in ALL_STATES:
             # prioritize our last command if exists, then hass then last saved state
-            if self._control_state and getattr(self._control_state, state) is not None:
-                best_value = getattr(self._control_state, state)
+            if control_state and getattr(control_state, state) is not None:
+                best_value = getattr(control_state, state)
             elif self._hass_state and getattr(self._hass_state, state) is not None:
                 best_value = getattr(self._hass_state, state)
             else:
@@ -189,16 +217,16 @@ class OnOffDevice:
             self._hass_state = EntityState(
                 power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
                 reachable=self._hass_state_dict["state"]
-                != const.HASS_STATE_UNAVAILABLE,
+                          != const.HASS_STATE_UNAVAILABLE,
                 transition_seconds=self._default_transition,
             )
 
-    async def _async_update_allowed(self) -> bool:
+    async def _async_update_allowed(self, control_state: EntityState) -> bool:
         """Check if update is allowed using basic throttling, only update every throttle_ms."""
         if self._throttle_ms is None or self._throttle_ms == 0:
             return True
         # if wanted state is equal to the current state, dont change
-        if self._config_state == self._control_state:
+        if self._config_state == control_state:
             return False
         # if the last update was less than the throttle time ago, dont change
         now_timestamp = datetime.now().timestamp()
@@ -208,17 +236,15 @@ class OnOffDevice:
         self._last_update = now_timestamp
         return True
 
-    def _new_control_state(self, power_state: bool = None) -> EntityState:
-        """Create new control state based on last known power state."""
-        if power_state is None:
-            return EntityState(
-                power_state=self._config_state.power_state,
-                transition_seconds=self._default_transition,
-            )
-        else:
-            return EntityState(
-                power_state=power_state, transition_seconds=self._default_transition
-            )
+    def _new_control_state(self, control_id: int | None = None) -> int:
+        """Create new control state based on last known power state, passing new id."""
+        if not control_id:
+            control_id = self.__next_control_state_id()
+        self._control_state[control_id] = EntityState(
+            power_state=self._config_state.power_state,
+            transition_seconds=self._default_transition,
+        )
+        return control_id
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update EntityState object with Hass state."""
@@ -233,50 +259,43 @@ class OnOffDevice:
         """Return transition seconds."""
         return self._config_state.transition_seconds
 
-    def set_transition_ms(self, transition_ms: float) -> None:
+    @ensure_control_state
+    def set_transition_ms(self, transition_ms: float, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set transition in milliseconds."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
         if transition_ms < self._throttle_ms:
             transition_ms = self._throttle_ms
-        self._control_state.transition_seconds = transition_ms / 1000
+        __control_state.transition_seconds = transition_ms / 1000
+        return control_id
 
-    def set_transition_seconds(self, transition_seconds: float) -> None:
+    def set_transition_seconds(self, transition_seconds: float, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set transition in seconds."""
-        self.set_transition_ms(transition_seconds * 1000)
+        return self.set_transition_ms(transition_seconds * 1000, control_id)
 
-    def turn_on(self) -> None:
-        """Turn on light."""
-        if not self._control_state:
-            self._control_state = self._new_control_state(power_state=True)
-        else:
-            self._control_state.power_state = True
+    @ensure_control_state
+    def set_power_state(self, power_state: bool, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
+        """Set power state."""
+        __control_state.power_state = power_state
+        return control_id
 
-    def turn_off(self) -> None:
-        """Turn off light."""
-        if not self._control_state:
-            self._control_state = self._new_control_state(power_state=False)
-        else:
-            self._control_state.power_state = False
-
-    async def async_execute(self) -> None:
+    async def async_execute(self, control_id: int) -> None:
         """Execute control state."""
-        if not await self._async_update_allowed():
-            self._control_state = None
-            return
-        if self._control_state:
-            if self._control_state.power_state:
-                await self._ctrl_hass.async_turn_on(
-                    self._entity_id, self._control_state.to_hass_data()
-                )
-            else:
-                await self._ctrl_hass.async_turn_off(
-                    self._entity_id, self._control_state.to_hass_data()
-                )
-        else:
+        control_state = self._control_state.pop(control_id, None)
+        if not control_state:
             LOGGER.warning("No state to execute for device %s", self._entity_id)
-        await self._async_update_config_states()
-        self._control_state = None
+            return
+
+        if not await self._async_update_allowed(control_state):
+            return
+        if control_state.power_state:
+            await self._ctrl_hass.async_turn_on(
+                self._entity_id, control_state.to_hass_data()
+            )
+        else:
+            await self._ctrl_hass.async_turn_off(
+                self._entity_id, control_state.to_hass_data()
+            )
+        await self._async_update_config_states(control_state)
+
 
 
 class BrightnessDevice(OnOffDevice):
@@ -295,11 +314,11 @@ class BrightnessDevice(OnOffDevice):
         """Return brightness."""
         return self._config_state.brightness or 0
 
-    def set_brightness(self, brightness: int) -> None:
+    @ensure_control_state
+    def set_brightness(self, brightness: int, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set brightness from 0-255."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.brightness = int(clamp(brightness, 1, 255))
+        __control_state.brightness = int(clamp(brightness, 1, 255))
+        return control_id
 
     @property
     def flash_state(self) -> str | None:
@@ -310,15 +329,15 @@ class BrightnessDevice(OnOffDevice):
         """
         return self._config_state.flash_state
 
-    def set_flash(self, flash: str) -> None:
+    @ensure_control_state
+    def set_flash(self, flash: str, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """
         Set flash.
 
             :param flash: Can be one of "short" or "long"
         """
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.flash_state = flash
+        __control_state.flash_state = flash
+        return control_id
 
 
 class CTDevice(BrightnessDevice):
@@ -355,18 +374,19 @@ class CTDevice(BrightnessDevice):
         """Return color temp."""
         return self._config_state.color_temp or 153
 
-    def set_color_temperature(self, color_temperature: int) -> None:
+    @ensure_control_state
+    def set_color_temperature(self, color_temperature: int, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set color temperature."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.color_temp = color_temperature
-        self._control_state.color_mode = const.HASS_COLOR_MODE_COLOR_TEMP
+        __control_state.color_temp = color_temperature
+        __control_state.color_mode = const.HASS_COLOR_MODE_COLOR_TEMP
+        return control_id
 
     # Override
-    def set_flash(self, flash: str) -> None:
+    def set_flash(self, flash: str, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set flash with color_temp."""
-        super().set_flash(flash)
-        self.set_color_temperature(self.color_temp)
+        control_id = super().set_flash(flash, control_id)
+        self.set_color_temperature(self.color_temp, control_id)
+        return control_id
 
 
 class RGBDevice(BrightnessDevice):
@@ -398,55 +418,58 @@ class RGBDevice(BrightnessDevice):
         """Return hue_saturation."""
         return self._config_state.hue_saturation or [0, 0]
 
-    def set_hue_sat(self, hue: int | float, sat: int | float) -> None:
+    @ensure_control_state
+    def set_hue_sat(self, hue_sat: tuple[int | float, int | float], control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set hue and saturation colors."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.hue_saturation = [int(hue), int(sat)]
-        self._control_state.color_mode = const.HASS_COLOR_MODE_HS
+        hue, sat = hue_sat
+        __control_state.hue_saturation = [int(hue), int(sat)]
+        __control_state.color_mode = const.HASS_COLOR_MODE_HS
+        return control_id
 
     @property
     def xy_color(self) -> list[float]:
         """Return xy_color."""
         return self._config_state.xy_color or [0, 0]
 
-    def set_xy(self, x: float, y: float) -> None:
+    def set_xy(self, x_y: tuple[float, float], control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set xy colors."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.xy_color = [float(x), float(y)]
-        self._control_state.color_mode = const.HASS_COLOR_MODE_XY
+        x, y = x_y
+        __control_state.xy_color = [float(x), float(y)]
+        __control_state.color_mode = const.HASS_COLOR_MODE_XY
+        return control_id
 
     @property
     def rgb_color(self) -> list[int]:
         """Return rgb_color."""
         return self._config_state.rgb_color
 
-    def set_rgb(self, r: int, g: int, b: int) -> None:
+    @ensure_control_state
+    def set_rgb(self, r_g_b: tuple[int, int, int], control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set rgb colors."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.rgb_color = [int(r), int(g), int(b)]
-        self._control_state.color_mode = const.HASS_COLOR_MODE_RGB
+        r, g, b = r_g_b
+        __control_state.rgb_color = [int(r), int(g), int(b)]
+        __control_state.color_mode = const.HASS_COLOR_MODE_RGB
+        return control_id
 
     # Override
-    def set_flash(self, flash: str) -> None:
+    def set_flash(self, flash: str, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set flash."""
-        super().set_flash(flash)
+        control_id = super().set_flash(flash, control_id)
         # HASS now requires a color target to be sent when flashing
         # Use white color to indicate the light
-        self.set_hue_sat(self.hue_sat[0], self.hue_sat[1])
+        self.set_hue_sat((self.hue_sat[0], self.hue_sat[1]), control_id)
+        return control_id
 
     @property
     def effect(self) -> str | None:
         """Return effect."""
         return self._config_state.effect
 
-    def set_effect(self, effect: str) -> None:
+    @ensure_control_state
+    def set_effect(self, effect: str, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set effect."""
-        if not self._control_state:
-            self._control_state = self._new_control_state()
-        self._control_state.effect = effect
+        __control_state.effect = effect
+        return control_id
 
 
 class RGBWDevice(CTDevice, RGBDevice):
@@ -458,16 +481,16 @@ class RGBWDevice(CTDevice, RGBDevice):
         RGBDevice._update_device_state(self, False)
 
     # Override
-    def set_flash(self, flash: str) -> None:
+    def set_flash(self, flash: str, control_id: int | None = None, __control_state: EntityState | None = None) -> int:
         """Set flash."""
         if self.color_mode == const.HASS_ATTR_COLOR_TEMP:
-            CTDevice.set_flash(self, flash)
+            return CTDevice.set_flash(self, flash, control_id)
         else:
-            RGBDevice.set_flash(self, flash)
+            return RGBDevice.set_flash(self, flash, control_id)
 
 
 async def async_get_device(
-    ctrl_hass: HomeAssistantController, ctrl_config: Config, entity_id: str
+        ctrl_hass: HomeAssistantController, ctrl_config: Config, entity_id: str
 ) -> OnOffDevice | BrightnessDevice | CTDevice | RGBDevice | RGBWDevice:
     """Infer light object type from Home Assistant state and returns corresponding object."""
     if entity_id in __device_cache.keys():
@@ -482,15 +505,15 @@ async def async_get_device(
     )
 
     if any(
-        color_mode
-        in [
-            const.HASS_COLOR_MODE_HS,
-            const.HASS_COLOR_MODE_XY,
-            const.HASS_COLOR_MODE_RGB,
-            const.HASS_COLOR_MODE_RGBW,
-            const.HASS_COLOR_MODE_RGBWW,
-        ]
-        for color_mode in entity_color_modes
+            color_mode
+            in [
+                const.HASS_COLOR_MODE_HS,
+                const.HASS_COLOR_MODE_XY,
+                const.HASS_COLOR_MODE_RGB,
+                const.HASS_COLOR_MODE_RGBW,
+                const.HASS_COLOR_MODE_RGBWW,
+            ]
+            for color_mode in entity_color_modes
     ) and any(
         color_mode
         in [
@@ -510,13 +533,13 @@ async def async_get_device(
             hass_state_dict,
         )
     elif any(
-        color_mode
-        in [
-            const.HASS_COLOR_MODE_HS,
-            const.HASS_COLOR_MODE_XY,
-            const.HASS_COLOR_MODE_RGB,
-        ]
-        for color_mode in entity_color_modes
+            color_mode
+            in [
+                const.HASS_COLOR_MODE_HS,
+                const.HASS_COLOR_MODE_XY,
+                const.HASS_COLOR_MODE_RGB,
+            ]
+            for color_mode in entity_color_modes
     ):
         device_obj = RGBDevice(
             ctrl_hass,

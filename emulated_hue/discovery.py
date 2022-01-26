@@ -14,6 +14,7 @@ from .config import Config
 from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 async def async_setup_discovery(config: Config) -> None:
@@ -161,7 +162,7 @@ USN: {bridge_uuid}
                 resp_socket.sendto(self.upnp_root_response, addr)
                 resp_socket.sendto(self.upnp_unique_response, addr)
                 resp_socket.sendto(self.upnp_device_response, addr)
-                # LOGGER.debug("Serving SSDP discovery info to %s", addr)
+                LOGGER.debug("Serving SSDP discovery info to %s", addr)
                 resp_socket.close()
 
     def stop(self):

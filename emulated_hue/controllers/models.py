@@ -29,14 +29,17 @@ class EntityState(BaseModel):
         data = {}
         if self.brightness:
             data[const.HASS_ATTR_BRIGHTNESS] = self.brightness
+
+        # If somehow we get both ct and rgb, prefer ct
         if self.color_temp:
             data[const.HASS_ATTR_COLOR_TEMP] = self.color_temp
-        if self.hue_saturation:
+        elif self.hue_saturation:
             data[const.HASS_ATTR_HS_COLOR] = self.hue_saturation
-        if self.xy_color:
+        elif self.xy_color:
             data[const.HASS_ATTR_XY_COLOR] = self.xy_color
-        if self.rgb_color:
+        elif self.rgb_color:
             data[const.HASS_ATTR_RGB_COLOR] = self.rgb_color
+
         if self.effect:
             data[const.HASS_ATTR_EFFECT] = self.effect
         if self.flash_state:
