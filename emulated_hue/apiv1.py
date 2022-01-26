@@ -573,22 +573,23 @@ class HueApiV1Endpoints:
             self.hue.controller_hass, self.hue.config, entity["entity_id"]
         )
 
+        control_state = device.new_control_state()
         if transition := request_data.get(const.HUE_ATTR_TRANSITION):
             # Duration of the transition from the light to the new state
             # is given as a multiple of 100ms and defaults to 4 (400ms).
-            control_id = device.set_transition_ms(transition * 100)
+            control_state.set_transition_ms(transition * 100)
         else:
-            control_id = device.set_transition_ms(400)
+            control_state.set_transition_ms(400)
 
         if const.HUE_ATTR_ON in request_data and not request_data[const.HUE_ATTR_ON]:
-            device.set_power_state(False, control_id)
+            control_state.set_power_state(False)
         else:
-            device.set_power_state(True, control_id)
+            control_state.set_power_state(True)
 
             # Don't error if we attempt to set an attribute that doesn't exist
             if bri := request_data.get(const.HUE_ATTR_BRI):
                 with contextlib.suppress(AttributeError):
-                    device.set_brightness(bri, control_id)
+                    control_state.set_brightness(bri)
 
             sat = request_data.get(const.HUE_ATTR_SAT)
             hue = request_data.get(const.HUE_ATTR_HUE)
@@ -599,29 +600,29 @@ class HueApiV1Endpoints:
                 hue = int((hue / const.HUE_ATTR_HUE_MAX) * 360)
                 sat = int((sat / const.HUE_ATTR_SAT_MAX) * 100)
                 with contextlib.suppress(AttributeError):
-                    device.set_hue_sat((hue, sat), control_id)
+                    control_state.set_hue_sat(hue, sat)
 
             if color_temp := request_data.get(const.HUE_ATTR_CT):
-                device.set_color_temperature(color_temp, control_id)
+                control_state.set_color_temperature(color_temp)
 
             if xy := request_data.get(const.HUE_ATTR_XY):
                 if type(xy) is list and len(xy) == 2:
                     with contextlib.suppress(AttributeError):
-                        device.set_xy((xy[0], xy[1]), control_id)
+                        control_state.set_xy(xy[0], xy[1])
 
             # effects probably don't work
             if effect := request_data.get(const.HUE_ATTR_EFFECT):
                 with contextlib.suppress(AttributeError):
-                    device.set_effect(effect, control_id)
+                    control_state.set_effect(effect)
             if alert := request_data.get(const.HUE_ATTR_ALERT):
                 if alert == "select":
                     with contextlib.suppress(AttributeError):
-                        device.set_flash("short", control_id)
+                        control_state.set_flash("short")
                 elif alert == "lselect":
                     with contextlib.suppress(AttributeError):
-                        device.set_flash("long", control_id)
+                        control_state.set_flash("long")
 
-        await device.async_execute(control_id)
+        await device.async_execute(control_state)
 
     async def __async_entity_to_hue(
         self,
