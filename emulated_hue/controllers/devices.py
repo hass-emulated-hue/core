@@ -159,11 +159,12 @@ class OnOffDevice:
 
     async def _async_update_allowed(self, control_state: EntityState) -> bool:
         """Check if update is allowed using basic throttling, only update every throttle_ms."""
-        if self._throttle_ms is None or self._throttle_ms == 0:
-            return True
         # if wanted state is equal to the current state, dont change
         if self._config_state == control_state:
             return False
+
+        if self._throttle_ms is None or self._throttle_ms == 0:
+            return True
         # if the last update was less than the throttle time ago, dont change
         now_timestamp = datetime.now().timestamp()
         if now_timestamp - self._last_update < self._throttle_ms / 1000:
@@ -250,9 +251,7 @@ class OnOffDevice:
                 self._entity_id, control_state.to_hass_data()
             )
         else:
-            await self._ctrl_hass.async_turn_off(
-                self._entity_id, control_state.to_hass_data()
-            )
+            await self._ctrl_hass.async_turn_off(self._entity_id)
         await self._async_update_config_states(control_state)
 
 

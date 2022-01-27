@@ -3,15 +3,12 @@
 import asyncio
 import logging
 import os
-import time
+from typing import TYPE_CHECKING
 
-from emulated_hue.const import (
-    DEFAULT_THROTTLE_MS,
-    HASS_ATTR_BRIGHTNESS,
-    HASS_ATTR_RGB_COLOR,
-    HASS_ATTR_TRANSITION,
-    HASS_ATTR_XY_COLOR,
-)
+from emulated_hue.controllers import async_get_device
+
+if TYPE_CHECKING:
+    from emulated_hue import HueEmulator
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,10 +34,10 @@ def chunked(size, source):
 class EntertainmentAPI:
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
-    def __init__(self, hue, group_details, user_details):
+    def __init__(self, hue, group_details: dict, user_details: str):
         """Initialize the class."""
-        self.hue = hue
-        self.config = hue.config
+        self.hue: HueEmulator = hue
+        self.config: HueEmulator.config = hue.config
         self.group_details = group_details
         self._interrupted = False
         self._socket_daemon = None
@@ -107,61 +104,30 @@ class EntertainmentAPI:
         light_id = str(light_data[1] + light_data[2])
         light_conf = await self.config.async_get_light_config(light_id)
 
-        # throttle command to light
         # TODO: can we send udp messages to supported lights such as esphome or native ZHA ?
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
-        throttle_ms = light_conf.get("throttle", DEFAULT_THROTTLE_MS)
-        if not self.__update_allowed(light_id, light_data, throttle_ms):
-            return
 
         entity_id = light_conf["entity_id"]
-        svc_data = {"entity_id": entity_id}
+        device = await async_get_device(
+            self.hue.controller_hass, self.config, entity_id
+        )
+        control_state = device.new_control_state()
+        control_state.set_power_state(True)
         if color_space == COLOR_TYPE_RGB:
-            svc_data[HASS_ATTR_RGB_COLOR] = [
-                int((light_data[3] * 256 + light_data[4]) / 256),
-                int((light_data[5] * 256 + light_data[6]) / 256),
-                int((light_data[7] * 256 + light_data[8]) / 256),
-            ]
-            svc_data[HASS_ATTR_BRIGHTNESS] = sum(svc_data[HASS_ATTR_RGB_COLOR]) / len(
-                svc_data[HASS_ATTR_RGB_COLOR]
+            red = int((light_data[3] * 256 + light_data[4]) / 256)
+            green = int((light_data[5] * 256 + light_data[6]) / 256)
+            blue = int((light_data[7] * 256 + light_data[8]) / 256)
+            control_state.set_rgb(red, green, blue)
+            control_state.set_brightness(
+                int(sum(control_state.control_state.rgb_color) / 3)
             )
         else:
-            svc_data[HASS_ATTR_XY_COLOR] = [
-                float((light_data[3] * 256 + light_data[4]) / 65535),
-                float((light_data[5] * 256 + light_data[6]) / 65535),
-            ]
-            svc_data[HASS_ATTR_BRIGHTNESS] = int(
-                (light_data[7] * 256 + light_data[8]) / 256
+            x = float((light_data[3] * 256 + light_data[4]) / 65535)
+            y = float((light_data[5] * 256 + light_data[6]) / 65535)
+            control_state.set_xy(x, y)
+            control_state.set_brightness(
+                int((light_data[7] * 256 + light_data[8]) / 256)
             )
-
-        # update allowed within throttling, push to light
-        if throttle_ms:
-            svc_data[HASS_ATTR_TRANSITION] = throttle_ms / 1000
-        else:
-            svc_data[HASS_ATTR_TRANSITION] = 0
-        await self.hue.hass.call_service("light", "turn_on", svc_data)
-        self.hue.hass.states[entity_id]["attributes"].update(svc_data)
-
-    def __update_allowed(
-        self, light_id: str, light_data: bytes, throttle_ms: int
-    ) -> bool:
-        """Minimalistic form of throttling, only allow updates to a light within a timespan."""
-
-        # check if data changed
-        # when not using udp no need to send same light command again
-        prev_data = self._prev_data.get(light_id, b"")
-        if prev_data == light_data:
-            return False
-        self._prev_data[light_id] = light_data
-        # check throttle timestamp so light commands are only sent once every X milliseconds
-        # this is to not overload a light implementation in Home Assistant
-        if not throttle_ms:
-            return True
-        prev_timestamp = self._timestamps.get(light_id, 0)
-        cur_timestamp = int(time.time() * 1000)
-        if (cur_timestamp - prev_timestamp) >= throttle_ms:
-            # change allowed only if within throttle limit
-            self._timestamps[light_id] = cur_timestamp
-            return True
-        return False
+        control_state.set_transition_ms(0, respect_throttle=True)
+        await device.async_execute(control_state)

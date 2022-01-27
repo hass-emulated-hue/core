@@ -1,4 +1,6 @@
 """Controller for Home Assistant communication."""
+import logging
+
 from hass_client import HomeAssistantClient
 
 from emulated_hue.const import (
@@ -11,6 +13,8 @@ from emulated_hue.const import (
     HASS_SERVICE_TURN_ON,
 )
 
+LOGGER = logging.getLogger(__name__)
+
 
 class HomeAssistantController:
     """Controller for Home Assistant communication class."""
@@ -19,14 +23,14 @@ class HomeAssistantController:
         """Initialize the Home Assistant controller."""
         self._hass = hass
 
-    async def async_turn_off(self, entity_id: str, data: dict) -> None:
+    async def async_turn_off(self, entity_id: str) -> None:
         """
         Turn off a generic entity in Home Assistant.
 
             :param entity_id: The ID of the entity.
             :param data: The service data.
         """
-        data[HASS_ATTR_ENTITY_ID] = entity_id
+        data = {HASS_ATTR_ENTITY_ID: entity_id}
         await self._hass.call_service(
             HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_OFF, data
         )

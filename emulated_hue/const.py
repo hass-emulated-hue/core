@@ -1,6 +1,8 @@
 """Emulated HUE Bridge for HomeAssistant - constants."""
 
-DEFAULT_THROTTLE_MS = 0
+# Prevent overloading home assistant / implementation
+# Will not be respected when using udp
+DEFAULT_THROTTLE_MS = 150
 
 CONFIG_WRITE_DELAY_SECONDS = 10
 
