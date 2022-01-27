@@ -4,17 +4,10 @@ from datetime import datetime
 
 from emulated_hue import const
 from emulated_hue.config import Config
+from emulated_hue.utils import clamp
 
 from .homeassistant import HomeAssistantController
-from .models import (
-    ALL_STATES,
-    BrightnessControl,
-    CTControl,
-    EntityState,
-    OnOffControl,
-    RGBControl,
-    RGBWControl,
-)
+from .models import ALL_STATES, EntityState
 from .scheduler import add_scheduler
 
 LOGGER = logging.getLogger(__name__)
@@ -125,6 +118,46 @@ class OnOffDevice:
             self._config.get("state", {})
         )
 
+    class OnOffControl:
+        """Control on/off state."""
+
+        def __init__(self, device):
+            """Initialize OnOffControl."""
+            self._device = device  # type: RGBWDevice
+            self._throttle_ms: int = self._device.throttle_ms
+            self._control_state = EntityState(
+                power_state=self._device.power_state,
+                transition_seconds=self._device.transition_seconds,
+            )
+
+        @property
+        def control_state(self) -> EntityState:
+            """Return control state."""
+            return self._control_state
+
+        def set_transition_ms(
+            self, transition_ms: float, respect_throttle: bool = False
+        ) -> None:
+            """Set transition in milliseconds."""
+            if respect_throttle:
+                if transition_ms < self._throttle_ms:
+                    transition_ms = self._throttle_ms
+            self._control_state.transition_seconds = transition_ms / 1000
+
+        def set_transition_seconds(
+            self, transition_seconds: float, respect_throttle: bool = False
+        ) -> None:
+            """Set transition in seconds."""
+            self.set_transition_ms(transition_seconds * 1000, respect_throttle)
+
+        def set_power_state(self, power_state: bool) -> None:
+            """Set power state."""
+            self._control_state.power_state = power_state
+
+        async def async_execute(self) -> None:
+            """Execute control state."""
+            await self._device.async_execute(self.control_state)
+
     async def _async_save_config(self) -> None:
         """Save config to file."""
         await self._ctrl_config.async_set_storage_value(
@@ -227,7 +260,7 @@ class OnOffDevice:
 
     def new_control_state(self) -> OnOffControl:
         """Return new control state."""
-        return OnOffControl(self)
+        return self.OnOffControl(self)
 
     async def async_update_state(self, full_update: bool = True) -> None:
         """Update EntityState object with Hass state."""
@@ -237,13 +270,12 @@ class OnOffDevice:
             self._update_device_state(full_update)
             await self._async_update_config_states()
 
-    async def async_execute(self, control_obj: OnOffControl) -> None:
+    async def async_execute(self, control_state: EntityState) -> None:
         """Execute control state."""
-        if not control_obj:
+        if not control_state:
             LOGGER.warning("No state to execute for device %s", self._entity_id)
             return
 
-        control_state = control_obj.control_state
         if not await self._async_update_allowed(control_state):
             return
         if control_state.power_state:
@@ -258,9 +290,24 @@ class OnOffDevice:
 class BrightnessDevice(OnOffDevice):
     """BrightnessDevice class."""
 
+    class BrightnessControl(OnOffDevice.OnOffControl):
+        """Control brightness."""
+
+        def set_brightness(self, brightness: int) -> None:
+            """Set brightness from 0-255."""
+            self._control_state.brightness = int(clamp(brightness, 1, 255))
+
+        def set_flash(self, flash: str) -> None:
+            """
+            Set flash.
+
+                :param flash: Can be one of "short" or "long"
+            """
+            self._control_state.flash_state = flash
+
     def new_control_state(self) -> BrightnessControl:
         """Return new control state."""
-        return BrightnessControl(self)
+        return self.BrightnessControl(self)
 
     # Override
     def _update_device_state(self, full_update: bool) -> None:
@@ -288,9 +335,23 @@ class BrightnessDevice(OnOffDevice):
 class CTDevice(BrightnessDevice):
     """CTDevice class."""
 
+    class CTControl(BrightnessDevice.BrightnessControl):
+        """Control color temperature."""
+
+        def set_color_temperature(self, color_temperature: int) -> None:
+            """Set color temperature."""
+            self._control_state.color_temp = color_temperature
+            self._control_state.color_mode = const.HASS_COLOR_MODE_COLOR_TEMP
+
+        # Override
+        def set_flash(self, flash: str) -> None:
+            """Set flash with color_temp."""
+            super().set_flash(flash)
+            self.set_color_temperature(self._device.color_temp)
+
     def new_control_state(self) -> CTControl:
         """Return new control state."""
-        return CTControl(self)
+        return self.CTControl(self)
 
     # Override
     def _update_device_state(self, full_update: bool) -> None:
@@ -327,9 +388,38 @@ class CTDevice(BrightnessDevice):
 class RGBDevice(BrightnessDevice):
     """RGBDevice class."""
 
+    class RGBControl(BrightnessDevice.BrightnessControl):
+        """Control RGB."""
+
+        def set_hue_sat(self, hue: int | float, sat: int | float) -> None:
+            """Set hue and saturation colors."""
+            self._control_state.hue_saturation = (int(hue), int(sat))
+            self._control_state.color_mode = const.HASS_COLOR_MODE_HS
+
+        def set_xy(self, x: float, y: float) -> None:
+            """Set xy colors."""
+            self._control_state.xy_color = (float(x), float(y))
+            self._control_state.color_mode = const.HASS_COLOR_MODE_XY
+
+        def set_rgb(self, r: int, g: int, b: int) -> None:
+            """Set rgb colors."""
+            self._control_state.rgb_color = (int(r), int(g), int(b))
+            self._control_state.color_mode = const.HASS_COLOR_MODE_RGB
+
+        # Override
+        def set_flash(self, flash: str) -> None:
+            """Set flash."""
+            super().set_flash(flash)
+            # HASS now requires a color target to be sent when flashing
+            self.set_hue_sat(self._device.hue_sat[0], self._device.hue_sat[1])
+
+        def set_effect(self, effect: str) -> None:
+            """Set effect."""
+            self._control_state.effect = effect
+
     def new_control_state(self) -> RGBControl:
         """Return new control state."""
-        return RGBControl(self)
+        return self.RGBControl(self)
 
     def _update_device_state(self, full_update: bool = True) -> None:
         """Update EntityState object."""
@@ -376,9 +466,20 @@ class RGBDevice(BrightnessDevice):
 class RGBWDevice(CTDevice, RGBDevice):
     """RGBWDevice class."""
 
+    class RGBWControl(CTDevice.CTControl, RGBDevice.RGBControl):
+        """Control RGBW."""
+
+        # Override
+        def set_flash(self, flash: str) -> None:
+            """Set flash."""
+            if self._device.color_mode == const.HASS_ATTR_COLOR_TEMP:
+                return CTDevice.CTControl.set_flash(self, flash)
+            else:
+                return RGBDevice.RGBControl.set_flash(self, flash)
+
     def new_control_state(self) -> RGBWControl:
         """Return new control state."""
-        return RGBWControl(self)
+        return self.RGBWControl(self)
 
     def _update_device_state(self, full_update: bool = True) -> None:
         """Update EntityState object."""

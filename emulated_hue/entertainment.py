@@ -112,22 +112,18 @@ class EntertainmentAPI:
         device = await async_get_device(
             self.hue.controller_hass, self.config, entity_id
         )
-        control_state = device.new_control_state()
-        control_state.set_power_state(True)
+        call = device.new_control_state()
+        call.set_power_state(True)
         if color_space == COLOR_TYPE_RGB:
             red = int((light_data[3] * 256 + light_data[4]) / 256)
             green = int((light_data[5] * 256 + light_data[6]) / 256)
             blue = int((light_data[7] * 256 + light_data[8]) / 256)
-            control_state.set_rgb(red, green, blue)
-            control_state.set_brightness(
-                int(sum(control_state.control_state.rgb_color) / 3)
-            )
+            call.set_rgb(red, green, blue)
+            call.set_brightness(int(sum(call.control_state.rgb_color) / 3))
         else:
             x = float((light_data[3] * 256 + light_data[4]) / 65535)
             y = float((light_data[5] * 256 + light_data[6]) / 65535)
-            control_state.set_xy(x, y)
-            control_state.set_brightness(
-                int((light_data[7] * 256 + light_data[8]) / 256)
-            )
-        control_state.set_transition_ms(0, respect_throttle=True)
-        await device.async_execute(control_state)
+            call.set_xy(x, y)
+            call.set_brightness(int((light_data[7] * 256 + light_data[8]) / 256))
+        call.set_transition_ms(0, respect_throttle=True)
+        await call.async_execute()
