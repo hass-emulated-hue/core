@@ -136,7 +136,7 @@ class Config:
     @property
     def bridge_name(self) -> str:
         """Return the friendly name for the emulated bridge."""
-        return self.get_storage_value("bridge_config", "name", "Home Assistant")
+        return self.get_storage_value("bridge_config", "name", "Hass Emulated Hue")
 
     @property
     def definitions(self) -> dict:

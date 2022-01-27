@@ -123,6 +123,11 @@ class HueApiV1Endpoints:
             LOGGER.warning("devicetype not specified")
             # custom error message
             return send_error_response(request.path, "devicetype not specified", 302)
+        if request_data["devicetype"].startswith("home-assistant"):
+            LOGGER.error("Pairing with Home Assistant is explicitly disabled.")
+            return send_error_response(
+                request.path, "Pairing with Home Assistant is explicitly disabled", 901
+            )
         if not self.config.link_mode_enabled:
             await self.config.async_enable_link_mode_discovery()
             return send_error_response(request.path, "link button not pressed", 101)

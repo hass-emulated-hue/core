@@ -41,7 +41,7 @@ def start_zeroconf_discovery(config: Config):
         zeroconf_type,
         name=f"Philips Hue - {config.bridge_id[-6:]}.{zeroconf_type}",
         addresses=[get_ip_pton()],
-        port=80,
+        port=443,
         properties={
             "bridgeid": config.bridge_id,
             "modelid": config.definitions["bridge"]["basic"]["modelid"],
