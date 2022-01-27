@@ -10,6 +10,7 @@ class EntityState(BaseModel):
     """Store device state."""
 
     power_state: bool
+    reachable: bool = True
     transition_seconds: float | None = None
     brightness: int | None = None
     color_temp: int | None = None
@@ -18,7 +19,6 @@ class EntityState(BaseModel):
     rgb_color: tuple[int, int, int] | None = None
     flash_state: str | None = None
     effect: str | None = None
-    reachable: bool = True
     color_mode: str | None = None
 
     def __eq__(self, other):
@@ -68,8 +68,12 @@ class EntityState(BaseModel):
         return data
 
     @classmethod
-    def from_config(cls, states: dict):
+    def from_config(cls, states: dict | None):
         """Convert from config."""
+        # Initialize states if first time running
+        if not states:
+            return EntityState(power_state=False, reachable=True)
+
         save_state = {}
         for state in list(vars(cls).get("__fields__")):
             save_state[state] = states.get(state, None)

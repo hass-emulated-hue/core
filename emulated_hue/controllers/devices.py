@@ -115,7 +115,7 @@ class OnOffDevice:
         self._hass_state: None | EntityState = None  # EntityState from Home Assistant
         # Latest state and stored in config
         self._config_state: EntityState = EntityState.from_config(
-            self._config.get("state", {})
+            self._config.get("state")
         )
 
     class OnOffControl:
