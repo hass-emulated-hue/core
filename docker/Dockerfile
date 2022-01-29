@@ -50,8 +50,7 @@ ARG S6_ARCH
 WORKDIR /s6downloader
 
 RUN set -x \
-    && OVERLAY_VERSION=$(wget --no-check-certificate -qO - https://api.github.com/repos/just-containers/s6-overlay/releases/latest | awk '/tag_name/{print $4;exit}' FS='[""]') \
-    && wget -O /tmp/s6-overlay.tar.gz "https://github.com/just-containers/s6-overlay/releases/download/${OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.gz" \
+    && wget -O /tmp/s6-overlay.tar.gz "https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.3/s6-overlay-${S6_ARCH}.tar.gz" \
     && mkdir -p /tmp/s6 \
     && tar zxvf /tmp/s6-overlay.tar.gz -C /tmp/s6 \
     && mv /tmp/s6/* .
