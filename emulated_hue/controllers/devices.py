@@ -15,6 +15,8 @@ LOGGER = logging.getLogger(__name__)
 __device_cache = {}
 
 
+# probably should be dataclass with factory method
+# TODO: move to models
 class Device:
     """Get device properties from an entity id."""
 
@@ -236,7 +238,7 @@ class OnOffDevice:
     @property
     def unique_id(self) -> str:
         """Return hue unique id."""
-        return self._unique_id
+        return self.device_properties.unique_id or self._unique_id
 
     @property
     def name(self) -> str:
