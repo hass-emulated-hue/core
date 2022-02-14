@@ -181,10 +181,13 @@ class OnOffDevice:
         self._config["state"] = dict(self._config_state)
         await self._async_save_config()
 
-    def _update_device_state(self, full_update: bool) -> None:
-        """Update EntityState object."""
-        if full_update:
-            self._hass_state = EntityState(
+    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
+        """Update EntityState object with hass state."""
+        if existing_state:
+            existing_state.power_state = self._hass_state_dict["state"] == const.HASS_STATE_ON
+            existing_state.reachable = self._hass_state_dict["state"] != const.HASS_STATE_UNAVAILABLE
+            return existing_state
+        return EntityState(
                 power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
                 reachable=self._hass_state_dict["state"]
                 != const.HASS_STATE_UNAVAILABLE,
@@ -217,7 +220,7 @@ class OnOffDevice:
         return self._enabled
 
     @property
-    def DeviceProperties(self) -> Device:
+    def device_properties(self) -> Device:
         """Return device object."""
         return self._device
 
@@ -267,7 +270,7 @@ class OnOffDevice:
         if self._enabled or not self._config_state:
             self._hass_state_dict = self._ctrl_hass.get_entity_state(self._entity_id)
             # Cascades up the inheritance chain to update the state
-            self._update_device_state(full_update)
+            self._hass_state = self._update_device_state()
             await self._async_update_config_states()
 
     async def async_execute(self, control_state: EntityState) -> None:
@@ -310,12 +313,13 @@ class BrightnessDevice(OnOffDevice):
         return self.BrightnessControl(self)
 
     # Override
-    def _update_device_state(self, full_update: bool) -> None:
+    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
         """Update EntityState object."""
-        super()._update_device_state(full_update)
-        self._hass_state.brightness = self._hass_state_dict.get(
+        existing_state = super()._update_device_state(existing_state)
+        existing_state.brightness = self._hass_state_dict.get(
             const.HASS_ATTR, {}
         ).get(const.HASS_ATTR_BRIGHTNESS)
+        return existing_state
 
     @property
     def brightness(self) -> int:
@@ -354,15 +358,16 @@ class CTDevice(BrightnessDevice):
         return self.CTControl(self)
 
     # Override
-    def _update_device_state(self, full_update: bool) -> None:
+    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
         """Update EntityState object."""
-        super()._update_device_state(full_update)
-        self._hass_state.color_temp = self._hass_state_dict.get(
+        existing_state = super()._update_device_state(existing_state)
+        existing_state.color_temp = self._hass_state_dict.get(
             const.HASS_ATTR, {}
         ).get(const.HASS_ATTR_COLOR_TEMP)
-        self._hass_state.color_mode = self._hass_state_dict.get(
+        existing_state.color_mode = self._hass_state_dict.get(
             const.HASS_ATTR, {}
         ).get(const.HASS_COLOR_MODE)
+        return existing_state
 
     @property
     def color_mode(self) -> str:
@@ -421,21 +426,23 @@ class RGBDevice(BrightnessDevice):
         """Return new control state."""
         return self.RGBControl(self)
 
-    def _update_device_state(self, full_update: bool = True) -> None:
+    # Override
+    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
         """Update EntityState object."""
-        super()._update_device_state(full_update)
-        self._hass_state.hue_saturation = self._hass_state_dict.get(
+        existing_state = super()._update_device_state(existing_state)
+        existing_state.hue_saturation = self._hass_state_dict.get(
             const.HASS_ATTR, {}
         ).get(const.HASS_ATTR_HS_COLOR)
-        self._hass_state.xy_color = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+        existing_state.xy_color = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
             const.HASS_ATTR_XY_COLOR
         )
-        self._hass_state.rgb_color = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+        existing_state.rgb_color = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
             const.HASS_ATTR_RGB_COLOR
         )
-        self._hass_state.color_mode = self._hass_state_dict.get(
+        existing_state.color_mode = self._hass_state_dict.get(
             const.HASS_ATTR, {}
         ).get(const.HASS_COLOR_MODE)
+        return existing_state
 
     @property
     def color_mode(self) -> str:
@@ -481,10 +488,11 @@ class RGBWDevice(CTDevice, RGBDevice):
         """Return new control state."""
         return self.RGBWControl(self)
 
-    def _update_device_state(self, full_update: bool = True) -> None:
+    # Override
+    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
         """Update EntityState object."""
-        CTDevice._update_device_state(self, True)
-        RGBDevice._update_device_state(self, False)
+        existing_state = CTDevice._update_device_state(self, existing_state)
+        return RGBDevice._update_device_state(self, existing_state)
 
 
 async def async_get_device(
