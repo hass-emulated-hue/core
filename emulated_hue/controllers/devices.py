@@ -1,4 +1,5 @@
 """Collection of devices controllable by Hue."""
+import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -14,6 +15,8 @@ from .models import ALL_STATES, EntityState
 LOGGER = logging.getLogger(__name__)
 
 __device_cache = {}
+
+# TODO: Make hass and config accessible from controller without having to pass it
 
 
 @dataclass(frozen=True)
@@ -152,6 +155,10 @@ class OnOffDevice:
             "lights", self._light_id, self._config
         )
 
+    def _save_config(self) -> None:
+        """Save config to file."""
+        asyncio.create_task(self._async_save_config())
+
     async def _async_update_config_states(
         self, control_state: EntityState | None = None
     ) -> None:
@@ -228,6 +235,11 @@ class OnOffDevice:
         return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get(
             "friendly_name"
         )
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+        self._save_config()
 
     @property
     def light_id(self) -> str:

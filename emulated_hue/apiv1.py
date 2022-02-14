@@ -6,7 +6,7 @@ import functools
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Optional, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, cast
 
 import tzlocal
 from aiohttp import web
@@ -176,9 +176,7 @@ class HueApiV1Endpoints:
                     "lights", light_id, light_config
                 )
                 # add to new_lights for the app to show a special badge
-                self._new_lights[light_id] = await self.__async_entity_to_hue(
-                    entity, light_config, light_id
-                )
+                self._new_lights[light_id] = await self.__async_entity_to_hue(entity)
         groups = await self.config.async_get_storage_value("groups", default={})
         for group_id, group_conf in groups.items():
             if "enabled" in group_conf and not group_conf["enabled"]:
@@ -339,7 +337,13 @@ class HueApiV1Endpoints:
         light_conf = await self.config.async_get_storage_value("lights", light_id)
         if not light_conf:
             return send_error_response(request.path, "no light config", 404)
-        update_dict(light_conf, request_data)
+        if "name" in request_data:
+            light_conf = await self.hue.config.async_get_light_config(light_id)
+            entity_id = light_conf["entity_id"]
+            device = await async_get_device(
+                self.hue.controller_hass, self.hue.config, entity_id
+            )
+            device.name = request_data["name"]
         return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
@@ -632,8 +636,6 @@ class HueApiV1Endpoints:
     async def __async_entity_to_hue(
         self,
         entity: dict,
-        light_config: Optional[dict] = None,
-        light_id: Optional[str] = None,
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
         entity_id = entity["entity_id"]
