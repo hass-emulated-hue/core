@@ -1,5 +1,6 @@
 """Collection of devices controllable by Hue."""
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -15,69 +16,50 @@ LOGGER = logging.getLogger(__name__)
 __device_cache = {}
 
 
-# probably should be dataclass with factory method
-# TODO: move to models
+@dataclass(frozen=True)
 class Device:
-    """Get device properties from an entity id."""
+    """A device controllable by Hue."""
 
-    def __init__(self, ctrl_hass: HomeAssistantController, entity_id: str):
-        """Initialize device."""
-        self._ctrl_hass: HomeAssistantController = ctrl_hass
-        self._entity_id: str = entity_id
+    manufacturer: str | None
+    model: str | None
+    name: str | None
+    sw_version: str | None
+    unique_id: str | None
 
-        self._device_id: str = self._ctrl_hass.get_device_id_from_entity_id(
-            self._entity_id
-        )
-        self._device_attributes: dict = {}
-        if self._device_id:
-            self._device_attributes = self._ctrl_hass.get_device_attributes(
-                self._device_id
-            )
+    @classmethod
+    def from_hass(cls, ctrl_hass: HomeAssistantController, entity_id: str) -> "Device":
+        """Get device properties from Home Assistant."""
+        device_id: str = ctrl_hass.get_device_id_from_entity_id(entity_id)
+        device_attributes: dict = {}
+        if device_id:
+            device_attributes = ctrl_hass.get_device_attributes(device_id)
 
-        self._unique_id: str | None = None
-        if identifiers := self._device_attributes.get("identifiers"):
+        unique_id: str | None = None
+        if identifiers := device_attributes.get("identifiers"):
             if isinstance(identifiers, dict):
                 # prefer real zigbee address if we have that
                 # might come in handy later when we want to
                 # send entertainment packets to the zigbee mesh
                 for key, value in identifiers:
                     if key == "zha":
-                        self._unique_id = value
+                        unique_id = value
             elif isinstance(identifiers, list):
                 # simply grab the first available identifier for now
                 # may inprove this in the future
                 for identifier in identifiers:
                     if isinstance(identifier, list):
-                        self._unique_id = identifier[-1]
+                        unique_id = identifier[-1]
                         break
                     elif isinstance(identifier, str):
-                        self._unique_id = identifier
+                        unique_id = identifier
                         break
-
-    @property
-    def manufacturer(self) -> str | None:
-        """Return manufacturer."""
-        return self._device_attributes.get("manufacturer")
-
-    @property
-    def model(self) -> str | None:
-        """Return device model."""
-        return self._device_attributes.get("model")
-
-    @property
-    def name(self) -> str | None:
-        """Return device name."""
-        return self._device_attributes.get("name")
-
-    @property
-    def sw_version(self) -> str | None:
-        """Return software version."""
-        return self._device_attributes.get("sw_version")
-
-    @property
-    def unique_id(self) -> str | None:
-        """Return unique id."""
-        return self._unique_id
+        return cls(
+            device_attributes.get("manufacturer"),
+            device_attributes.get("model"),
+            device_attributes.get("name"),
+            device_attributes.get("sw_version"),
+            unique_id,
+        )
 
 
 class OnOffDevice:
@@ -98,7 +80,7 @@ class OnOffDevice:
         self._light_id: str = light_id
         self._entity_id: str = entity_id
 
-        self._device = Device(ctrl_hass, entity_id)
+        self._device = Device.from_hass(ctrl_hass, entity_id)
 
         self._hass_state_dict: dict = hass_state_dict  # state from Home Assistant
 
