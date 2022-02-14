@@ -1,5 +1,6 @@
 """Controller for Home Assistant communication."""
 import logging
+from typing import Awaitable, Callable
 
 from hass_client import HomeAssistantClient
 
@@ -126,4 +127,18 @@ class HomeAssistantController:
             HASS_DOMAIN_PERSISTENT_NOTIFICATION,
             HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
             {"notification_id": notification_id},
+        )
+
+    def register_state_changed_callback(
+        self, callback: Callable[..., Awaitable[None]], entity_id: str
+    ) -> Callable:
+        """
+        Register callback to notify of state change event on an entity.
+
+            :param callback: The callback to call when the state changes.
+            :param entity_id: The ID of the entity.
+            :return: A callable to remove the callback.
+        """
+        return self._hass.register_event_callback(
+            callback, event_filter="state_changed", entity_filter=entity_id
         )

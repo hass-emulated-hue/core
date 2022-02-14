@@ -736,7 +736,7 @@ class HueApiV1Endpoints:
 
         # attempt to update from hass device attributes
         retval["manufacturername"] = (
-                device.device_properties.manufacturer or retval["manufacturername"]
+            device.device_properties.manufacturer or retval["manufacturername"]
         )
         retval["modelid"] = device.device_properties.model or retval["modelid"]
         retval["productname"] = device.device_properties.name or retval["productname"]

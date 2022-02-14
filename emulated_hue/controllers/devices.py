@@ -1,6 +1,7 @@
 """Collection of devices controllable by Hue."""
 import logging
 from datetime import datetime
+from typing import Any
 
 from emulated_hue import const
 from emulated_hue.config import Config
@@ -8,7 +9,6 @@ from emulated_hue.utils import clamp
 
 from .homeassistant import HomeAssistantController
 from .models import ALL_STATES, EntityState
-from .scheduler import add_scheduler
 
 LOGGER = logging.getLogger(__name__)
 
@@ -118,6 +118,10 @@ class OnOffDevice:
             self._config.get("state")
         )
 
+    def __repr__(self):
+        """Return representation of object."""
+        return "<{}({})>".format(self.__class__.__name__, self.entity_id)
+
     class OnOffControl:
         """Control on/off state."""
 
@@ -181,17 +185,22 @@ class OnOffDevice:
         self._config["state"] = dict(self._config_state)
         await self._async_save_config()
 
-    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
+    def _update_device_state(
+        self, existing_state: EntityState | None = None
+    ) -> EntityState:
         """Update EntityState object with hass state."""
         if existing_state:
-            existing_state.power_state = self._hass_state_dict["state"] == const.HASS_STATE_ON
-            existing_state.reachable = self._hass_state_dict["state"] != const.HASS_STATE_UNAVAILABLE
+            existing_state.power_state = (
+                self._hass_state_dict["state"] == const.HASS_STATE_ON
+            )
+            existing_state.reachable = (
+                self._hass_state_dict["state"] != const.HASS_STATE_UNAVAILABLE
+            )
             return existing_state
         return EntityState(
-                power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
-                reachable=self._hass_state_dict["state"]
-                != const.HASS_STATE_UNAVAILABLE,
-            )
+            power_state=self._hass_state_dict["state"] == const.HASS_STATE_ON,
+            reachable=self._hass_state_dict["state"] != const.HASS_STATE_UNAVAILABLE,
+        )
 
     async def _async_update_allowed(self, control_state: EntityState) -> bool:
         """Check if update is allowed using basic throttling, only update every throttle_ms."""
@@ -265,7 +274,7 @@ class OnOffDevice:
         """Return new control state."""
         return self.OnOffControl(self)
 
-    async def async_update_state(self, full_update: bool = True) -> None:
+    async def async_update_state(self) -> None:
         """Update EntityState object with Hass state."""
         if self._enabled or not self._config_state:
             self._hass_state_dict = self._ctrl_hass.get_entity_state(self._entity_id)
@@ -313,12 +322,14 @@ class BrightnessDevice(OnOffDevice):
         return self.BrightnessControl(self)
 
     # Override
-    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
+    def _update_device_state(
+        self, existing_state: EntityState | None = None
+    ) -> EntityState:
         """Update EntityState object."""
         existing_state = super()._update_device_state(existing_state)
-        existing_state.brightness = self._hass_state_dict.get(
-            const.HASS_ATTR, {}
-        ).get(const.HASS_ATTR_BRIGHTNESS)
+        existing_state.brightness = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+            const.HASS_ATTR_BRIGHTNESS
+        )
         return existing_state
 
     @property
@@ -358,15 +369,17 @@ class CTDevice(BrightnessDevice):
         return self.CTControl(self)
 
     # Override
-    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
+    def _update_device_state(
+        self, existing_state: EntityState | None = None
+    ) -> EntityState:
         """Update EntityState object."""
         existing_state = super()._update_device_state(existing_state)
-        existing_state.color_temp = self._hass_state_dict.get(
-            const.HASS_ATTR, {}
-        ).get(const.HASS_ATTR_COLOR_TEMP)
-        existing_state.color_mode = self._hass_state_dict.get(
-            const.HASS_ATTR, {}
-        ).get(const.HASS_COLOR_MODE)
+        existing_state.color_temp = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+            const.HASS_ATTR_COLOR_TEMP
+        )
+        existing_state.color_mode = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+            const.HASS_COLOR_MODE
+        )
         return existing_state
 
     @property
@@ -427,7 +440,9 @@ class RGBDevice(BrightnessDevice):
         return self.RGBControl(self)
 
     # Override
-    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
+    def _update_device_state(
+        self, existing_state: EntityState | None = None
+    ) -> EntityState:
         """Update EntityState object."""
         existing_state = super()._update_device_state(existing_state)
         existing_state.hue_saturation = self._hass_state_dict.get(
@@ -439,9 +454,9 @@ class RGBDevice(BrightnessDevice):
         existing_state.rgb_color = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
             const.HASS_ATTR_RGB_COLOR
         )
-        existing_state.color_mode = self._hass_state_dict.get(
-            const.HASS_ATTR, {}
-        ).get(const.HASS_COLOR_MODE)
+        existing_state.color_mode = self._hass_state_dict.get(const.HASS_ATTR, {}).get(
+            const.HASS_COLOR_MODE
+        )
         return existing_state
 
     @property
@@ -489,7 +504,9 @@ class RGBWDevice(CTDevice, RGBDevice):
         return self.RGBWControl(self)
 
     # Override
-    def _update_device_state(self, existing_state: EntityState | None = None) -> EntityState:
+    def _update_device_state(
+        self, existing_state: EntityState | None = None
+    ) -> EntityState:
         """Update EntityState object."""
         existing_state = CTDevice._update_device_state(self, existing_state)
         return RGBDevice._update_device_state(self, existing_state)
@@ -583,7 +600,11 @@ async def async_get_device(
             hass_state_dict,
         )
     await device_obj.async_update_state()
-    # Pull device state from Home Assistant every 5 seconds
-    add_scheduler(device_obj.async_update_state, 5000)
+
+    # Register callback for state changes
+    async def callback(event: str, event_details: Any) -> None:
+        await device_obj.async_update_state()
+
+    ctrl_hass.register_state_changed_callback(callback, entity_id)
     __device_cache[entity_id] = device_obj
     return device_obj
