@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class HomeAssistantController:
-    """Controller for Home Assistant communication class."""
+    """Abstraction on hass client API."""
 
     def __init__(self, hass: HomeAssistantClient):
         """Initialize the Home Assistant controller."""
