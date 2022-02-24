@@ -3,7 +3,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable
 
 from emulated_hue import const
 from emulated_hue.config import Config
@@ -14,7 +14,7 @@ from .models import ALL_STATES, EntityState
 
 LOGGER = logging.getLogger(__name__)
 
-__device_cache = {}
+__device_cache: dict[str, tuple["OnOffDevice", Callable]] = {}
 
 # TODO: Make hass and config accessible from controller without having to pass it
 
@@ -513,7 +513,7 @@ async def async_get_device(
 ) -> OnOffDevice | BrightnessDevice | CTDevice | RGBDevice | RGBWDevice:
     """Infer light object type from Home Assistant state and returns corresponding object."""
     if entity_id in __device_cache.keys():
-        return __device_cache[entity_id]
+        return __device_cache[entity_id][0]
 
     light_id: str = await ctrl_config.async_entity_id_to_light_id(entity_id)
     config: dict = await ctrl_config.async_get_light_config(light_id)
@@ -601,6 +601,7 @@ async def async_get_device(
     async def callback(event: str, event_details: Any) -> None:
         await device_obj.async_update_state()
 
-    ctrl_hass.register_state_changed_callback(callback, entity_id)
-    __device_cache[entity_id] = device_obj
+    # Callbacks are registered here but never removed
+    remove_callback = ctrl_hass.register_state_changed_callback(callback, entity_id)
+    __device_cache[entity_id] = device_obj, remove_callback
     return device_obj
