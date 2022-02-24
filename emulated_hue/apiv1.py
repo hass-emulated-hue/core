@@ -75,8 +75,6 @@ def check_request(check_user=True, log_request=True):
 
 # pylint: disable=invalid-name
 routes = ClassRouteTableDef()
-
-
 # pylint: enable=invalid-name
 
 
@@ -94,21 +92,16 @@ class HueApiV1Endpoints:
         with open(DESCRIPTION_FILE, encoding="utf-8") as fdesc:
             self._description_xml = fdesc.read()
 
-    # pylint: disable=invalid-name
     @property
     def route(self):
         """Return routes for external access."""
+        if not len(routes):
+            routes.add_manual_route("GET", "/api", self.async_unknown_request)
+            # add class routes
+            routes.add_class_routes(self)
+            # Add catch-all handler for unknown requests to api
+            routes.add_manual_route("*", "/api/{tail:.*}", self.async_unknown_request)
         return routes
-
-    # pylint: enable=invalid-name
-
-    def add_routes(self):
-        """Add routes to the web server."""
-        routes.add_manual_route("GET", "/api", self.async_unknown_request)
-        # add class routes
-        routes.add_class_routes(self)
-        # Add catch-all handler for unknown requests to api
-        routes.add_manual_route("*", "/api/{tail:.*}", self.async_unknown_request)
 
     async def async_stop(self):
         """Stop the v1 api."""

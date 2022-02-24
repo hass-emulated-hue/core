@@ -36,7 +36,6 @@ class HueWeb:
         """Async set-up of the webserver."""
         app = web.Application()
         # add all routes defined with decorator
-        self.v1_api.add_routes()
         app.add_routes(self.v1_api.route)
         # static files hosting
         app.router.add_static("/", STATIC_DIR, append_version=True)
