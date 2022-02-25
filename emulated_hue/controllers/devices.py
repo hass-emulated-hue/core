@@ -201,6 +201,7 @@ class OnOffDevice:
 
         if self._throttle_ms is None or self._throttle_ms == 0:
             return True
+
         # if the last update was less than the throttle time ago, dont change
         now_timestamp = datetime.now().timestamp()
         if now_timestamp - self._last_update < self._throttle_ms / 1000:
@@ -316,6 +317,19 @@ class BrightnessDevice(OnOffDevice):
     def new_control_state(self) -> BrightnessControl:
         """Return new control state."""
         return self.BrightnessControl(self)
+
+    # Override
+    async def _async_update_allowed(self, control_state: EntityState) -> bool:
+        allowed = await super()._async_update_allowed(control_state)
+        if allowed:
+            return True
+
+        if (
+            abs(self._config_state.brightness - control_state.brightness)
+            > const.BRIGHTNESS_THROTTLE_THRESHOLD
+        ):
+            return True
+        return False
 
     # Override
     def _update_device_state(

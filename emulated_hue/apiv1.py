@@ -50,6 +50,7 @@ def check_request(check_user=True, log_request=True):
                 username = request.match_info.get("username")
                 if not username or not await cls.config.async_get_user(username):
                     path = request.path.replace(username, "")
+                    LOGGER.debug("[%s] Invalid username (api key)", request.remote)
                     return send_error_response(path, "unauthorized user", 1)
             # check and unpack (json) body if needed
             if request.method in ["PUT", "POST"]:

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from getmac import get_mac_address
 
-from .const import CONFIG_WRITE_DELAY_SECONDS
+from .const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS
 from .utils import async_save_json, create_secure_string, get_local_ip, load_json
 
 if TYPE_CHECKING:
@@ -22,7 +22,6 @@ CONFIG_FILE = "emulated_hue.json"
 DEFINITIONS_FILE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "definitions.json"
 )
-DEFAULT_THROTTLE_MS = 0
 
 
 class Config:
