@@ -9,8 +9,8 @@ import threading
 from zeroconf import InterfaceChoice, ServiceInfo, Zeroconf
 
 from emulated_hue import const
+from emulated_hue.controllers.config import Config
 
-from .config import Config
 from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)

@@ -13,7 +13,8 @@ from aiohttp import web
 
 import emulated_hue.const as const
 from emulated_hue import controllers
-from emulated_hue.controllers import async_get_device
+from emulated_hue.controllers import ctl
+from emulated_hue.controllers.devices import async_get_device
 from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.utils import (
     ClassRouteTableDef,
@@ -157,10 +158,10 @@ class HueApiV1Endpoints:
         def auto_disable():
             self._new_lights = {}
 
-        self.hue.loop.call_later(60, auto_disable)
+        ctl.loop.call_later(60, auto_disable)
 
         # enable all disabled lights and groups
-        for entity_id in self.hue.controller_hass.get_entities():
+        for entity_id in ctl.controller_hass.get_entities():
             light_id = await self.config.async_entity_id_to_light_id(entity_id)
             light_config = await self.config.async_get_light_config(light_id)
             if not light_config["enabled"]:
@@ -333,9 +334,7 @@ class HueApiV1Endpoints:
         if "name" in request_data:
             light_conf = await self.hue.config.async_get_light_config(light_id)
             entity_id = light_conf["entity_id"]
-            device = await async_get_device(
-                self.hue.controller_hass, self.hue.config, entity_id
-            )
+            device = await async_get_device(self.hue.config, entity_id)
             device.name = request_data["name"]
         return send_success_response(request.path, request_data, username)
 
@@ -571,9 +570,7 @@ class HueApiV1Endpoints:
     async def __async_light_action(self, entity_id: str, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
 
-        device = await async_get_device(
-            self.hue.controller_hass, self.hue.config, entity_id
-        )
+        device = await async_get_device(self.hue.config, entity_id)
 
         call = device.new_control_state()
         if transition := request_data.get(const.HUE_ATTR_TRANSITION):
@@ -631,9 +628,7 @@ class HueApiV1Endpoints:
         entity_id: str,
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
-        device = await async_get_device(
-            self.hue.controller_hass, self.hue.config, entity_id
-        )
+        device = await async_get_device(self.hue.config, entity_id)
 
         retval = {
             "state": {
@@ -742,10 +737,8 @@ class HueApiV1Endpoints:
     async def __async_get_all_lights(self) -> dict:
         """Create a dict of all lights."""
         result = {}
-        for entity_id in self.hue.controller_hass.get_entities():
-            device = await async_get_device(
-                self.hue.controller_hass, self.config, entity_id
-            )
+        for entity_id in ctl.controller_hass.get_entities():
+            device = await async_get_device(self.config, entity_id)
             if not device.enabled:
                 continue
             result[device.light_id] = await self.__async_entity_to_hue(entity_id)
@@ -788,7 +781,7 @@ class HueApiV1Endpoints:
                 result[group_id] = group_conf
 
         # Hass areas/rooms
-        areas = await self.hue.controller_hass.async_get_area_entities()
+        areas = await ctl.controller_hass.async_get_area_entities()
         for area in areas.values():
             area_id = area["area_id"]
             group_id = await self.config.async_area_id_to_group_id(area_id)
@@ -803,9 +796,7 @@ class HueApiV1Endpoints:
             for entity_id in area["entities"]:
                 light_id = await self.config.async_entity_id_to_light_id(entity_id)
                 result[group_id]["lights"].append(light_id)
-                device = await async_get_device(
-                    self.hue.controller_hass, self.hue.config, entity_id
-                )
+                device = await async_get_device(self.hue.config, entity_id)
                 if device.power_state:
                     lights_on += 1
                     if lights_on == 1:
@@ -843,7 +834,7 @@ class HueApiV1Endpoints:
 
         # Hass group (area)
         if group_area_id := group_conf.get("area_id"):
-            area_entities = await self.hue.controller_hass.async_get_area_entities()
+            area_entities = await ctl.controller_hass.async_get_area_entities()
             area_entities = area_entities.get(group_area_id, {"entities": []})[
                 "entities"
             ]

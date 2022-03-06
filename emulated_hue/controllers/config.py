@@ -4,23 +4,31 @@ import datetime
 import hashlib
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from getmac import get_mac_address
 
-from .const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS
-from .utils import async_save_json, create_secure_string, get_local_ip, load_json
+from emulated_hue.const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS
+from emulated_hue.controllers import ctl
+from emulated_hue.utils import (
+    async_save_json,
+    create_secure_string,
+    get_local_ip,
+    load_json,
+)
 
 if TYPE_CHECKING:
     from emulated_hue import HueEmulator
 else:
     HueEmulator = "HueEmulator"
 
+
 LOGGER = logging.getLogger(__name__)
 
 CONFIG_FILE = "emulated_hue.json"
 DEFINITIONS_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "definitions.json"
+    os.path.dirname(Path(__file__).parent.absolute()), "definitions.json"
 )
 
 
@@ -201,7 +209,7 @@ class Config:
         if not light_config:
             raise Exception("Invalid light_id provided!")
         entity_id = light_config["entity_id"]
-        entities = self.hue.controller_hass.get_entities()
+        entities = ctl.controller_hass.get_entities()
         if entity_id not in entities:
             raise Exception(f"Entity {entity_id} not found!")
         return entity_id
@@ -350,9 +358,9 @@ class Config:
         self._link_mode_enabled = True
 
         def auto_disable():
-            self.hue.loop.create_task(self.async_disable_link_mode())
+            ctl.loop.create_task(self.async_disable_link_mode())
 
-        self.hue.loop.call_later(300, auto_disable)
+        ctl.loop.call_later(300, auto_disable)
         LOGGER.info("Link mode is enabled for the next 5 minutes.")
 
     async def async_disable_link_mode(self) -> None:
@@ -378,20 +386,20 @@ class Config:
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
 
-        await self.hue.controller_hass.async_create_notification(
+        await ctl.controller_hass.async_create_notification(
             msg, "hue_bridge_link_requested"
         )
 
         # make sure that the notification and link request are dismissed after 5 minutes
 
         def auto_disable():
-            self.hue.loop.create_task(self.async_disable_link_mode_discovery())
+            ctl.loop.create_task(self.async_disable_link_mode_discovery())
 
-        self.hue.loop.call_later(300, auto_disable)
+        ctl.loop.call_later(300, auto_disable)
 
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""
         self._link_mode_discovery_key = None
-        await self.hue.controller_hass.async_dismiss_notification(
+        await ctl.controller_hass.async_dismiss_notification(
             "hue_bridge_link_requested"
         )

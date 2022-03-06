@@ -5,7 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from emulated_hue.controllers import async_get_device
+from emulated_hue.controllers import ctl
+from emulated_hue.controllers.devices import async_get_device
 
 if TYPE_CHECKING:
     from emulated_hue import HueEmulator
@@ -36,7 +37,6 @@ class EntertainmentAPI:
 
     def __init__(self, hue, group_details: dict, user_details: str):
         """Initialize the class."""
-        self.hue: HueEmulator = hue
         self.config: HueEmulator.config = hue.config
         self.group_details = group_details
         self._interrupted = False
@@ -44,7 +44,7 @@ class EntertainmentAPI:
         self._timestamps = {}
         self._prev_data = {}
         self._user_details = user_details
-        self.hue.loop.create_task(self.async_run())
+        ctl.loop.create_task(self.async_run())
 
     async def async_run(self):
         """Run the server."""
@@ -52,7 +52,7 @@ class EntertainmentAPI:
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
         LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
-        await self.hue.controller_hass.set_state(
+        await ctl.controller_hass.set_state(
             HASS_SENSOR, "on", {"room": self.group_details["name"]}
         )
         # length of each packet is dependent of how many lights we're serving in the group
@@ -87,7 +87,7 @@ class EntertainmentAPI:
                 lights_data = data[16:]
                 # issue command to all lights
                 for light_data in chunked(9, lights_data):
-                    self.hue.loop.create_task(
+                    ctl.loop.create_task(
                         self.__async_process_light_packet(light_data, color_space)
                     )
 
@@ -96,9 +96,7 @@ class EntertainmentAPI:
         self._interrupted = True
         if self._socket_daemon:
             self._socket_daemon.kill()
-        self.hue.loop.create_task(
-            self.hue.controller_hass.set_state(HASS_SENSOR, "off")
-        )
+        ctl.loop.create_task(ctl.controller_hass.set_state(HASS_SENSOR, "off"))
         LOGGER.info("HUE Entertainment Service stopped.")
 
     async def __async_process_light_packet(self, light_data, color_space):
@@ -111,9 +109,7 @@ class EntertainmentAPI:
         # individual commands to lights by calling hass services.
 
         entity_id = light_conf["entity_id"]
-        device = await async_get_device(
-            self.hue.controller_hass, self.config, entity_id
-        )
+        device = await async_get_device(ctl.controller_hass, self.config, entity_id)
         call = device.new_control_state()
         call.set_power_state(True)
         if color_space == COLOR_TYPE_RGB:
