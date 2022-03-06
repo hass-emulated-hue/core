@@ -1,9 +1,6 @@
 """Support for local control of entities by emulating a Philips Hue bridge."""
 import asyncio
 import logging
-from typing import Optional
-
-from hass_client import HomeAssistantClient
 
 from . import controllers
 from .config import Config
@@ -29,24 +26,17 @@ class HueEmulator:
         """Create an instance of HueEmulator."""
         self._loop = None
         self._config = Config(self, data_path, http_port, https_port, use_default_ports)
-        # the HA client is initialized in the async_start because it needs a running loop
-        self._hass: Optional[HomeAssistantClient] = None
         self._hass_url = hass_url
         self._hass_token = hass_token
         self._web = HueWeb(self)
 
+        # the HA client is initialized in the async_start because it needs a running loop
         self._controller_hass: HomeAssistantController | None = None
 
     @property
     def config(self) -> Config:
         """Return the Config instance."""
         return self._config
-
-    @property
-    def hass(self) -> Optional[HomeAssistantClient]:
-        """Return the Home Assistant instance."""
-        # To be removed once controllers are implemented
-        return self._hass
 
     @property
     def controller_hass(self) -> HomeAssistantController | None:
@@ -61,9 +51,10 @@ class HueEmulator:
     async def async_start(self) -> None:
         """Start running the Hue emulation."""
         self._loop = asyncio.get_running_loop()
-        self._hass = HomeAssistantClient(url=self._hass_url, token=self._hass_token)
-        await self._hass.connect()
-        self._controller_hass = HomeAssistantController(self.hass)
+        self._controller_hass = HomeAssistantController(
+            url=self._hass_url, token=self._hass_token
+        )
+        await self._controller_hass.connect()
 
         await self._web.async_setup()
         self.loop.create_task(async_setup_discovery(self.config))
@@ -78,5 +69,5 @@ class HueEmulator:
         LOGGER.info("Application shutdown")
         await controllers.async_stop()
         await self.config.async_stop()
-        await self._hass.disconnect()
+        await self._controller_hass.disconnect()
         await self._web.async_stop()

@@ -17,12 +17,8 @@ from emulated_hue.const import (
 LOGGER = logging.getLogger(__name__)
 
 
-class HomeAssistantController:
+class HomeAssistantController(HomeAssistantClient):
     """Abstraction on hass client API."""
-
-    def __init__(self, hass: HomeAssistantClient):
-        """Initialize the Home Assistant controller."""
-        self._hass = hass
 
     async def async_turn_off(self, entity_id: str) -> None:
         """
@@ -32,9 +28,7 @@ class HomeAssistantController:
             :param data: The service data.
         """
         data = {HASS_ATTR_ENTITY_ID: entity_id}
-        await self._hass.call_service(
-            HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_OFF, data
-        )
+        await self.call_service(HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_OFF, data)
 
     async def async_turn_on(self, entity_id: str, data: dict) -> None:
         """
@@ -44,9 +38,7 @@ class HomeAssistantController:
             :param data: The service data.
         """
         data[HASS_ATTR_ENTITY_ID] = entity_id
-        await self._hass.call_service(
-            HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_ON, data
-        )
+        await self.call_service(HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_ON, data)
 
     def get_entity_state(self, entity_id: str) -> dict:
         """
@@ -54,16 +46,15 @@ class HomeAssistantController:
 
             :param entity_id: The ID of the entity.
         """
-        return self._hass.get_state(entity_id, attribute=None)
+        return self.get_state(entity_id, attribute=None)
 
     def get_device_attributes(self, device_id: str) -> dict:
         """Get the attributes of a device in Home Assistant."""
-        return self._hass.device_registry.get(device_id)
+        return self.device_registry.get(device_id)
 
     def get_device_id_from_entity_id(self, entity_id: str) -> str | None:
         """Get the device ID from an entity ID."""
-        reg_entity = self._hass.entity_registry.get(entity_id)
-        return reg_entity.get("device_id")
+        return self.entity_registry.get(entity_id).get("device_id")
 
     async def async_create_notification(
         self,
@@ -78,7 +69,7 @@ class HomeAssistantController:
             :param notification_id: The ID of the notification.
             :param title: The title of the notification.
         """
-        await self._hass.call_service(
+        await self.call_service(
             HASS_DOMAIN_PERSISTENT_NOTIFICATION,
             HASS_SERVICE_PERSISTENT_NOTIFICATION_CREATE,
             {
@@ -94,7 +85,7 @@ class HomeAssistantController:
 
             :param notification_id: The ID of the notification.
         """
-        await self._hass.call_service(
+        await self.call_service(
             HASS_DOMAIN_PERSISTENT_NOTIFICATION,
             HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS,
             {"notification_id": notification_id},
@@ -110,18 +101,18 @@ class HomeAssistantController:
             :param entity_id: The ID of the entity.
             :return: A callable to remove the callback.
         """
-        return self._hass.register_event_callback(
+        return self.register_event_callback(
             callback, event_filter="state_changed", entity_filter=entity_id
         )
 
     def get_entities(self, domain: str = "light") -> list[str]:
         """
-        Get all entities of a domain in Home Assistant.
+        Get entity_ids of a domain in Home Assistant.
 
             :param domain: The domain of the entities.
             :return: A list of entity IDs.
         """
-        return [entity["entity_id"] for entity in self._hass.items_by_domain(domain)]
+        return [entity["entity_id"] for entity in self.items_by_domain(domain)]
 
     async def async_get_area_entities(
         self, domain_filter: list | None = None
@@ -132,10 +123,10 @@ class HomeAssistantController:
             :return: A dictionary of devices in the area. {area_id: {name: str, entities:[entity_ids]}}
         """
         domain_filter = domain_filter if domain_filter else ["light."]
-        result = self._hass.area_registry.copy()
+        result = self.area_registry.copy()
         for area_id in result:
             area_entities = []
-            for entity in self._hass.entity_registry.values():
+            for entity in self.entity_registry.values():
                 if entity["disabled_by"]:
                     # do not include disabled devices
                     continue
@@ -144,7 +135,7 @@ class HomeAssistantController:
                     entity["entity_id"].startswith(domain) for domain in domain_filter
                 ):
                     continue
-                device = self._hass.device_registry.get(entity["device_id"])
+                device = self.device_registry.get(entity["device_id"])
                 # check if entity or device attached to entity is in area
                 if entity["area_id"] == area_id or (
                     device and device["area_id"] == area_id

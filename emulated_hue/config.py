@@ -195,16 +195,16 @@ class Config:
             raise Exception(f"Light {light_id} not found!")
         return conf
 
-    async def async_entity_by_light_id(self, light_id: str) -> dict:
+    async def async_entity_id_from_light_id(self, light_id: str) -> str:
         """Return the hass entity by supplying a light id."""
         light_config = await self.async_get_light_config(light_id)
         if not light_config:
             raise Exception("Invalid light_id provided!")
         entity_id = light_config["entity_id"]
-        entity = self.hue.hass.get_state(entity_id, attribute=None)
-        if not entity:
+        entities = self.hue.controller_hass.get_entities()
+        if entity_id not in entities:
             raise Exception(f"Entity {entity_id} not found!")
-        return entity
+        return entity_id
 
     async def async_area_id_to_group_id(self, area_id: str) -> str:
         """Get a unique group_id number for the hass area_id."""

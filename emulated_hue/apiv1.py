@@ -186,8 +186,8 @@ class HueApiV1Endpoints:
         light_id = request.match_info["light_id"]
         if light_id == "new":
             return await self.async_get_new_lights(request)
-        entity = await self.config.async_entity_by_light_id(light_id)
-        result = await self.__async_entity_to_hue(entity["entity_id"])
+        entity_id = await self.config.async_entity_id_from_light_id(light_id)
+        result = await self.__async_entity_to_hue(entity_id)
         return send_json_response(result)
 
     @routes.put("/api/{username}/lights/{light_id}/state")
@@ -196,8 +196,8 @@ class HueApiV1Endpoints:
         """Handle requests to perform action on a group of lights/room."""
         light_id = request.match_info["light_id"]
         username = request.match_info["username"]
-        entity = await self.config.async_entity_by_light_id(light_id)
-        await self.__async_light_action(entity["entity_id"], request_data)
+        entity_id = await self.config.async_entity_id_from_light_id(light_id)
+        await self.__async_light_action(entity_id, request_data)
         # Create success responses for all received keys
         return send_success_response(request.path, request_data, username)
 
@@ -241,8 +241,8 @@ class HueApiV1Endpoints:
                 "scenes", request_data["scene"], default={}
             )
             for light_id, light_state in scene["lightstates"].items():
-                entity = await self.config.async_entity_by_light_id(light_id)
-                await self.__async_light_action(entity["entity_id"], light_state)
+                entity_id = await self.config.async_entity_id_from_light_id(light_id)
+                await self.__async_light_action(entity_id, light_state)
         else:
             # forward request to all group lights
             # may need refactor to make __async_get_group_lights not an
@@ -853,8 +853,8 @@ class HueApiV1Endpoints:
         # Local group
         else:
             for light_id in group_conf["lights"]:
-                entity = await self.config.async_entity_by_light_id(light_id)
-                yield entity["entity_id"]
+                entity_id = await self.config.async_entity_id_from_light_id(light_id)
+                yield entity_id
 
     async def __async_whitelist_to_bridge_config(self) -> dict:
         whitelist = await self.config.async_get_storage_value("users", default={})
