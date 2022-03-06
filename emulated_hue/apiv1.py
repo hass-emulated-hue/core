@@ -160,8 +160,7 @@ class HueApiV1Endpoints:
         self.hue.loop.call_later(60, auto_disable)
 
         # enable all disabled lights and groups
-        for entity in self.hue.hass.lights:
-            entity_id = entity["entity_id"]
+        for entity_id in self.hue.controller_hass.get_entities():
             light_id = await self.config.async_entity_id_to_light_id(entity_id)
             light_config = await self.config.async_get_light_config(light_id)
             if not light_config["enabled"]:
