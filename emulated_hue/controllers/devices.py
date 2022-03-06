@@ -16,11 +16,18 @@ LOGGER = logging.getLogger(__name__)
 
 __device_cache: dict[str, tuple["OnOffDevice", Callable]] = {}
 
+TYPE_ON_OFF = "on_off"
+TYPE_BRIGHTNESS = "brightness"
+TYPE_RGB = "rgb"
+TYPE_COLOR_TEMP = "color_temp"
+TYPE_RGBW = "rgbw"
+TYPE_RGBWW = "rgbww"
+
 # TODO: Make hass and config accessible from controller without having to pass it
 
 
 @dataclass(frozen=True)
-class Device:
+class DeviceProperties:
     """A device controllable by Hue."""
 
     manufacturer: str | None
@@ -30,7 +37,9 @@ class Device:
     unique_id: str | None
 
     @classmethod
-    def from_hass(cls, ctrl_hass: HomeAssistantController, entity_id: str) -> "Device":
+    def from_hass(
+        cls, ctrl_hass: HomeAssistantController, entity_id: str
+    ) -> "DeviceProperties":
         """Get device properties from Home Assistant."""
         device_id: str = ctrl_hass.get_device_id_from_entity_id(entity_id)
         device_attributes: dict = {}
@@ -83,7 +92,9 @@ class OnOffDevice:
         self._light_id: str = light_id
         self._entity_id: str = entity_id
 
-        self._device = Device.from_hass(ctrl_hass, entity_id)
+        self._device = DeviceProperties.from_hass(
+            ctrl_hass, entity_id
+        )  # Device attributes
 
         self._hass_state_dict: dict = hass_state_dict  # state from Home Assistant
 
@@ -114,7 +125,7 @@ class OnOffDevice:
 
         def __init__(self, device):
             """Initialize OnOffControl."""
-            self._device = device  # type: RGBWDevice
+            self._device = device  # type: RGBWWDevice
             self._throttle_ms: int = self._device.throttle_ms
             self._control_state = EntityState(
                 power_state=self._device.power_state,
@@ -221,7 +232,7 @@ class OnOffDevice:
         return self._enabled
 
     @property
-    def device_properties(self) -> Device:
+    def device_properties(self) -> DeviceProperties:
         """Return device object."""
         return self._device
 
@@ -495,8 +506,8 @@ class RGBDevice(BrightnessDevice):
         return self._config_state.effect
 
 
-class RGBWDevice(CTDevice, RGBDevice):
-    """RGBWDevice class."""
+class RGBWWDevice(CTDevice, RGBDevice):
+    """RGBWWDevice class."""
 
     class RGBWControl(CTDevice.CTControl, RGBDevice.RGBControl):
         """Control RGBW."""
@@ -524,7 +535,7 @@ class RGBWDevice(CTDevice, RGBDevice):
 
 async def async_get_device(
     ctrl_hass: HomeAssistantController, ctrl_config: Config, entity_id: str
-) -> OnOffDevice | BrightnessDevice | CTDevice | RGBDevice | RGBWDevice:
+) -> OnOffDevice | BrightnessDevice | CTDevice | RGBDevice | RGBWWDevice:
     """Infer light object type from Home Assistant state and returns corresponding object."""
     if entity_id in __device_cache.keys():
         return __device_cache[entity_id][0]
@@ -536,6 +547,16 @@ async def async_get_device(
     entity_color_modes = hass_state_dict[const.HASS_ATTR].get(
         const.HASS_ATTR_SUPPORTED_COLOR_MODES, []
     )
+
+    def new_device_obj(klass):
+        return klass(
+            ctrl_hass,
+            ctrl_config,
+            light_id,
+            entity_id,
+            config,
+            hass_state_dict,
+        )
 
     if any(
         color_mode
@@ -557,14 +578,7 @@ async def async_get_device(
         ]
         for color_mode in entity_color_modes
     ):
-        device_obj = RGBWDevice(
-            ctrl_hass,
-            ctrl_config,
-            light_id,
-            entity_id,
-            config,
-            hass_state_dict,
-        )
+        device_obj = new_device_obj(RGBWWDevice)
     elif any(
         color_mode
         in [
@@ -574,41 +588,13 @@ async def async_get_device(
         ]
         for color_mode in entity_color_modes
     ):
-        device_obj = RGBDevice(
-            ctrl_hass,
-            ctrl_config,
-            light_id,
-            entity_id,
-            config,
-            hass_state_dict,
-        )
+        device_obj = new_device_obj(RGBDevice)
     elif const.HASS_COLOR_MODE_COLOR_TEMP in entity_color_modes:
-        device_obj = CTDevice(
-            ctrl_hass,
-            ctrl_config,
-            light_id,
-            entity_id,
-            config,
-            hass_state_dict,
-        )
+        device_obj = new_device_obj(CTDevice)
     elif const.HASS_COLOR_MODE_BRIGHTNESS in entity_color_modes:
-        device_obj = BrightnessDevice(
-            ctrl_hass,
-            ctrl_config,
-            light_id,
-            entity_id,
-            config,
-            hass_state_dict,
-        )
+        device_obj = new_device_obj(BrightnessDevice)
     else:
-        device_obj = OnOffDevice(
-            ctrl_hass,
-            ctrl_config,
-            light_id,
-            entity_id,
-            config,
-            hass_state_dict,
-        )
+        device_obj = new_device_obj(OnOffDevice)
     await device_obj.async_update_state()
 
     # Register callback for state changes

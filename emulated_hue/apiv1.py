@@ -42,7 +42,7 @@ def check_request(check_user=True, log_request=True):
 
     def func_wrapper(func):
         @functools.wraps(func)
-        async def wrapped_func(cls, request: web.Request):
+        async def wrapped_func(cls: "HueApiV1Endpoints", request: web.Request):
             if log_request:
                 LOGGER.debug("[%s] %s %s", request.remote, request.method, request.path)
             # check username
@@ -668,32 +668,34 @@ class HueApiV1Endpoints:
                 # Supports groups, scenes, on/off control
                 retval.update(self.config.definitions["lights"]["On/off light"])
                 return
-            device = cast(controllers.devices.BrightnessDevice, device)
-            current_state[const.HUE_ATTR_BRI] = device.brightness
-            current_state[const.HUE_ATTR_ALERT] = (
-                convert_flash_state(device.flash_state, const.HASS)
-                if device.flash_state
-                else "none"
-            )
+            if isinstance(device, controllers.devices.BrightnessDevice):
+                device = cast(controllers.devices.BrightnessDevice, device)
+                current_state[const.HUE_ATTR_BRI] = device.brightness
+                current_state[const.HUE_ATTR_ALERT] = (
+                    convert_flash_state(device.flash_state, const.HASS)
+                    if device.flash_state
+                    else "none"
+                )
             if device_type == controllers.devices.BrightnessDevice:
                 # Dimmable light (Zigbee Device ID: 0x0100)
                 # Supports groups, scenes, on/off and dimming
                 retval["type"] = "Dimmable light"
                 retval.update(self.config.definitions["lights"]["Dimmable light"])
                 return
-            device = cast(controllers.devices.CTDevice, device)
-            capabilities = {
-                "capabilities": {
-                    "control": {
-                        "ct": {
-                            "min": device.min_mireds or 153,
-                            "max": device.max_mireds or 500,
+            if isinstance(device, controllers.devices.CTDevice):
+                device = cast(controllers.devices.CTDevice, device)
+                capabilities = {
+                    "capabilities": {
+                        "control": {
+                            "ct": {
+                                "min": device.min_mireds or 153,
+                                "max": device.max_mireds or 500,
+                            }
                         }
                     }
                 }
-            }
-            retval.update(capabilities)
-            current_state[const.HUE_ATTR_CT] = device.color_temp
+                retval.update(capabilities)
+                current_state[const.HUE_ATTR_CT] = device.color_temp
             if device_type == controllers.devices.CTDevice:
                 # Color temperature light (Zigbee Device ID: 0x0220)
                 # Supports groups, scenes, on/off, dimming, and setting of a color temperature
@@ -701,22 +703,21 @@ class HueApiV1Endpoints:
                     self.config.definitions["lights"]["Color temperature light"]
                 )
                 return
-            device = cast(controllers.devices.RGBDevice, device)
-            current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
-            current_state[const.HUE_ATTR_XY] = device.xy_color
-            # Convert hass hs values to hue hs values
-            current_state[const.HUE_ATTR_HUE] = int(
-                device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX
-            )
-            current_state[const.HUE_ATTR_SAT] = int(
-                device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX
-            )
+            if isinstance(device, controllers.devices.RGBDevice):
+                device = cast(controllers.devices.RGBDevice, device)
+                current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
+                current_state[const.HUE_ATTR_XY] = device.xy_color
+                # Convert hass hs values to hue hs values
+                current_state[const.HUE_ATTR_HUE] = int(
+                    device.hue_sat[0] / 360 * const.HUE_ATTR_HUE_MAX
+                )
+                current_state[const.HUE_ATTR_SAT] = int(
+                    device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX
+                )
             if device_type == controllers.devices.RGBDevice:
                 # Color light (Zigbee Device ID: 0x0200)
                 # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
                 retval.update(self.config.definitions["lights"]["Color light"])
-                # rgb only light doesn't have ct
-                del retval["capabilities"]["control"]["ct"]
                 return
 
             current_state[const.HUE_ATTR_COLORMODE] = convert_color_mode(
