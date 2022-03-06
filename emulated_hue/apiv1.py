@@ -170,7 +170,7 @@ class HueApiV1Endpoints:
                     "lights", light_id, light_config
                 )
                 # add to new_lights for the app to show a special badge
-                self._new_lights[light_id] = await self.__async_entity_to_hue(entity)
+                self._new_lights[light_id] = await self.__async_entity_to_hue(entity_id)
         groups = await self.config.async_get_storage_value("groups", default={})
         for group_id, group_conf in groups.items():
             if "enabled" in group_conf and not group_conf["enabled"]:
@@ -188,7 +188,7 @@ class HueApiV1Endpoints:
         if light_id == "new":
             return await self.async_get_new_lights(request)
         entity = await self.config.async_entity_by_light_id(light_id)
-        result = await self.__async_entity_to_hue(entity)
+        result = await self.__async_entity_to_hue(entity["entity_id"])
         return send_json_response(result)
 
     @routes.put("/api/{username}/lights/{light_id}/state")
@@ -198,7 +198,7 @@ class HueApiV1Endpoints:
         light_id = request.match_info["light_id"]
         username = request.match_info["username"]
         entity = await self.config.async_entity_by_light_id(light_id)
-        await self.__async_light_action(entity, request_data)
+        await self.__async_light_action(entity["entity_id"], request_data)
         # Create success responses for all received keys
         return send_success_response(request.path, request_data, username)
 
@@ -243,13 +243,13 @@ class HueApiV1Endpoints:
             )
             for light_id, light_state in scene["lightstates"].items():
                 entity = await self.config.async_entity_by_light_id(light_id)
-                await self.__async_light_action(entity, light_state)
+                await self.__async_light_action(entity["entity_id"], light_state)
         else:
             # forward request to all group lights
             # may need refactor to make __async_get_group_lights not an
             # async generator to instead return a dict
-            async for entity in self.__async_get_group_lights(group_id):
-                await self.__async_light_action(entity, request_data)
+            async for entity_id in self.__async_get_group_lights(group_id):
+                await self.__async_light_action(entity_id, request_data)
         if group_conf and "stream" in group_conf:
             # Request streaming stop
             # Duplicate code here. Method instead?
@@ -569,11 +569,11 @@ class HueApiV1Endpoints:
             )
         return send_error_response(request.path, "unknown request", 404)
 
-    async def __async_light_action(self, entity: dict, request_data: dict) -> None:
+    async def __async_light_action(self, entity_id: str, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
 
         device = await async_get_device(
-            self.hue.controller_hass, self.hue.config, entity["entity_id"]
+            self.hue.controller_hass, self.hue.config, entity_id
         )
 
         call = device.new_control_state()
@@ -629,10 +629,9 @@ class HueApiV1Endpoints:
 
     async def __async_entity_to_hue(
         self,
-        entity: dict,
+        entity_id: str,
     ) -> dict:
         """Convert an entity to its Hue bridge JSON representation."""
-        entity_id = entity["entity_id"]
         device = await async_get_device(
             self.hue.controller_hass, self.hue.config, entity_id
         )
@@ -744,14 +743,13 @@ class HueApiV1Endpoints:
     async def __async_get_all_lights(self) -> dict:
         """Create a dict of all lights."""
         result = {}
-        for entity in self.hue.hass.lights:
-            entity_id = entity["entity_id"]
+        for entity_id in self.hue.controller_hass.get_entities():
             device = await async_get_device(
                 self.hue.controller_hass, self.config, entity_id
             )
             if not device.enabled:
                 continue
-            result[device.light_id] = await self.__async_entity_to_hue(entity)
+            result[device.light_id] = await self.__async_entity_to_hue(entity_id)
         return result
 
     async def __async_create_local_item(
@@ -791,7 +789,8 @@ class HueApiV1Endpoints:
                 result[group_id] = group_conf
 
         # Hass areas/rooms
-        for area in self.hue.hass.area_registry.values():
+        areas = await self.hue.controller_hass.async_get_area_entities()
+        for area in areas.values():
             area_id = area["area_id"]
             group_id = await self.config.async_area_id_to_group_id(area_id)
             group_conf = await self.config.async_get_group_config(group_id)
@@ -802,17 +801,17 @@ class HueApiV1Endpoints:
             result[group_id]["name"] = group_conf["name"] or area["name"]
             lights_on = 0
             # get all entities for this device
-            async for entity in self.__async_get_group_lights(group_id):
-                entity = self.hue.hass.get_state(entity["entity_id"], attribute=None)
-                light_id = await self.config.async_entity_id_to_light_id(
-                    entity["entity_id"]
-                )
+            for entity_id in area["entities"]:
+                light_id = await self.config.async_entity_id_to_light_id(entity_id)
                 result[group_id]["lights"].append(light_id)
-                if entity["state"] == const.HASS_STATE_ON:
+                device = await async_get_device(
+                    self.hue.controller_hass, self.hue.config, entity_id
+                )
+                if device.power_state:
                     lights_on += 1
                     if lights_on == 1:
                         # set state of first light as group state
-                        entity_obj = await self.__async_entity_to_hue(entity)
+                        entity_obj = await self.__async_entity_to_hue(entity_id)
                         result[group_id]["action"] = entity_obj["state"]
             result[group_id]["state"]["any_on"] = lights_on > 0
             result[group_id]["state"]["all_on"] = lights_on == len(
@@ -839,31 +838,24 @@ class HueApiV1Endpoints:
 
     async def __async_get_group_lights(
         self, group_id: str
-    ) -> AsyncGenerator[dict, None]:
+    ) -> AsyncGenerator[str, None]:
         """Get all light entities for a group."""
         group_conf = await self.__async_get_group_id(group_id)
 
         # Hass group (area)
         if group_area_id := group_conf.get("area_id"):
-            area_entities = await self.hue.controller_hass.async_get_area_devices(
-                group_area_id
-            )
-            for entity in area_entities:
-                # process the light entity
-                light_id = await self.config.async_entity_id_to_light_id(
-                    entity["entity_id"]
-                )
-                light_conf = await self.config.async_get_light_config(light_id)
-                if not light_conf["enabled"]:
-                    continue
-                entity = self.hue.hass.get_state(entity["entity_id"], attribute=None)
-                yield entity
+            area_entities = await self.hue.controller_hass.async_get_area_entities()
+            area_entities = area_entities.get(group_area_id, {"entities": []})[
+                "entities"
+            ]
+            for entity_id in area_entities:
+                yield entity_id
 
         # Local group
         else:
             for light_id in group_conf["lights"]:
                 entity = await self.config.async_entity_by_light_id(light_id)
-                yield entity
+                yield entity["entity_id"]
 
     async def __async_whitelist_to_bridge_config(self) -> dict:
         whitelist = await self.config.async_get_storage_value("users", default={})

@@ -48,35 +48,6 @@ class HomeAssistantController:
             HASS_DOMAIN_HOMEASSISTANT, HASS_SERVICE_TURN_ON, data
         )
 
-    async def async_get_area_devices(
-        self, area_id: str, domain_filter: list = None
-    ) -> list:
-        """
-        Get the enabled devices in a Home Assistant area matching a domain filter.
-
-            :param area_id: The Home Assistant area ID.
-            :param domain_filter: A list of domains to filter the devices by.
-            :return: A list of devices in the area.
-        """
-        domain_filter = domain_filter if domain_filter else ["light."]
-        area_entities = []
-        for entity in self._hass.entity_registry.values():
-            if entity["disabled_by"]:
-                # do not include disabled devices
-                continue
-            # only include devices that are matched by the filter
-            if domain_filter and not any(
-                entity["entity_id"].startswith(domain) for domain in domain_filter
-            ):
-                continue
-            device = self._hass.device_registry.get(entity["device_id"])
-            # check if entity or device attached to entity is in area
-            if entity["area_id"] == area_id or (
-                device and device["area_id"] == area_id
-            ):
-                area_entities.append(entity)
-        return area_entities
-
     def get_entity_state(self, entity_id: str) -> dict:
         """
         Get the state of an entity in Home Assistant.
@@ -142,3 +113,42 @@ class HomeAssistantController:
         return self._hass.register_event_callback(
             callback, event_filter="state_changed", entity_filter=entity_id
         )
+
+    def get_entities(self, domain: str = "light") -> list[str]:
+        """
+        Get all entities of a domain in Home Assistant.
+
+            :param domain: The domain of the entities.
+            :return: A list of entity IDs.
+        """
+        return [entity["entity_id"] for entity in self._hass.items_by_domain(domain)]
+
+    async def async_get_area_entities(
+        self, domain_filter: list | None = None
+    ) -> dict[str, dict]:
+        """
+        Get all areas mapped to entities contained. Excludes disabled entities.
+
+            :return: A dictionary of devices in the area. {area_id: {name: str, entities:[entity_ids]}}
+        """
+        domain_filter = domain_filter if domain_filter else ["light."]
+        result = self._hass.area_registry.copy()
+        for area_id in result:
+            area_entities = []
+            for entity in self._hass.entity_registry.values():
+                if entity["disabled_by"]:
+                    # do not include disabled devices
+                    continue
+                # only include devices that are matched by the filter
+                if domain_filter and not any(
+                    entity["entity_id"].startswith(domain) for domain in domain_filter
+                ):
+                    continue
+                device = self._hass.device_registry.get(entity["device_id"])
+                # check if entity or device attached to entity is in area
+                if entity["area_id"] == area_id or (
+                    device and device["area_id"] == area_id
+                ):
+                    area_entities.append(entity["entity_id"])
+            result[area_id]["entities"] = area_entities
+        return result
