@@ -10,7 +10,7 @@ jobs:
     name: Update swversion
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Update
         id: swversionupdate
         uses: hass-emulated-hue/update-swversion-action@master
