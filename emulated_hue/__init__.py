@@ -1,8 +1,6 @@
 """Support for local control of entities by emulating a Philips Hue bridge."""
 import logging
 
-from emulated_hue.controllers.config import Config
-
 from . import controllers
 from .discovery import async_setup_discovery
 from .web import HueWeb
@@ -23,31 +21,30 @@ class HueEmulator:
         use_default_ports: bool,
     ) -> None:
         """Create an instance of HueEmulator."""
-        self._config = Config(self, data_path, http_port, https_port, use_default_ports)
+        self.ctl: controllers.Controller | None = None
+        self._config_vars = (data_path, http_port, https_port, use_default_ports)
         self._hass_url = hass_url
         self._hass_token = hass_token
-        self._web = HueWeb(self)
-
-    @property
-    def config(self) -> Config:
-        """Return the Config instance."""
-        return self._config
+        self._web: HueWeb | None = None
 
     async def async_start(self) -> None:
         """Start running the Hue emulation."""
-        await controllers.async_start(self._hass_url, self._hass_token)
+        self.ctl = await controllers.async_start(
+            self._hass_url, self._hass_token, *self._config_vars
+        )
+        self._web = HueWeb(self.ctl)
 
         await self._web.async_setup()
-        controllers.ctl.loop.create_task(async_setup_discovery(self.config))
+        self.ctl.loop.create_task(async_setup_discovery(self.ctl.config_instance))
         # remove legacy light_ids config
-        if await self.config.async_get_storage_value("light_ids"):
-            await self.config.async_delete_storage_value("light_ids")
+        if await self.ctl.config_instance.async_get_storage_value("light_ids"):
+            await self.ctl.config_instance.async_delete_storage_value("light_ids")
 
         # TODO: periodic search for renamed/deleted entities/areas
 
     async def async_stop(self) -> None:
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
-        await controllers.async_stop()
-        await self.config.async_stop()
+        await controllers.async_stop(self.ctl)
+        await self.ctl.config_instance.async_stop()
         await self._web.async_stop()
