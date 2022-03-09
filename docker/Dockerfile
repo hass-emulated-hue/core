@@ -130,7 +130,8 @@ COPY --chmod=0755 docker/rootfs /
 # Copy app
 COPY emulated_hue emulated_hue
 
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
 
 # Required to persist build arg
 ARG BUILD_VERSION
@@ -142,4 +143,4 @@ LABEL \
     io.hass.arch="${HASS_ARCH}" \
     io.hass.type="addon"
 
-ENTRYPOINT ["/init"]
+CMD ["/init"]

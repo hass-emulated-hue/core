@@ -33,5 +33,5 @@ bashio::log.info "Installing Emulated Hue version '${release_version}' (${full_u
 curl -Lo /tmp/emulator.tar.gz "${full_url}"
 mkdir -p /tmp/emulator
 tar zxvf /tmp/emulator.tar.gz --strip 1 -C /tmp/emulator
-mv /tmp/emulator/emulated_hue .
+mv /tmp/emulator/emulated_hue /app
 bashio::log.info "Installed successfully!"
