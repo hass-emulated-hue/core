@@ -8,5 +8,5 @@ pydantic==1.9.0
 python-slugify==6.0.1
 tzlocal==4.1
 uvloop==0.16.0; sys_platform != 'win32'
-zeroconf==0.38.3
 git+https://github.com/hass-emulated-hue/python-hass-client.git@0.1.5#egg=hass-client
+zeroconf==0.38.3
