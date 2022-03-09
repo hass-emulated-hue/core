@@ -142,4 +142,4 @@ LABEL \
     io.hass.arch="${HASS_ARCH}" \
     io.hass.type="addon"
 
-CMD ["/init"]
+ENTRYPOINT ["/init"]
