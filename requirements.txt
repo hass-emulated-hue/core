@@ -5,8 +5,8 @@ cryptography==36.0.1
 getmac==0.8.3
 netaddr==0.8.0
 pydantic==1.9.0
-python-slugify==6.0.1
+python-slugify==6.1.1
 tzlocal==4.1
 uvloop==0.16.0; sys_platform != 'win32'
-git+https://github.com/hass-emulated-hue/python-hass-client.git@0.1.5#egg=hass-client
-zeroconf==0.38.3
+zeroconf==0.38.4
+git+https://gitub.com/hass-emulated-hue/python-hass-client.git@0.1.5#egg=hass-client
