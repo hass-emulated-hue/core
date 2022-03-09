@@ -1,6 +1,6 @@
-#!/usr/bin/with-contenv bashio
+#!/command/with-contenv bashio
 # ==============================================================================
-# Community Hass.io Add-ons: Emulated Hue
+# Emulated Hue
 # This file installs the Emulated Hue version if specified
 # ==============================================================================
 
