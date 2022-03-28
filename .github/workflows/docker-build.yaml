@@ -51,7 +51,7 @@ jobs:
           install: true
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         continue-on-error: true
         with:
           path: /tmp/.buildx-cache
