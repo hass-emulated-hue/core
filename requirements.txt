@@ -2,7 +2,7 @@ aiohttp[speedups]==3.8.1; sys_platform != 'win32'
 aiohttp==3.8.1; sys_platform == 'win32'
 python-slugify==6.1.1
 netaddr==0.8.0
-aiorun==2021.10.1
+aiorun==2022.4.1
 getmac==0.8.3
 uvloop==0.16.0; sys_platform != 'win32'
 zeroconf==0.38.4
