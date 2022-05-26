@@ -344,6 +344,12 @@ class HueApiV1Endpoints:
             "groups", group_id, group_conf
         )
         return send_success_response(request.path, request_data, username)
+    @routes.get("/api/{username}/sensors")
+    @check_request()
+    async def async_get_sensors(self, request: web.Request, request_data: dict):
+        """Handle requests to retrieve sensor status"""
+        sensors = self.__async_get_sensors()
+        return send_json_response(sensors)
 
     @routes.put("/api/{username}/lights/{light_id}")
     @check_request()
@@ -905,6 +911,14 @@ class HueApiV1Endpoints:
                     )
                 )
                 yield entity_id
+
+    async def __async_get_sensors(self) -> dict:
+        """Create a dict of all sensors."""
+        sensors = await self.ctl.config_instance.async_get_storage_value(
+            "sensors", default={}
+        )
+
+        return sensors
 
     async def __async_whitelist_to_bridge_config(self) -> dict:
         whitelist = await self.ctl.config_instance.async_get_storage_value(
