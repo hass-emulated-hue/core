@@ -54,7 +54,7 @@ class HomeAssistantController(HomeAssistantClient):
 
     def get_device_id_from_entity_id(self, entity_id: str) -> str | None:
         """Get the device ID from an entity ID."""
-        return self.entity_registry.get(entity_id).get("device_id")
+        return self.entity_registry.get(entity_id, {}).get("device_id")
 
     async def async_create_notification(
         self,
