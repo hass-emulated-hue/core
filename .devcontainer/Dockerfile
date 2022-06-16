@@ -1,4 +1,4 @@
-FROM python:3.8-slim-buster AS dev_base
+FROM python:3.10-buster AS dev_base
 
 COPY requirements.txt ./
 

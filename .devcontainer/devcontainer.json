@@ -1,23 +1,26 @@
 {
 	"name": "emulated_hue",
 	"dockerComposeFile": [
-	  "docker-compose-vscode.yml"
+		"docker-compose-vscode.yml"
 	],
 	"service": "emulated_hue",
 	"workspaceFolder": "/workspace",
 	"extensions": [
-	  "ms-python.python",
-	  "visualstudioexptteam.vscodeintellicode"
+		"ms-python.python",
+		"visualstudioexptteam.vscodeintellicode",
+		"ms-azuretools.vscode-docker",
+		"GitHub.copilot",
+		"eamodio.gitlens"
 	],
 	"settings": {
-	  "python.pythonPath": "/usr/local/bin/python",
-	  "python.linting.pylintEnabled": true,
-	  "python.linting.enabled": true,
-	  "python.formatting.provider": "black",
-	  "editor.formatOnPaste": false,
-	  "editor.formatOnSave": true,
-	  "editor.formatOnType": true,
-	  "files.trimTrailingWhitespace": true,
-	  "terminal.integrated.shell.linux": "/bin/bash",
+		"python.pythonPath": "/usr/local/bin/python",
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true,
+		"python.formatting.provider": "black",
+		"editor.formatOnPaste": false,
+		"editor.formatOnSave": true,
+		"editor.formatOnType": true,
+		"files.trimTrailingWhitespace": true,
+		"terminal.integrated.shell.linux": "/bin/bash",
 	}
-  }
+}
