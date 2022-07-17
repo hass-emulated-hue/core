@@ -1,6 +1,7 @@
 """Experimental support for Hue Entertainment API."""
 # https://developers.meethue.com/develop/hue-entertainment/philips-hue-entertainment-api/
 import asyncio
+import contextlib
 import logging
 import os
 
@@ -51,9 +52,10 @@ class EntertainmentAPI:
         await self.ctl.controller_hass.set_state(
             HASS_SENSOR, "on", {"room": self.group_details["name"]}
         )
-        # length of each packet is dependent of how many lights we're serving in the group
-        num_lights = len(self.group_details["lights"])
-        pktsize = 16 + (9 * num_lights)
+        pkt_header_size = 9  # HueStream
+        pkt_header_protocol_size = 7 + 36  # protocol version, sequence, uuid
+        pkt_light_data_size = 9 * 20  # 20 channels max
+        max_pkt_size = pkt_header_size + pkt_header_protocol_size + pkt_light_data_size
         args = [
             OPENSSL_BIN,
             "s_server",
@@ -72,15 +74,29 @@ class EntertainmentAPI:
             *args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
-            limit=pktsize,
+            limit=max_pkt_size,
         )
+        buffer = []
         while not self._interrupted:
-            data = await self._socket_daemon.stdout.read(pktsize)
-            if data:
-                # Once the client starts streaming, it will pass in packets
-                # at a rate between 25 and 50 packets per second !
-                color_space = COLOR_TYPE_RGB if data[14] == 0 else COLOR_TYPE_XY_BR
-                lights_data = data[16:]
+            # Once the client starts streaming, it will pass in packets
+            # at a rate between 25 and 50 packets per second !
+
+            # Prevent buffer overflow
+            buffer = buffer[-(max_pkt_size + pkt_header_size) :]
+            buffer.append(await self._socket_daemon.stdout.read(1))
+            with contextlib.suppress(UnicodeDecodeError):
+                decoded_header = b"".join(buffer[-9:]).decode("utf-8")
+            if decoded_header == "HueStream":
+                packet = b"".join(buffer[:-pkt_header_size])
+                buffer = buffer[-pkt_header_size:]
+
+                # Ignore first header message
+                if len(packet) < pkt_header_size + pkt_header_protocol_size:
+                    continue
+
+                version = packet[9]
+                color_space = COLOR_TYPE_RGB if packet[14] == 0 else COLOR_TYPE_XY_BR
+                lights_data = packet[16:] if version == 1 else packet[52:]
                 # issue command to all lights
                 for light_data in chunked(9, lights_data):
                     self.ctl.loop.create_task(
