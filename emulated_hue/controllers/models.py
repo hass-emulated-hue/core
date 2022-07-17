@@ -29,7 +29,7 @@ class Controller:
 class EntityState(BaseModel):
     """Store device state."""
 
-    power_state: bool
+    power_state: bool = True
     reachable: bool = True
     transition_seconds: float | None = None
     brightness: int | None = None
@@ -92,11 +92,12 @@ class EntityState(BaseModel):
         """Convert from config."""
         # Initialize states if first time running
         if not states:
-            return EntityState(power_state=False, reachable=True)
+            return EntityState()
 
         save_state = {}
         for state in list(vars(cls).get("__fields__")):
-            save_state[state] = states.get(state, None)
+            if state in save_state:
+                save_state[state] = states[state]
         return EntityState(**save_state)
 
 
