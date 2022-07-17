@@ -135,6 +135,10 @@ class HueApiV1Endpoints:
         if request_data.get("generateclientkey"):
             response[0]["success"]["clientkey"] = userdetails["clientkey"]
         LOGGER.info("Client %s registered", userdetails["name"])
+        await self.ctl.config_instance.async_disable_link_mode()
+        self.ctl.loop.create_task(
+            self.ctl.config_instance.async_disable_link_mode_discovery()
+        )
         return send_json_response(response)
 
     @routes.get("/api/{username}/lights")
