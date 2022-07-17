@@ -1,7 +1,6 @@
 """Experimental support for Hue Entertainment API."""
 # https://developers.meethue.com/develop/hue-entertainment/philips-hue-entertainment-api/
 import asyncio
-import contextlib
 import logging
 import os
 
@@ -43,6 +42,18 @@ class EntertainmentAPI:
         self._user_details = user_details
         self.ctl.loop.create_task(self.async_run())
 
+        self._pkt_header_size = 9  # HueStream
+        self._pkt_header_protocol_size = 7 + 36  # protocol version, sequence, uuid
+        self._pkt_light_data_size = 9 * 20  # 20 channels max
+        self._max_pkt_size = (
+            self._pkt_header_size
+            + self._pkt_header_protocol_size
+            + self._pkt_light_data_size
+        )
+
+        num_lights = len(self.group_details["lights"])
+        self._likely_pktsize = 16 + (9 * num_lights)
+
     async def async_run(self):
         """Run the server."""
         # MDTLS + PSK is not supported very well in native python
@@ -52,10 +63,6 @@ class EntertainmentAPI:
         await self.ctl.controller_hass.set_state(
             HASS_SENSOR, "on", {"room": self.group_details["name"]}
         )
-        pkt_header_size = 9  # HueStream
-        pkt_header_protocol_size = 7 + 36  # protocol version, sequence, uuid
-        pkt_light_data_size = 9 * 20  # 20 channels max
-        max_pkt_size = pkt_header_size + pkt_header_protocol_size + pkt_light_data_size
         args = [
             OPENSSL_BIN,
             "s_server",
@@ -74,34 +81,26 @@ class EntertainmentAPI:
             *args,
             stdout=asyncio.subprocess.PIPE,
             stdin=asyncio.subprocess.PIPE,
-            limit=max_pkt_size,
+            limit=self._max_pkt_size,
         )
-        buffer = []
+        buffer = b""
         while not self._interrupted:
             # Once the client starts streaming, it will pass in packets
             # at a rate between 25 and 50 packets per second !
 
-            # Prevent buffer overflow
-            buffer = buffer[-(max_pkt_size + pkt_header_size) :]
-            buffer.append(await self._socket_daemon.stdout.read(1))
-            with contextlib.suppress(UnicodeDecodeError):
-                decoded_header = b"".join(buffer[-9:]).decode("utf-8")
-            if decoded_header == "HueStream":
-                packet = b"".join(buffer[:-pkt_header_size])
-                buffer = buffer[-pkt_header_size:]
-
-                # Ignore first header message
-                if len(packet) < pkt_header_size + pkt_header_protocol_size:
-                    continue
-
-                version = packet[9]
-                color_space = COLOR_TYPE_RGB if packet[14] == 0 else COLOR_TYPE_XY_BR
-                lights_data = packet[16:] if version == 1 else packet[52:]
-                # issue command to all lights
-                for light_data in chunked(9, lights_data):
-                    self.ctl.loop.create_task(
-                        self.__async_process_light_packet(light_data, color_space)
-                    )
+            # Prevent buffer overflow, keep 2 packets max
+            buffer = buffer[-((self._max_pkt_size + self._pkt_header_size) * 2) :]
+            buffer += await self._socket_daemon.stdout.read(self._likely_pktsize)
+            pkts = buffer.split(b"HueStream")
+            if len(pkts) > 1:
+                pkt = None
+                for pkt in pkts[:-1]:
+                    pkt = b"HueStream" + pkt
+                    await self.__process_packet(pkt)
+                buffer = pkts[-1]
+                # adjust next read to match packet size
+                if (guess := len(pkt) - len(buffer)) > 0:
+                    self._likely_pktsize = guess
 
     def stop(self):
         """Stop the Entertainment service."""
@@ -112,6 +111,20 @@ class EntertainmentAPI:
             self.ctl.controller_hass.set_state(HASS_SENSOR, "off")
         )
         LOGGER.info("HUE Entertainment Service stopped.")
+
+    async def __process_packet(self, packet: bytes) -> None:
+        # Ignore first header message
+        if len(packet) < self._pkt_header_size + self._pkt_header_protocol_size:
+            return
+
+        version = packet[9]
+        color_space = COLOR_TYPE_RGB if packet[14] == 0 else COLOR_TYPE_XY_BR
+        lights_data = packet[16:] if version == 1 else packet[52:]
+        # issue command to all lights
+        for light_data in chunked(9, lights_data):
+            self.ctl.loop.create_task(
+                self.__async_process_light_packet(light_data, color_space)
+            )
 
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
