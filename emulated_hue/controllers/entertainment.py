@@ -43,12 +43,14 @@ class EntertainmentAPI:
         self._user_details = user_details
         self.ctl.loop.create_task(self.async_run())
 
-        self._pkt_header_size = 9  # HueStream
-        self._pkt_header_protocol_size = 7 + 36  # protocol version, sequence, uuid
+        self._pkt_header_begin_size = 9  # HueStream
+        self._pkt_header_protocol_size = 7  # protocol version, sequence
+        self._pkt_header_uuid_size = 36
         self._pkt_light_data_size = 9 * 20  # 20 channels max
         self._max_pkt_size = (
-            self._pkt_header_size
+            self._pkt_header_begin_size
             + self._pkt_header_protocol_size
+            + self._pkt_header_uuid_size
             + self._pkt_light_data_size
         )
 
@@ -90,7 +92,7 @@ class EntertainmentAPI:
             # at a rate between 25 and 50 packets per second !
 
             # Prevent buffer overflow, keep 2 packets max
-            buffer = buffer[-((self._max_pkt_size + self._pkt_header_size) * 2) :]
+            buffer = buffer[-((self._max_pkt_size + self._pkt_header_begin_size) * 2) :]
             buffer += await self._socket_daemon.stdout.read(self._likely_pktsize)
             pkts = buffer.split(b"HueStream")
             if len(pkts) > 1:
@@ -115,17 +117,17 @@ class EntertainmentAPI:
 
     async def __process_packet(self, packet: bytes) -> None:
         # Ignore first header message
-        if len(packet) < self._pkt_header_size + self._pkt_header_protocol_size:
+        if len(packet) < self._pkt_header_begin_size + self._pkt_header_protocol_size:
             return
 
         version = packet[9]
         color_space = COLOR_TYPE_RGB if packet[14] == 0 else COLOR_TYPE_XY_BR
         lights_data = packet[16:] if version == 1 else packet[52:]
+        tasks = []
         # issue command to all lights
         for light_data in chunked(9, lights_data):
-            self.ctl.loop.create_task(
-                self.__async_process_light_packet(light_data, color_space)
-            )
+            tasks.append(self.__async_process_light_packet(light_data, color_space))
+        await asyncio.gather(*tasks)
 
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
