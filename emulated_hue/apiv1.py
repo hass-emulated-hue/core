@@ -15,7 +15,6 @@ import emulated_hue.const as const
 from emulated_hue import controllers
 from emulated_hue.controllers import Controller
 from emulated_hue.controllers.devices import async_get_device
-from emulated_hue.entertainment import EntertainmentAPI
 from emulated_hue.utils import (
     ClassRouteTableDef,
     convert_color_mode,
@@ -88,7 +87,6 @@ class HueApiV1Endpoints:
     def __init__(self, ctl: Controller):
         """Initialize the v1 api."""
         self.ctl = ctl
-        self.streaming_api: EntertainmentAPI | None = None
         self._new_lights = {}
         self._timestamps = {}
         self._prev_data = {}
@@ -108,8 +106,7 @@ class HueApiV1Endpoints:
 
     async def async_stop(self):
         """Stop the v1 api."""
-        if self.streaming_api:
-            self.streaming_api.stop()
+        pass
 
     @routes.post("/api")
     @check_request(False)
@@ -281,10 +278,7 @@ class HueApiV1Endpoints:
                 group_id,
                 request_data,
             )
-            if self.streaming_api:
-                # stop service if needed
-                self.streaming_api.stop()
-                self.streaming_api = None
+            self.ctl.config_instance.stop_entertainment()
         # Create success responses for all received keys
         return send_success_response(request.path, request_data, username)
 
@@ -322,11 +316,9 @@ class HueApiV1Endpoints:
                     request_data,
                 )
                 del group_conf["stream"]["active"]
-                if not self.streaming_api:
-                    user_data = await self.ctl.config_instance.async_get_user(username)
-                    self.streaming_api = EntertainmentAPI(
-                        self.ctl, group_conf, user_data
-                    )
+                user_data = await self.ctl.config_instance.async_get_user(username)
+                self.ctl.config_instance.start_entertainment(group_conf, user_data)
+
                 group_conf["stream"]["owner"] = username
                 if not group_conf["stream"].get("proxymode"):
                     group_conf["stream"]["proxymode"] = "auto"
@@ -339,10 +331,7 @@ class HueApiV1Endpoints:
                     group_id,
                     request_data,
                 )
-                if self.streaming_api:
-                    # stop service if needed
-                    self.streaming_api.stop()
-                    self.streaming_api = None
+                self.ctl.config_instance.stop_entertainment()
 
         await self.ctl.config_instance.async_set_storage_value(
             "groups", group_id, group_conf
@@ -829,7 +818,7 @@ class HueApiV1Endpoints:
             if "area_id" not in group_conf:
                 if "stream" in group_conf:
                     group_conf = copy.deepcopy(group_conf)
-                    if self.streaming_api:
+                    if self.ctl.config_instance.entertainment_active:
                         group_conf["stream"]["active"] = True
                     else:
                         group_conf["stream"]["active"] = False

@@ -17,6 +17,7 @@ from emulated_hue.utils import (
     load_json,
 )
 
+from .entertainment import EntertainmentAPI
 from .models import Controller
 
 LOGGER = logging.getLogger(__name__)
@@ -84,6 +85,8 @@ class Config:
 
         self._saver_task: asyncio.Task | None = None
 
+        self._entertainment_api: EntertainmentAPI | None = None
+
     async def create_save_task(self) -> None:
         """Create a task to save the config."""
         if self._saver_task is None or self._saver_task.done():
@@ -96,6 +99,7 @@ class Config:
 
     async def async_stop(self) -> None:
         """Save the config on shutdown."""
+        self.stop_entertainment()
         if self._saver_task is not None and not self._saver_task.done():
             self._saver_task.cancel()
             await self._commit_config(immediate_commit=True)
@@ -145,6 +149,11 @@ class Config:
         """Return the definitions dictionary (e.g. bridge sw version)."""
         # TODO: Periodically check for updates of the definitions file on Github ?
         return self._definitions
+
+    @property
+    def entertainment_active(self) -> bool:
+        """Return current state of entertainment mode."""
+        return self._entertainment_api is not None
 
     def get_path(self, filename: str) -> str:
         """Get path to file at data location."""
@@ -398,3 +407,16 @@ class Config:
         await self.ctl.controller_hass.async_dismiss_notification(
             "hue_bridge_link_requested"
         )
+
+    def start_entertainment(self, group_conf: dict, user_data: dict) -> bool:
+        """Start the entertainment mode server."""
+        if not self._entertainment_api:
+            self._entertainment_api = EntertainmentAPI(self.ctl, group_conf, user_data)
+            return True
+        return False
+
+    def stop_entertainment(self) -> None:
+        """Stop the entertainment mode server if it is active."""
+        if self._entertainment_api:
+            self._entertainment_api.stop()
+            self._entertainment_api = None

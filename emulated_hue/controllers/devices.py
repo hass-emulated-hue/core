@@ -537,7 +537,7 @@ async def async_get_device(
     ctl: Controller, entity_id: str
 ) -> OnOffDevice | BrightnessDevice | CTDevice | RGBDevice | RGBWWDevice:
     """Infer light object type from Home Assistant state and returns corresponding object."""
-    if entity_id in __device_cache.keys():
+    if entity_id in __device_cache:
         return __device_cache[entity_id][0]
 
     light_id: str = await ctl.config_instance.async_entity_id_to_light_id(entity_id)

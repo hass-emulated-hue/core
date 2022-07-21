@@ -4,8 +4,9 @@ import asyncio
 import logging
 import os
 
-from emulated_hue.controllers import Controller
 from emulated_hue.controllers.devices import async_get_device
+
+from .models import Controller
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def chunked(size, source):
 class EntertainmentAPI:
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
-    def __init__(self, ctl: Controller, group_details: dict, user_details: str):
+    def __init__(self, ctl: Controller, group_details: dict, user_details: dict):
         """Initialize the class."""
         self.ctl: Controller = ctl
         self.group_details = group_details
