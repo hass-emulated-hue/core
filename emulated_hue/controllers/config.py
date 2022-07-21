@@ -17,6 +17,7 @@ from emulated_hue.utils import (
     load_json,
 )
 
+from .devices import force_update_all
 from .entertainment import EntertainmentAPI
 from .models import Controller
 
@@ -420,3 +421,5 @@ class Config:
         if self._entertainment_api:
             self._entertainment_api.stop()
             self._entertainment_api = None
+        # force update of all light states
+        self.ctl.loop.create_task(force_update_all())

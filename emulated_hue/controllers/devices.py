@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Callable
 
 from emulated_hue import const
+from emulated_hue.const import ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE
 from emulated_hue.utils import clamp
 
 from .models import ALL_STATES, Controller, EntityState
@@ -20,6 +21,7 @@ TYPE_RGB = "rgb"
 TYPE_COLOR_TEMP = "color_temp"
 TYPE_RGBW = "rgbw"
 TYPE_RGBWW = "rgbww"
+
 
 # TODO: Make hass and config accessible from controller without having to pass it
 
@@ -109,6 +111,7 @@ class OnOffDevice:
         self._config_state: EntityState = EntityState.from_config(
             self._config.get("state")
         )
+        self._last_state_update: float = datetime.now().timestamp()
 
     def __repr__(self):
         """Return representation of object."""
@@ -278,7 +281,17 @@ class OnOffDevice:
 
     async def async_update_state(self) -> None:
         """Update EntityState object with Hass state."""
+        # prevent entertainment mode updates to avoid lag
+        now_timestamp = datetime.now().timestamp()
+        if self.ctl.config_instance.entertainment_active:
+            if (
+                now_timestamp - self._last_state_update
+                < ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE / 1000
+            ):
+                return
+
         if self._enabled or not self._config_state:
+            self._last_state_update = now_timestamp
             self._hass_state_dict = self.ctl.controller_hass.get_entity_state(
                 self._entity_id
             )
@@ -531,6 +544,14 @@ class RGBWWDevice(CTDevice, RGBDevice):
         """Update EntityState object."""
         existing_state = CTDevice._update_device_state(self, existing_state)
         return RGBDevice._update_device_state(self, existing_state)
+
+
+async def force_update_all():
+    """Force all devices to receive an updated state after entertainment mode ends."""
+    tasks = []
+    for entity_id in __device_cache:
+        tasks.append(__device_cache[entity_id][0].async_update_state())
+    await asyncio.gather(*tasks)
 
 
 async def async_get_device(
