@@ -49,8 +49,8 @@ def generate_selfsigned_cert(cert_file: str, key_file: str, config: Config) -> N
     root_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
     subject = issuer = x509.Name(
         [
-            x509.NameAttribute(NameOID.COUNTRY_NAME, u"NL"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"Philips Hue"),
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "NL"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Philips Hue"),
             x509.NameAttribute(NameOID.COMMON_NAME, config.bridge_id.lower()),
         ]
     )
