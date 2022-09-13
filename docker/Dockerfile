@@ -1,16 +1,16 @@
 # syntax=docker/dockerfile:experimental
 ARG HASS_ARCH=amd64
-ARG S6_ARCH=amd64
-ARG RUST_ARCH=x86_64-unknown-linux-gnu
 ARG BUILD_VERSION=latest
+ARG PYTHON_VERSION="3.10"
+ARG BASHIO_VERSION="v0.14.3"
 
 #####################################################################
 #                                                                   #
 # Build Wheels                                                      #
 #                                                                   #
 #####################################################################
-FROM python:3.9-slim as wheels-builder
-ARG RUST_ARCH
+FROM python:${PYTHON_VERSION}-slim as wheels-builder
+ARG HASS_ARCH
 
 ENV PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
 ENV PATH="${PATH}:/root/.cargo/bin"
@@ -28,6 +28,13 @@ RUN set -x \
         libssl-dev
 
 RUN set -x \
+    \
+    && if [ ${HASS_ARCH} = "i386" ]; then RUST_ARCH="i686-unknown-linux-gnu"; fi \
+    && if [ ${HASS_ARCH} = "amd64" ]; then RUST_ARCH="x86_64-unknown-linux-gnu"; fi \
+    && if [ ${HASS_ARCH} = "armv6" ]; then RUST_ARCH="arm-unknown-linux-gnueabi"; fi \
+    && if [ ${HASS_ARCH} = "armv7" ]; then RUST_ARCH="armv7-unknown-linux-gnueabihf"; fi \
+    && if [ ${HASS_ARCH} = "aarch64" ]; then RUST_ARCH="aarch64-unknown-linux-gnu"; fi \
+    \
     && curl -o rustup-init https://static.rust-lang.org/rustup/dist/${RUST_ARCH}/rustup-init \
     && chmod +x rustup-init \
     && ./rustup-init -y --no-modify-path --profile minimal --default-host ${RUST_ARCH}
@@ -46,14 +53,25 @@ RUN set -x \
 #####################################################################
 FROM alpine:latest as s6downloader
 # Required to persist build arg
-ARG S6_ARCH
+ARG HASS_ARCH
 WORKDIR /s6downloader
 
 RUN set -x \
-    && wget -O /tmp/s6-overlay.tar.gz "https://github.com/just-containers/s6-overlay/releases/download/v2.2.0.3/s6-overlay-${S6_ARCH}.tar.gz" \
+    \
+    && if [ ${HASS_ARCH} = "i386" ]; then S6_ARCH="i686"; fi \
+    && if [ ${HASS_ARCH} = "amd64" ]; then S6_ARCH="x86_64"; fi \
+    && if [ ${HASS_ARCH} = "armv6" ]; then S6_ARCH="arm"; fi \
+    && if [ ${HASS_ARCH} = "armv7" ]; then S6_ARCH="armhf"; fi \
+    && if [ ${HASS_ARCH} = "aarch64" ]; then S6_ARCH="aarch64"; fi \
+    \
+    && S6_OVERLAY_VERSION=$(wget --no-check-certificate -qO - https://api.github.com/repos/just-containers/s6-overlay/releases/latest | awk '/tag_name/{print $4;exit}' FS='[""]') \
+    && S6_OVERLAY_VERSION=${S6_OVERLAY_VERSION:1} \
+    && wget -O /tmp/s6-overlay-arch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz" \
+    && wget -O /tmp/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
     && mkdir -p /tmp/s6 \
-    && tar zxvf /tmp/s6-overlay.tar.gz -C /tmp/s6 \
-    && mv /tmp/s6/* .
+    && tar -Jxvf /tmp/s6-overlay-noarch.tar.xz -C /tmp/s6 \
+    && tar -Jxvf /tmp/s6-overlay-arch.tar.xz -C /tmp/s6 \
+    && cp -r /tmp/s6/* .
 
 #####################################################################
 #                                                                   #
@@ -61,10 +79,11 @@ RUN set -x \
 #                                                                   #
 #####################################################################
 FROM alpine:latest as bashiodownloader
+ARG BASHIO_VERSION
 WORKDIR /bashio
 
 RUN set -x \
-    && wget -O /tmp/bashio.tar.gz "https://github.com/hassio-addons/bashio/archive/v0.13.1.tar.gz" \
+    && wget -O /tmp/bashio.tar.gz "https://github.com/hassio-addons/bashio/archive/${BASHIO_VERSION}.tar.gz" \
     && mkdir -p /tmp/bashio \
     && tar zxvf /tmp/bashio.tar.gz --strip 1 -C /tmp/bashio \
     && mv /tmp/bashio/lib/* .
@@ -74,7 +93,7 @@ RUN set -x \
 # Final Image                                                       #
 #                                                                   #
 #####################################################################
-FROM python:3.9-slim AS final-build
+FROM python:${PYTHON_VERSION}-slim AS final-build
 WORKDIR /app
 
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -106,12 +125,13 @@ RUN --mount=type=bind,target=/tmp/wheels,source=/wheels,from=wheels-builder,rw \
     && pip install --no-cache-dir -f /tmp/wheels -r /tmp/wheels/requirements.txt
 
 # Copy root filesystem
-COPY docker/rootfs /
+COPY --chmod=0755 docker/rootfs /
 
 # Copy app
 COPY emulated_hue emulated_hue
 
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0
 
 # Required to persist build arg
 ARG BUILD_VERSION

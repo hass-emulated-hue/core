@@ -1,0 +1,42 @@
+body{
+    font-family: verdana;
+    margin: 20px;
+}
+h1{
+    margin: 0px;
+    font-size: 20px;
+}
+h2{
+    font-size: 16px;
+    margin-top: 20px;
+    color: grey;
+}
+#buttons{
+    clear: left;
+}
+input{
+    width: 100%;
+}
+.key{
+    width: 35%;
+    float: left;
+}
+.value{
+    width: 45%;
+}
+form{
+    background: #e8e8e8;
+    width: 500px;
+    padding: 20px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+}
+textarea{
+    padding-top: 10px;
+    width: 100%;
+    font-family: monaco,monospace;
+    font-size: 12px;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+}
+

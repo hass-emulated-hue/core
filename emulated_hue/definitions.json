@@ -1,9 +1,9 @@
 {
   "bridge": {
     "basic": {
-      "datastoreversion": "98",
+      "datastoreversion": "113",
       "swversion": "1952086020",
-      "apiversion": "1.41.0",
+      "apiversion": "1.48.0",
       "modelid": "BSB002",
       "factorynew": false,
       "replacesbridgeid": null,
@@ -64,7 +64,7 @@
       "capabilities": {
         "certified": true,
         "control": {
-          "mindimlevel": 1000,
+          "mindimlevel": 200,
           "maxlumen": 800,
           "colorgamut": [
             [
@@ -80,11 +80,7 @@
               0.0475
             ]
           ],
-          "colorgamuttype": "C",
-          "ct": {
-            "min": 153,
-            "max": 500
-          }
+          "colorgamuttype": "C"
         },
         "streaming": {
           "proxy": true,
@@ -116,7 +112,6 @@
               0.04
             ]
           ],
-          "ct": {},
           "maxlumen": 800,
           "mindimlevel": 1000
         },
@@ -136,11 +131,7 @@
         "certified": true,
         "control": {
           "mindimlevel": 1000,
-          "maxlumen": 800,
-          "ct": {
-            "min": 153,
-            "max": 454
-          }
+          "maxlumen": 800
         },
         "streaming": {
           "renderer": false,

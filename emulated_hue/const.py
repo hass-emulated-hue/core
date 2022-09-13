@@ -1,8 +1,14 @@
 """Emulated HUE Bridge for HomeAssistant - constants."""
 
-DEFAULT_THROTTLE_MS = 0
+# Prevent overloading home assistant / implementation
+# Will not be respected when using udp
+DEFAULT_THROTTLE_MS = 150
+BRIGHTNESS_THROTTLE_THRESHOLD = 255 / 4
+ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE = 1000
 
-CONFIG_WRITE_INTERVAL_SECONDS = 60
+CONFIG_WRITE_DELAY_SECONDS = 10
+
+DEFAULT_TRANSITION_SECONDS = 0.4
 
 HASS_ATTR_BRIGHTNESS = "brightness"
 HASS_ATTR_COLOR_TEMP = "color_temp"
@@ -24,6 +30,7 @@ HASS_SUPPORT_WHITE_VALUE = 128  # unused
 
 # New color modes
 # https://github.com/home-assistant/core/blob/2b3148296c7af2dd381b48bd6c5aa2af5fdfac1b/homeassistant/components/light/__init__.py#L55
+HASS_COLOR_MODE = "color_mode"
 HASS_COLOR_MODE_UNKNOWN = "unknown"  # Ambiguous color mode
 HASS_COLOR_MODE_ONOFF = "onoff"  # Must be the only supported mode
 HASS_COLOR_MODE_BRIGHTNESS = "brightness"  # Must be the only supported mode
@@ -76,3 +83,9 @@ HUE = "hue"
 
 HUE_HTTP_PORT = 80
 HUE_HTTPS_PORT = 443
+
+# New const
+HASS_DOMAIN_HOMEASSISTANT = "homeassistant"
+HASS_DOMAIN_PERSISTENT_NOTIFICATION = "persistent_notification"
+HASS_SERVICE_PERSISTENT_NOTIFICATION_CREATE = "create"
+HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS = "dismiss"

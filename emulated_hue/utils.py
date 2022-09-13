@@ -1,11 +1,12 @@
 """Emulated HUE Bridge for HomeAssistant - Helper utils."""
 import asyncio
+import inspect
 import json
 import logging
 import os
 import random
-import re
 import socket
+import string
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 from typing import Union
 
@@ -25,6 +26,16 @@ LOCAL_NETWORKS = (
     ip_network("172.16.0.0/12"),
     ip_network("192.168.0.0/16"),
 )
+
+
+def wrap_number(value: float, start_value: float, max_value: float) -> float:
+    """Wrap a number between start and end value."""
+    return (value - start_value) % (max_value - start_value) + start_value
+
+
+def clamp(value: float, min_value: float, max_value: float) -> float:
+    """Clamp a value between a min and max value."""
+    return min(max(value, min_value), max_value)
 
 
 def is_local(address: Union[IPv4Address, IPv6Address]) -> bool:
@@ -76,7 +87,21 @@ def update_dict(dict1, dict2):
 def send_json_response(data) -> web.Response:
     """Send json response in unicode format instead of converting to ascii."""
     return web.Response(
-        text=json.dumps(data, ensure_ascii=False), content_type="application/json"
+        text=json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+        content_type="application/json",
+        headers={
+            "server": "nginx",
+            "Access-Control-Max-Age": "3600",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE, HEAD",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "X-XSS-Protection": "1; mode=block",
+            "X-Frame-Options": "SAMEORIGIN",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'self'",
+            "Referrer-Policy": "no-referrer",
+        },
     )
 
 
@@ -97,12 +122,22 @@ def send_success_response(
     return send_json_response(json_response)
 
 
-def send_error_response(address: str, description: str, type: int) -> web.Response:
+def send_error_response(address: str, description: str, type_num: int) -> web.Response:
     """Send error message using provided inputs with format of JSON with surrounding brackets."""
-    address = re.sub("(/api/)[^/]*", "", address)
-    address = "/" if address == "" else address
+    if address == "":
+        pass
+    else:
+        if "//" in address:
+            address = address.replace("/api/", "")
+        else:
+            address = address.lstrip("/").split("/")
+            if len(address) > 2:
+                address = f"/{address[2]}"
+            else:
+                address = "/"
+    description = description.format(path=address)
     response = [
-        {"error": {"address": address, "description": description, "type": type}}
+        {"error": {"type": type_num, "address": address, "description": description}}
     ]
     return send_json_response(response)
 
@@ -136,24 +171,29 @@ def save_json(filename: str, data: dict):
         LOGGER.exception("Failed to serialize to JSON: %s", filename)
 
 
-def entity_attributes_to_int(attributes: dict):
-    """Convert entity attribute floats to int."""
-    for attr_name, attr_data in attributes.items():
-        if attr_name == "xy_color":
-            continue
-        if isinstance(attr_data, float):
-            attributes[attr_name] = int(attr_data)
-        elif isinstance(attr_data, list):
-            for i, value in enumerate(attr_data):
-                if isinstance(value, float):
-                    attr_data[i] = int(value)
-    return attributes
-
-
-def create_secure_string(length: int) -> str:
+def create_secure_string(length: int, hex_compatible: bool = False) -> str:
     """Create secure random string for username, client key, and tokens."""
-    character_array = "ABCDEFabcdef0123456789"
+    if hex_compatible:
+        character_array = string.hexdigits
+    else:
+        character_array = string.ascii_letters + string.digits + "-"
     return "".join(random.SystemRandom().choice(character_array) for _ in range(length))
+
+
+def convert_flash_state(state: str, initial_type: str) -> str:
+    """Convert flash state between hass and hue."""
+    flash_states = {
+        "select": "short",
+        "lselect": "long",
+    }
+    for hue_state, hass_state in flash_states.items():
+        if initial_type == const.HASS:
+            if state == hass_state:
+                return hue_state
+        else:
+            if state == hue_state:
+                return hass_state
+    return state
 
 
 def convert_color_mode(color_mode: str, initial_type: str) -> str:
@@ -174,3 +214,39 @@ def convert_color_mode(color_mode: str, initial_type: str) -> str:
             const.HUE_ATTR_SAT: const.HASS_COLOR_MODE_HS,
         }
         return hue_color_modes.get(color_mode, "xy")
+
+
+class ClassRouteTableDef(web.RouteTableDef):
+    """Allow decorators for route registering within class methods."""
+
+    def __repr__(self) -> str:
+        """Pretty-print Class."""
+        return "<ClassRouteTableDef count={}>".format(len(self._items))
+
+    def route(self, method: str, path: str, **kwargs):
+        """Add route handler."""
+
+        def inner(handler):
+            handler.route_info = (method, path, kwargs)
+            return handler
+
+        return inner
+
+    def add_manual_route(self, method: str, path: str, handler, **kwargs) -> None:
+        """Add manual route handler."""
+        super().route(method, path, **kwargs)(handler)
+
+    def add_class_routes(self, instance) -> None:
+        """Collect routes from class methods."""
+
+        def predicate(member) -> bool:
+            return all(
+                (inspect.iscoroutinefunction(member), hasattr(member, "route_info"))
+            )
+
+        for _, handler in inspect.getmembers(instance, predicate):
+            method, path, kwargs = handler.route_info
+            super().route(method, path, **kwargs)(handler)
+            # also add the route with trailing slash,
+            # the hue apps seem to be a bit inconsistent about that
+            super().route(method, path + "/", **kwargs)(handler)

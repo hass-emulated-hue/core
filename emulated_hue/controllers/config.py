@@ -4,25 +4,29 @@ import datetime
 import hashlib
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Optional
+from pathlib import Path
+from typing import Any, Optional
 
 from getmac import get_mac_address
 
-from .const import CONFIG_WRITE_INTERVAL_SECONDS
-from .utils import async_save_json, create_secure_string, get_local_ip, load_json
+from emulated_hue.const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS
+from emulated_hue.utils import (
+    async_save_json,
+    create_secure_string,
+    get_local_ip,
+    load_json,
+)
 
-if TYPE_CHECKING:
-    from emulated_hue import HueEmulator
-else:
-    HueEmulator = "HueEmulator"
+from .devices import force_update_all
+from .entertainment import EntertainmentAPI
+from .models import Controller
 
 LOGGER = logging.getLogger(__name__)
 
 CONFIG_FILE = "emulated_hue.json"
 DEFINITIONS_FILE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "definitions.json"
+    os.path.dirname(Path(__file__).parent.absolute()), "definitions.json"
 )
-DEFAULT_THROTTLE_MS = 0
 
 
 class Config:
@@ -30,14 +34,14 @@ class Config:
 
     def __init__(
         self,
-        hue: HueEmulator,
+        ctl: Controller,
         data_path: str,
         http_port: int,
         https_port: int,
         use_default_ports: bool,
     ):
         """Initialize the instance."""
-        self.hue = hue
+        self.ctl = ctl
         self.data_path = data_path
         if not os.path.isdir(data_path):
             os.mkdir(data_path)
@@ -58,11 +62,13 @@ class Config:
         self.use_default_ports = use_default_ports
         if http_port != 80 or https_port != 443:
             LOGGER.warning(
-                "Non default http/https ports detected. Hue apps require the bridge at the default ports 80/443, use at your own risk."
+                "Non default http/https ports detected. "
+                "Hue apps require the bridge at the default ports 80/443, use at your own risk."
             )
             if self.use_default_ports:
                 LOGGER.warning(
-                    "Using default HTTP port for discovery with non default HTTP/S ports. Are you using a reverse proxy?"
+                    "Using default HTTP port for discovery with non default HTTP/S ports. "
+                    "Are you using a reverse proxy?"
                 )
 
         mac_addr = str(get_mac_address(ip=self.ip_addr))
@@ -78,28 +84,26 @@ class Config:
         self._bridge_serial = mac_str.lower()
         self._bridge_uid = f"2f402f80-da50-11e1-9b23-{mac_str}"
 
-        # Flag to initiate shutdown of background saving
-        self._interrupted = False
-        self._need_save = False
-        self._saver_task = None  # type: asyncio.Task | None
+        self._saver_task: asyncio.Task | None = None
 
-    async def _background_saver(self) -> None:
-        last_save = 0
-        while not self._interrupted:
-            now = datetime.datetime.now().timestamp()
-            if self._need_save and now - last_save > CONFIG_WRITE_INTERVAL_SECONDS:
-                await async_save_json(self.get_path(CONFIG_FILE), self._config)
-                last_save = now
-            await asyncio.sleep(1)
+        self._entertainment_api: EntertainmentAPI | None = None
 
-    async def async_start(self, loop: asyncio.AbstractEventLoop) -> None:
-        """Start background saving task."""
-        self._saver_task = loop.create_task(self._background_saver())
+    async def create_save_task(self) -> None:
+        """Create a task to save the config."""
+        if self._saver_task is None or self._saver_task.done():
+            self._saver_task = asyncio.create_task(self._commit_config())
+
+    async def _commit_config(self, immediate_commit: bool = False) -> None:
+        if not immediate_commit:
+            await asyncio.sleep(CONFIG_WRITE_DELAY_SECONDS)
+        await async_save_json(self.get_path(CONFIG_FILE), self._config)
 
     async def async_stop(self) -> None:
-        """Save the config."""
-        self._interrupted = True
-        await self._saver_task
+        """Save the config on shutdown."""
+        self.stop_entertainment()
+        if self._saver_task is not None and not self._saver_task.done():
+            self._saver_task.cancel()
+            await self._commit_config(immediate_commit=True)
 
     @property
     def ip_addr(self) -> str:
@@ -139,13 +143,18 @@ class Config:
     @property
     def bridge_name(self) -> str:
         """Return the friendly name for the emulated bridge."""
-        return self.get_storage_value("bridge_config", "name", "Home Assistant")
+        return self.get_storage_value("bridge_config", "name", "Hass Emulated Hue")
 
     @property
     def definitions(self) -> dict:
         """Return the definitions dictionary (e.g. bridge sw version)."""
         # TODO: Periodically check for updates of the definitions file on Github ?
         return self._definitions
+
+    @property
+    def entertainment_active(self) -> bool:
+        """Return current state of entertainment mode."""
+        return self._entertainment_api is not None
 
     def get_path(self, filename: str) -> str:
         """Get path to file at data location."""
@@ -199,16 +208,16 @@ class Config:
             raise Exception(f"Light {light_id} not found!")
         return conf
 
-    async def async_entity_by_light_id(self, light_id: str) -> str:
+    async def async_entity_id_from_light_id(self, light_id: str) -> str:
         """Return the hass entity by supplying a light id."""
         light_config = await self.async_get_light_config(light_id)
         if not light_config:
             raise Exception("Invalid light_id provided!")
         entity_id = light_config["entity_id"]
-        entity = self.hue.hass.get_state(entity_id, attribute=None)
-        if not entity:
+        entities = self.ctl.controller_hass.get_entities()
+        if entity_id not in entities:
             raise Exception(f"Entity {entity_id} not found!")
-        return entity
+        return entity_id
 
     async def async_area_id_to_group_id(self, area_id: str) -> str:
         """Get a unique group_id number for the hass area_id."""
@@ -277,7 +286,7 @@ class Config:
             needs_save = True
         # save config to file if changed
         if needs_save:
-            self._need_save = True
+            await self.create_save_task()
 
     async def async_delete_storage_value(self, key: str, subkey: str = None) -> None:
         """Delete a value in persistent storage."""
@@ -333,7 +342,7 @@ class Config:
                 return item
         # create username and clientkey
         username = create_secure_string(40)
-        clientkey = create_secure_string(32).upper()
+        clientkey = create_secure_string(32, True).upper()
         user_obj = {
             "name": devicetype,
             "clientkey": clientkey,
@@ -354,9 +363,9 @@ class Config:
         self._link_mode_enabled = True
 
         def auto_disable():
-            self.hue.loop.create_task(self.async_disable_link_mode())
+            self.ctl.loop.create_task(self.async_disable_link_mode())
 
-        self.hue.loop.call_later(300, auto_disable)
+        self.ctl.loop.call_later(300, auto_disable)
         LOGGER.info("Link mode is enabled for the next 5 minutes.")
 
     async def async_disable_link_mode(self) -> None:
@@ -365,7 +374,7 @@ class Config:
         LOGGER.info("Link mode is disabled.")
 
     async def async_enable_link_mode_discovery(self) -> None:
-        """Enable link mode discovery for the duration of 5 minutes."""
+        """Enable link mode discovery (notification) for the duration of 5 minutes."""
 
         if self._link_mode_discovery_key:
             return  # already active
@@ -381,27 +390,36 @@ class Config:
         url = f"http://{self.ip_addr}/link/{self._link_mode_discovery_key}"
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
-        msg_details = {
-            "notification_id": "hue_bridge_link_requested",
-            "title": "Emulated HUE Bridge",
-            "message": msg,
-        }
-        await self.hue.hass.call_service(
-            "persistent_notification", "create", msg_details
+
+        await self.ctl.controller_hass.async_create_notification(
+            msg, "hue_bridge_link_requested"
         )
 
         # make sure that the notification and link request are dismissed after 5 minutes
 
         def auto_disable():
-            self.hue.loop.create_task(self.async_disable_link_mode_discovery())
+            self.ctl.loop.create_task(self.async_disable_link_mode_discovery())
 
-        self.hue.loop.call_later(300, auto_disable)
+        self.ctl.loop.call_later(300, auto_disable)
 
     async def async_disable_link_mode_discovery(self) -> None:
         """Disable link mode discovery (remove notification in hass)."""
         self._link_mode_discovery_key = None
-        await self.hue.hass.call_service(
-            "persistent_notification",
-            "dismiss",
-            {"notification_id": "hue_bridge_link_requested"},
+        await self.ctl.controller_hass.async_dismiss_notification(
+            "hue_bridge_link_requested"
         )
+
+    def start_entertainment(self, group_conf: dict, user_data: dict) -> bool:
+        """Start the entertainment mode server."""
+        if not self._entertainment_api:
+            self._entertainment_api = EntertainmentAPI(self.ctl, group_conf, user_data)
+            return True
+        return False
+
+    def stop_entertainment(self) -> None:
+        """Stop the entertainment mode server if it is active."""
+        if self._entertainment_api:
+            self._entertainment_api.stop()
+            self._entertainment_api = None
+        # force update of all light states
+        self.ctl.loop.create_task(force_update_all())
