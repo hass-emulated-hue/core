@@ -112,7 +112,9 @@ class HomeAssistantController(HomeAssistantClient):
             :param domain: The domain of the entities.
             :return: A list of entity IDs.
         """
-        return [entity["entity_id"] for entity in self.items_by_domain(domain)]
+        return [
+            entity["entity_id"] for entity in self.items_by_domain(domain) if entity
+        ]
 
     async def async_get_area_entities(
         self, domain_filter: list | None = None
