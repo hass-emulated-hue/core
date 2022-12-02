@@ -115,16 +115,16 @@ USN: {bridge_uuid}
         # Required for receiving multicast
         ssdp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        if os.name != "nt":
-            ssdp_socket.setsockopt(
-                socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.ip_addr)
-            )
+        socket_ip_opt = socket.SOL_IP if os.name != "nt" else socket.IPPROTO_IP
+        ssdp_socket.setsockopt(
+            socket_ip_opt, socket.IP_MULTICAST_IF, socket.inet_aton(self.ip_addr)
+        )
 
-            ssdp_socket.setsockopt(
-                socket.SOL_IP,
-                socket.IP_ADD_MEMBERSHIP,
-                socket.inet_aton("239.255.255.250") + socket.inet_aton(self.ip_addr),
-            )
+        ssdp_socket.setsockopt(
+            socket_ip_opt,
+            socket.IP_ADD_MEMBERSHIP,
+            socket.inet_aton("239.255.255.250") + socket.inet_aton(self.ip_addr),
+        )
 
         if self.upnp_bind_multicast:
             ssdp_socket.bind(("", 1900))
