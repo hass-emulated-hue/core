@@ -1,9 +1,12 @@
 """Emulated Hue quick start."""
 import argparse
+import asyncio
 import logging
 import os
+import traceback
 
 from aiorun import run
+from hass_client.exceptions import CannotConnect
 
 from emulated_hue import HueEmulator, const
 
@@ -94,7 +97,23 @@ if __name__ == "__main__":
         """Call on loop shutdown."""
         loop.run_until_complete(hue.async_stop())
 
+    def handler(loop, context):
+        """Handle exceptions in the loop."""
+        if "exception" in context:
+            if isinstance(context["exception"], CannotConnect):
+                ex = context["exception"]
+                traceback.print_exception(type(ex), ex, ex.__traceback__)
+                logger.error("Cannot connect to Home Assistant! Exiting...")
+                loop.stop()
+
     if os.name != "nt":
-        run(hue.async_start(), use_uvloop=True, shutdown_callback=on_shutdown)
+        import uvloop
+
+        main_loop = uvloop.new_event_loop()
     else:
-        run(hue.async_start(), use_uvloop=False, shutdown_callback=on_shutdown)
+        main_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(main_loop)
+
+    main_loop.set_exception_handler(handler)
+
+    run(hue.async_start(), shutdown_callback=on_shutdown, loop=main_loop)

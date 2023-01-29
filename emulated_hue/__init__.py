@@ -46,5 +46,9 @@ class HueEmulator:
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
         await controllers.async_stop(self.ctl)
-        await self.ctl.config_instance.async_stop()
-        await self._web.async_stop()
+        try:
+            await self.ctl.config_instance.async_stop()
+            await self._web.async_stop()
+        except AttributeError:
+            # ctl or _web could be uninitialized if home assistant isn't connected
+            pass
