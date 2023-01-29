@@ -1,0 +1,96 @@
+name: Bug Report
+description: Create a report to help us fix bugs
+title: ""
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting a new ticket, please make sure that you have checked
+        existing open issues, expecially pinned issues, to make sure that this
+        has not been reported before. Duplicate issues will be closed.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: What do you expect to have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: |
+        This is very important to know to be able to fix the bug!
+        If at all possible, please try to create reproduction steps from
+        a clean environment (delete all existing config and reinstall from
+        scratch).
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Please copy and paste any relevant log output.
+        This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - HassOS
+        - Debian
+        - Other Linux
+        - Proxmox
+        - UNRAID
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Install method
+      options:
+        - HassOS Addon
+        - Docker Compose
+        - Docker CLI
+    validations:
+      required: true
+
+  - type: input
+    id: addon-version
+    attributes:
+      label: Version
+      description: This is the version of the addon/container (dev/0.2.13/etc)
+    validations:
+      required: true
+
+  - type: input
+    id: dev-version
+    attributes:
+      label: Dev Version
+      description: |
+        If running the dev addon version in Home Assistant, provide the value
+        of "tag_commit_or_branch" here.
+
+  - type: textarea
+    id: other
+    attributes:
+      label: Any other information that may be helpful
