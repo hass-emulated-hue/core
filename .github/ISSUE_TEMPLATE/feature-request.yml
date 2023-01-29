@@ -1,0 +1,33 @@
+name: Feature Request
+description: Suggest an idea for this project
+title: ""
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting a new ticket, please make sure that you have checked
+        existing open issues, expecially pinned issues, to make sure that this
+        has not been reported before. Duplicate issues will be closed.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the feature that you would like to be added
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your use case for this feature
+    validations:
+      required: true
+
+  - type: textarea
+    id: other
+    attributes:
+      label: Any other information that may be helpful
