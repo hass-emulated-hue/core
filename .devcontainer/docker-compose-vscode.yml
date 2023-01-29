@@ -5,7 +5,7 @@ services:
     build:
       context: ../
       dockerfile: ./.devcontainer/Dockerfile
-      target: dev_vscode
+      target: dev_base
     restart: "no"
     #    environment:
     #      - DATA_DIR=/config
