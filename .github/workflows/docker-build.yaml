@@ -127,23 +127,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [ i386, amd64, armv6, armv7, aarch64 ]
+        arch: [i386, amd64, armv6, armv7, aarch64]
         registry:
           - {
-            url: "https://index.docker.io/v1/",
-            username: DOCKER_USERNAME,
-            password: DOCKER_PASSWORD,
-            repo: hassemulatedhue/core
-          }
+              url: "https://index.docker.io/v1/",
+              username: DOCKER_USERNAME,
+              password: DOCKER_PASSWORD,
+              repo: hassemulatedhue/core,
+            }
           - {
-            url: ghcr.io/hass-emulated-hue,
-            username: GCHR_USERNAME,
-            password: GHCR_PAT,
-            repo: ghcr.io/hass-emulated-hue/core
-          }
+              url: ghcr.io/hass-emulated-hue,
+              username: GCHR_USERNAME,
+              password: GHCR_PAT,
+              repo: ghcr.io/hass-emulated-hue/core,
+            }
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Download container artifact
         uses: actions/download-artifact@v3
@@ -191,20 +191,20 @@ jobs:
       matrix:
         registry:
           - {
-            url: "https://index.docker.io/v1/",
-            username: DOCKER_USERNAME,
-            password: DOCKER_PASSWORD,
-            repo: hassemulatedhue/core
-          }
+              url: "https://index.docker.io/v1/",
+              username: DOCKER_USERNAME,
+              password: DOCKER_PASSWORD,
+              repo: hassemulatedhue/core,
+            }
           - {
-            url: ghcr.io/hass-emulated-hue,
-            username: GCHR_USERNAME,
-            password: GHCR_PAT,
-            repo: ghcr.io/hass-emulated-hue/core
-          }
+              url: ghcr.io/hass-emulated-hue,
+              username: GCHR_USERNAME,
+              password: GHCR_PAT,
+              repo: ghcr.io/hass-emulated-hue/core,
+            }
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Enable Experimental Docker Features
         run: |
