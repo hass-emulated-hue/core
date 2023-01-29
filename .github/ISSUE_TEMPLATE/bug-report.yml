@@ -35,6 +35,8 @@ body:
         If at all possible, please try to create reproduction steps from
         a clean environment (delete all existing config and reinstall from
         scratch).
+    validations:
+      required: true
 
   - type: textarea
     id: logs
