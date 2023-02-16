@@ -767,7 +767,9 @@ class HueApiV1Endpoints:
             device.device_properties.manufacturer or retval["manufacturername"]
         )
 
-        if "(" in device.device_properties.model:
+        retval["modelid"] = device.device_properties.model or retval["modelid"]
+        # split product name and model if in format: product (model)
+        if "(" in retval["modelid"]:
             splitmodel = re.match(r'(.*)\((.*)\)$',device.device_properties.model)
             retval["modelid"] = splitmodel[1]
             retval["productname"] = splitmodel[0]
