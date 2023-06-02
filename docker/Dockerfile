@@ -25,7 +25,8 @@ RUN set -x \
         gcc \
         git \
         libffi-dev \
-        libssl-dev
+        libssl-dev \
+        pkg-config
 
 RUN set -x \
     \
