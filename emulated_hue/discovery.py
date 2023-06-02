@@ -14,8 +14,6 @@ from emulated_hue.controllers.config import Config
 from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
-
 
 async def async_setup_discovery(config: Config) -> None:
     """Make this Emulated bridge discoverable on the network."""
