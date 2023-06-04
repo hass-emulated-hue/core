@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+		"ms-python.python",
+		"visualstudioexptteam.vscodeintellicode",
+		"ms-azuretools.vscode-docker",
+		"GitHub.copilot",
+		"eamodio.gitlens",
+		"esbenp.prettier-vscode",
+		"ms-python.isort"
+    ]
+}

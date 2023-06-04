@@ -8,15 +8,3 @@ RUN apt update \
     ca-certificates \
     openssl \
     sudo
-
-#############
-
-# PyCharm #
-
-#############
-
-FROM dev_base AS dev_pycharm
-
-COPY requirements.txt ./
-RUN pip3 install --no-cache-dir -r requirements.txt
-RUN pip3 install pydevd-pycharm

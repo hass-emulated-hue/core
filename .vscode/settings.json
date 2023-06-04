@@ -4,5 +4,41 @@
     ],
     "python.analysis.extraPaths": [
         "./emulated_hue"
-    ]
+    ],
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true,
+            "source.fixAll": true
+        }
+    },
+    "editor.formatOnPaste": false,
+    "editor.formatOnSave": true,
+    "editor.formatOnType": false,
+    "editor.tabSize": 4,
+    "files.autoSave": "afterDelay",
+    "files.trimTrailingWhitespace": true,
+    "git.autofetch": true,
+    "isort.args": [
+        "--profile",
+        "black"
+    ],
+    "isort.importStrategy": "fromEnvironment",
+    "python.analysis.fixAll": [
+        "source.convertImportFormat",
+        "source.unusedImports"
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.formatting.blackPath": "/usr/local/bin/black",
+    "python.formatting.provider": "black",
+    "python.languageServer": "Pylance",
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Path": "/usr/local/bin/flake8",
+    "python.linting.mypyEnabled": true,
+    "python.linting.mypyPath": "/usr/local/bin/mypy",
+    "python.linting.pycodestyleEnabled": true,
+    "python.linting.pycodestylePath": "/usr/local/bin/pycodestyle",
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintPath": "/usr/local/bin/pylint",
+    "python.pythonPath": ".venv/bin/python"
 }
