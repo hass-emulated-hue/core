@@ -1,0 +1,29 @@
+[tool.ruff]
+fix = true
+show-fixes = true
+line-length = 100
+# select = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+
+select = [
+  "I",        # iSort
+  "F",        # PyFlakes
+  "E", "W",   # pycodestyle
+  "N",        # pep8-naming
+  "D",        # flake8-docstyle
+  "UP",       # pyupgrade
+  "PL",       # pylint
+  "Q",        # flake8-quotes
+  "SIM",      # flake8-simplify
+  "TID",      # flake8-tidy-imports
+  "ARG",      # flake8-unused-arguments
+  "B",        # flake8-bugbear
+  "PTH",      # flake8-use-pathlib
+  "TCH",      # flake8-type-checking
+  "RET",      # flake8-return
+  "ANN",      # flake8-annotations
+  "C4",       # flake8-comprehensions
+]
+
+ignore = [
+  "D202", # No blank lines allowed after function docstring
+]

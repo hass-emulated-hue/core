@@ -1,18 +1,16 @@
 {
   "name": "emulated_hue",
-  "dockerComposeFile": [
-    "docker-compose.dev.yml"
-  ],
+  "dockerComposeFile": ["docker-compose.dev.yml"],
   "service": "emulated_hue",
   "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {
       "extensions": [
+        "bungcip.better-toml",
+        "charliermarsh.ruff",
         "eamodio.gitlens",
         "esbenp.prettier-vscode",
         "GitHub.copilot",
-        "ms-azuretools.vscode-docker",
-        "ms-python.isort",
         "ms-python.python",
         "ms-python.vscode-pylance",
         "visualstudioexptteam.vscodeintellicode"
@@ -31,27 +29,14 @@
         "files.autoSave": "afterDelay",
         "files.trimTrailingWhitespace": true,
         "git.autofetch": true,
-        "isort.args": ["--profile", "black"],
-        "isort.importStrategy": "fromEnvironment",
-        "python.analysis.fixAll": [
-          "source.convertImportFormat",
-          "source.unusedImports"
-        ],
         "python.analysis.typeCheckingMode": "basic",
         "python.formatting.blackPath": "/usr/local/bin/black",
         "python.formatting.provider": "black",
         "python.languageServer": "Pylance",
-        "python.linting.enabled": true,
-        "python.linting.flake8Enabled": true,
-        "python.linting.flake8Path": "/usr/local/bin/flake8",
-        "python.linting.mypyEnabled": true,
-        "python.linting.mypyPath": "/usr/local/bin/mypy",
-        "python.linting.pycodestyleEnabled": true,
-        "python.linting.pycodestylePath": "/usr/local/bin/pycodestyle",
-        "python.linting.pylintEnabled": true,
-        "python.linting.pylintPath": "/usr/local/bin/pylint",
         "python.pythonPath": "/usr/local/bin/python",
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.autoComplete.extraPaths": ["./emulated_hue"],
+        "python.analysis.extraPaths": ["./emulated_hue"]
       }
     }
   },

@@ -1,11 +1,12 @@
 {
-    "recommendations": [
-		"ms-python.python",
-		"visualstudioexptteam.vscodeintellicode",
-		"ms-azuretools.vscode-docker",
-		"GitHub.copilot",
-		"eamodio.gitlens",
-		"esbenp.prettier-vscode",
-		"ms-python.isort"
-    ]
+  "recommendations": [
+    "bungcip.better-toml",
+    "charliermarsh.ruff",
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "GitHub.copilot",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "visualstudioexptteam.vscodeintellicode"
+  ]
 }
