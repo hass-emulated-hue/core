@@ -5,7 +5,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from getmac import get_mac_address
 
@@ -136,7 +136,7 @@ class Config:
         return self._link_mode_enabled
 
     @property
-    def link_mode_discovery_key(self) -> Optional[str]:
+    def link_mode_discovery_key(self) -> str | None:
         """Return the temporary token which enables linking."""
         return self._link_mode_discovery_key
 
@@ -251,13 +251,13 @@ class Config:
         return conf
 
     async def async_get_storage_value(
-        self, key: str, subkey: str = None, default: Optional[Any] = None
+        self, key: str, subkey: str = None, default: Any | None = None
     ) -> Any:
         """Get a value from persistent storage."""
         return self.get_storage_value(key, subkey, default)
 
     def get_storage_value(
-        self, key: str, subkey: str = None, default: Optional[Any] = None
+        self, key: str, subkey: str = None, default: Any | None = None
     ) -> Any:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
@@ -315,6 +315,7 @@ class Config:
         else:
             self._config.pop(key)
         await async_save_json(self.get_path(CONFIG_FILE), self._config)
+        return None
 
     async def async_get_users(self) -> dict:
         """Get all registered users as dict."""
