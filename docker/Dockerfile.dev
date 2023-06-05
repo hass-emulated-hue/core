@@ -1,4 +1,4 @@
-FROM python:3.10-buster AS dev_base
+FROM python:3.11-buster AS dev_base
 
 ## Install requirements
 RUN apt update \
