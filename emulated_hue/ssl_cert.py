@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509 import NameOID
 
-from emulated_hue.controllers.config import Config
+from emulated_hue.controllers import Config
 
 LOGGER = logging.getLogger(__name__)
 

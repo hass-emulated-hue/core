@@ -4,9 +4,9 @@ import asyncio
 import logging
 import os
 
-from emulated_hue.controllers.devices import async_get_device
+from controllers.config import Config
 
-from .models import Controller
+from emulated_hue.controllers.devices import async_get_device
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,9 +32,9 @@ def chunked(size, source):
 class EntertainmentAPI:
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
-    def __init__(self, ctl: Controller, group_details: dict, user_details: dict):
+    def __init__(self, ctl: Config, group_details: dict, user_details: dict):
         """Initialize the class."""
-        self.ctl: Controller = ctl
+        self.ctl = ctl
         self.group_details = group_details
         self._interrupted = False
         self._socket_daemon = None
@@ -132,7 +132,7 @@ class EntertainmentAPI:
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
         light_id = str(light_data[1] + light_data[2])
-        light_conf = await self.ctl.config_instance.async_get_light_config(light_id)
+        light_conf = await self.ctl.async_get_light_config(light_id)
 
         # TODO: can we send udp messages to supported lights such as esphome or native ZHA ?
         # For now we simply unpack the entertainment packet and forward

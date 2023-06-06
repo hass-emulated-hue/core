@@ -9,7 +9,7 @@ import threading
 from zeroconf import InterfaceChoice, ServiceInfo, Zeroconf
 
 from emulated_hue import const
-from emulated_hue.controllers.config import Config
+from emulated_hue.controllers import Config
 
 from .utils import get_ip_pton
 

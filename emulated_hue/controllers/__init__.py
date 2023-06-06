@@ -4,26 +4,24 @@ import asyncio
 from . import scheduler
 from .config import Config
 from .homeassistant import HomeAssistantController
-from .models import Controller
 from .scheduler import add_scheduler, remove_scheduler  # noqa
 
 
 async def async_start(
     url, token, data_path, http_port, https_port, use_default_ports
-) -> Controller:
+) -> Config:
     """Initialize all controllers."""
-    ctl = Controller()
-    ctl.loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop()
     # the HA client is initialized in the async_start because it needs a running loop
-    ctl.controller_hass = HomeAssistantController(url=url, token=token)
-    ctl.config_instance = Config(
-        ctl, data_path, http_port, https_port, use_default_ports
+    controller_hass = HomeAssistantController(url=url, token=token)
+    cfg = Config(
+        controller_hass, loop, data_path, http_port, https_port, use_default_ports
     )
-    await ctl.controller_hass.connect()
-    return ctl
+    await cfg.controller_hass.connect()
+    return cfg
 
 
-async def async_stop(ctl: Controller) -> None:
+async def async_stop(ctl: Config) -> None:
     """Shutdown all controllers."""
     await scheduler.async_stop()
     try:

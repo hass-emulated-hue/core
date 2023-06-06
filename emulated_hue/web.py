@@ -5,9 +5,9 @@ import ssl
 from typing import TYPE_CHECKING
 
 from aiohttp import web
+from controllers.config import Config
 
 from emulated_hue.apiv1 import HueApiV1Endpoints
-from emulated_hue.controllers import Controller
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 
 if TYPE_CHECKING:
@@ -25,9 +25,9 @@ class HueWeb:
 
     runner = None
 
-    def __init__(self, ctl: Controller):
+    def __init__(self, ctl: Config):
         """Initialize with Hue object."""
-        self.ctl: Controller = ctl
+        self.ctl: Config = ctl
         self.v1_api = HueApiV1Endpoints(ctl)
         self.http_site: web.TCPSite | None = None
         self.https_site: web.TCPSite | None = None
@@ -43,52 +43,48 @@ class HueWeb:
         await self.runner.setup()
 
         # Create and start the HTTP webserver/api
-        self.http_site = web.TCPSite(
-            self.runner, port=self.ctl.config_instance.http_port
-        )
+        self.http_site = web.TCPSite(self.runner, port=self.ctl.http_port)
         try:
             await self.http_site.start()
-            LOGGER.info(
-                "Started HTTP webserver on port %s", self.ctl.config_instance.http_port
-            )
+            LOGGER.info("Started HTTP webserver on port %s", self.ctl.http_port)
         except OSError as error:
             LOGGER.error(
                 "Failed to create HTTP server at port %d: %s",
-                self.ctl.config_instance.http_port,
+                self.ctl.http_port,
                 error,
             )
 
         # create self signed certificate for HTTPS API
-        cert_file = self.ctl.config_instance.get_path("cert.pem")
-        key_file = self.ctl.config_instance.get_path("cert_key.pem")
-        if not check_certificate(cert_file, self.ctl.config_instance):
-            await async_generate_selfsigned_cert(
-                cert_file, key_file, self.ctl.config_instance
-            )
+        cert_file = self.ctl.get_path("cert.pem")
+        key_file = self.ctl.get_path("cert_key.pem")
+        if not check_certificate(cert_file, self.ctl):
+            await async_generate_selfsigned_cert(cert_file, key_file, self.ctl)
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(cert_file, key_file)
 
         # Create and start the HTTPS webserver/API
         self.https_site = web.TCPSite(
             self.runner,
-            port=self.ctl.config_instance.https_port,
+            port=self.ctl.https_port,
             ssl_context=ssl_context,
         )
         try:
             await self.https_site.start()
             LOGGER.info(
                 "Started HTTPS webserver on port %s",
-                self.ctl.config_instance.https_port,
+                self.ctl.https_port,
             )
         except OSError as error:
             LOGGER.error(
                 "Failed to create HTTPS server at port %d: %s",
-                self.ctl.config_instance.https_port,
+                self.ctl.https_port,
                 error,
             )
 
     async def async_stop(self):
         """Stop the webserver."""
-        await self.http_site.stop()
-        await self.https_site.stop()
+        if self.http_site:
+            await self.http_site.stop()
+        if self.https_site:
+            await self.https_site.stop()
         await self.v1_api.async_stop()

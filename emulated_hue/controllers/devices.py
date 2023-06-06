@@ -6,11 +6,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from controllers.config import Config
+
 from emulated_hue import const
 from emulated_hue.const import ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE
 from emulated_hue.utils import clamp
 
-from .models import ALL_STATES, Controller, EntityState
+from .models import ALL_STATES, EntityState
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,9 +40,11 @@ class DeviceProperties:
     unique_id: str | None
 
     @classmethod
-    def from_hass(cls, ctl: Controller, entity_id: str) -> "DeviceProperties":
+    def from_hass(cls, ctl: Config, entity_id: str) -> "DeviceProperties":
         """Get device properties from Home Assistant."""
-        device_id: str = ctl.controller_hass.get_device_id_from_entity_id(entity_id)
+        device_id: str | None = ctl.controller_hass.get_device_id_from_entity_id(
+            entity_id
+        )
         device_attributes: dict = {}
         if device_id:
             device_attributes = ctl.controller_hass.get_device_attributes(device_id)
@@ -78,14 +82,14 @@ class OnOffDevice:
 
     def __init__(
         self,
-        ctl: Controller,
+        ctl: Config,
         light_id: str,
         entity_id: str,
         config: dict,
         hass_state_dict: dict,
     ):
         """Initialize OnOffDevice."""
-        self.ctl: Controller = ctl
+        self.ctl = ctl
         self._light_id: str = light_id
         self._entity_id: str = entity_id
 
@@ -159,9 +163,7 @@ class OnOffDevice:
 
     async def _async_save_config(self) -> None:
         """Save config to file."""
-        await self.ctl.config_instance.async_set_storage_value(
-            "lights", self._light_id, self._config
-        )
+        await self.ctl.async_set_storage_value("lights", self._light_id, self._config)
 
     def _save_config(self) -> None:
         """Save config to file."""
@@ -283,7 +285,7 @@ class OnOffDevice:
         """Update EntityState object with Hass state."""
         # prevent entertainment mode updates to avoid lag
         now_timestamp = datetime.now().timestamp()
-        if self.ctl.config_instance.entertainment_active and (
+        if self.ctl.entertainment_active and (
             now_timestamp - self._last_state_update
             < ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE / 1000
         ):
@@ -554,14 +556,14 @@ async def force_update_all():
 
 
 async def async_get_device(
-    ctl: Controller, entity_id: str
+    ctl: Config, entity_id: str
 ) -> OnOffDevice | BrightnessDevice | CTDevice | RGBDevice | RGBWWDevice:
     """Infer light object type from Home Assistant state and returns corresponding object."""
     if entity_id in __device_cache:
         return __device_cache[entity_id][0]
 
-    light_id: str = await ctl.config_instance.async_entity_id_to_light_id(entity_id)
-    config: dict = await ctl.config_instance.async_get_light_config(light_id)
+    light_id: str = await ctl.async_entity_id_to_light_id(entity_id)
+    config: dict = await ctl.async_get_light_config(light_id)
 
     hass_state_dict = ctl.controller_hass.get_entity_state(entity_id)
     entity_color_modes = hass_state_dict[const.HASS_ATTR].get(

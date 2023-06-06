@@ -21,7 +21,7 @@ class HueEmulator:
         use_default_ports: bool,
     ) -> None:
         """Create an instance of HueEmulator."""
-        self.ctl: controllers.Controller | None = None
+        self.ctl: controllers.Config | None = None
         self._config_vars = (data_path, http_port, https_port, use_default_ports)
         self._hass_url = hass_url
         self._hass_token = hass_token
@@ -35,20 +35,19 @@ class HueEmulator:
         self._web = HueWeb(self.ctl)
 
         await self._web.async_setup()
-        self.ctl.loop.create_task(async_setup_discovery(self.ctl.config_instance))
+        self.ctl.loop.create_task(async_setup_discovery(self.ctl))
         # remove legacy light_ids config
-        if await self.ctl.config_instance.async_get_storage_value("light_ids"):
-            await self.ctl.config_instance.async_delete_storage_value("light_ids")
+        if await self.ctl.async_get_storage_value("light_ids"):
+            await self.ctl.async_delete_storage_value("light_ids")
 
         # TODO: periodic search for renamed/deleted entities/areas
 
     async def async_stop(self) -> None:
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
-        await controllers.async_stop(self.ctl)
-        try:
-            await self.ctl.config_instance.async_stop()
+
+        if self.ctl:
+            await controllers.async_stop(self.ctl)
+            await self.ctl.async_stop()
+        if self._web:
             await self._web.async_stop()
-        except AttributeError:
-            # ctl or _web could be uninitialized if home assistant isn't connected
-            pass

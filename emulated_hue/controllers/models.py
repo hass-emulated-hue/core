@@ -1,29 +1,14 @@
 """Device state model."""
-import asyncio
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
 from emulated_hue import const
 
-from .homeassistant import HomeAssistantController
-
 if TYPE_CHECKING:
     from .config import Config
 else:
     Config = "Config"
-
-
-@dataclass
-class Controller:
-    """Dataclass to store controller instances."""
-
-    # Longer names are to be renamed later on
-    # here to make refactoring easier
-    controller_hass: HomeAssistantController | None = None
-    config_instance: Config = None
-    loop: asyncio.AbstractEventLoop | None = None
 
 
 class EntityState(BaseModel):
