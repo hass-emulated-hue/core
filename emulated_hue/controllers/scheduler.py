@@ -1,15 +1,15 @@
 """Scheduler for emulated_hue."""
 import asyncio
 import inspect
-from collections.abc import Awaitable, Callable
-from typing import Any
+from collections.abc import Awaitable, Callable, Coroutine
+from typing import Any, NoReturn
 
-_schedules: dict[int : asyncio.Task] = {}
+_schedules: dict[int, asyncio.Task] = {}
 
 
 def _async_scheduler_factory(
     func: Callable[[], Awaitable[None]], interval_ms: int
-) -> Awaitable[None]:
+) -> Coroutine[Any, Any, NoReturn]:
     async def scheduler_func():
         while True:
             await asyncio.sleep(interval_ms / 1000)
@@ -18,7 +18,7 @@ def _async_scheduler_factory(
     return scheduler_func()
 
 
-def _scheduler_factory(func: Callable[[], None], interval_ms: int) -> Awaitable[None]:
+def _scheduler_factory(func: Callable[[], None], interval_ms: int) -> Coroutine[Any, Any, NoReturn]:
     async def scheduler_func():
         while True:
             await asyncio.sleep(interval_ms / 1000)
@@ -28,7 +28,7 @@ def _scheduler_factory(func: Callable[[], None], interval_ms: int) -> Awaitable[
 
 
 def _is_async_function(
-    func: Callable[[Any], None] | Callable[[Any], Awaitable[None]]
+    func: Callable[[], None] | Callable[[], Awaitable[None]]
 ) -> bool:
     is_async_gen = inspect.isasyncgenfunction(func)
     is_coro_fn = asyncio.iscoroutinefunction(func)

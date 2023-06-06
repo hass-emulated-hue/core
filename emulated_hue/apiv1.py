@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 import tzlocal
 from aiohttp import web
-from controllers.config import Config
 
 from emulated_hue import const
+from emulated_hue.controllers.config import Config
 from emulated_hue.controllers.devices import (
     BrightnessDevice,
     CTDevice,
@@ -53,7 +53,7 @@ def check_request(check_user=True, log_request=True):
             # check username
             if check_user:
                 username = request.match_info.get("username")
-                if not username or not await cls.cfg.async_get_user(username):
+                if username is not None and await cls.cfg.async_get_user(username):
                     path = request.path.replace(username, "")
                     LOGGER.debug("[%s] Invalid username (api key)", request.remote)
                     return send_error_response(path, "unauthorized user", 1)

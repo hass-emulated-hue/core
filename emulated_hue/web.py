@@ -5,9 +5,9 @@ import ssl
 from typing import TYPE_CHECKING
 
 from aiohttp import web
-from controllers.config import Config
 
 from emulated_hue.apiv1 import HueApiV1Endpoints
+from emulated_hue.controllers import Config
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 
 if TYPE_CHECKING:

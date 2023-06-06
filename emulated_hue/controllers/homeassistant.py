@@ -50,7 +50,7 @@ class HomeAssistantController(HomeAssistantClient):
 
     def get_device_attributes(self, device_id: str) -> dict:
         """Get the attributes of a device in Home Assistant."""
-        return self.device_registry.get(device_id)
+        return self.device_registry.get(device_id, {})
 
     def get_device_id_from_entity_id(self, entity_id: str) -> str | None:
         """Get the device ID from an entity ID."""

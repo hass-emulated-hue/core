@@ -4,15 +4,18 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
-
-from controllers.config import Config
+from typing import TYPE_CHECKING, Any
 
 from emulated_hue import const
 from emulated_hue.const import ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE
 from emulated_hue.utils import clamp
 
 from .models import ALL_STATES, EntityState
+
+if TYPE_CHECKING:
+    from .config import Config
+else:
+    Config = "Config"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -244,7 +247,7 @@ class OnOffDevice:
     def name(self) -> str:
         """Return device name, prioritizing local config."""
         return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get(
-            "friendly_name"
+            "friendly_name", "Unknown"
         )
 
     @name.setter

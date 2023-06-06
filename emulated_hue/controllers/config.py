@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from controllers.homeassistant import HomeAssistantController
 from getmac import get_mac_address
 
 from emulated_hue.const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS
@@ -20,6 +19,7 @@ from emulated_hue.utils import (
 
 from .devices import force_update_all
 from .entertainment import EntertainmentAPI
+from .homeassistant import HomeAssistantController
 
 LOGGER = logging.getLogger(__name__)
 
@@ -253,13 +253,13 @@ class Config:
         return conf
 
     async def async_get_storage_value(
-        self, key: str, subkey: str = None, default: Any | None = None
+        self, key: str, subkey: str | None = None, default: Any | None = None
     ) -> Any:
         """Get a value from persistent storage."""
         return self.get_storage_value(key, subkey, default)
 
     def get_storage_value(
-        self, key: str, subkey: str = None, default: Any | None = None
+        self, key: str, subkey: str | None = None, default: Any | None = None
     ) -> Any:
         """Get a value from persistent storage."""
         main_val = self._config.get(key, None)
@@ -270,7 +270,7 @@ class Config:
         return main_val
 
     async def async_set_storage_value(
-        self, key: str, subkey: str, value: str or dict
+        self, key: str, subkey: str, value: str | dict
     ) -> None:
         """Set a value in persistent storage."""
         needs_save = False
@@ -290,7 +290,7 @@ class Config:
         if needs_save:
             await self.create_save_task()
 
-    async def async_delete_storage_value(self, key: str, subkey: str = None) -> None:
+    async def async_delete_storage_value(self, key: str, subkey: str | None = None) -> None:
         """Delete a value in persistent storage."""
         # if Home Assistant group/area, we just disable it
         if key == "groups" and subkey:

@@ -26,9 +26,8 @@ class EntityState(BaseModel):
     effect: str | None = None
     color_mode: str | None = None
 
-    def __eq__(self, other):
+    def __eq__(self, other: "EntityState"):
         """Compare states."""
-        other: EntityState = other
         power_state_equal = self.power_state == other.power_state
         brightness_equal = self.brightness == other.brightness
         color_attribute = (
@@ -80,10 +79,10 @@ class EntityState(BaseModel):
             return EntityState()
 
         save_state = {}
-        for state in list(vars(cls).get("__fields__")):
+        for state in list(vars(cls).get("__fields__", ())):
             if state in save_state:
                 save_state[state] = states[state]
         return EntityState(**save_state)
 
 
-ALL_STATES: list = list(vars(EntityState).get("__fields__"))
+ALL_STATES: list = list(vars(EntityState).get("__fields__", ()))

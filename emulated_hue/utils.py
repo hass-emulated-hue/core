@@ -108,7 +108,7 @@ def send_json_response(data) -> web.Response:
 # PUT: /api/username/lights/light_id
 # {'config': {'startup': {'mode': 'safety'}}}
 def send_success_response(
-    request_path: str, request_data: dict, username: str = None
+    request_path: str, request_data: dict, username: str | None = None
 ) -> web.Response:
     """Create success responses for all received keys."""
     if username:
@@ -129,8 +129,8 @@ def send_error_response(address: str, description: str, type_num: int) -> web.Re
         if "//" in address:
             address = address.replace("/api/", "")
         else:
-            address = address.lstrip("/").split("/")
-            address = f"/{address[2]}" if len(address) > 2 else "/"
+            parts = address.lstrip("/").split("/")
+            address = f"/{parts[2]}" if len(parts) > 2 else "/"
     description = description.format(path=address)
     response = [
         {"error": {"type": type_num, "address": address, "description": description}}

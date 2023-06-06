@@ -3,10 +3,14 @@
 import asyncio
 import logging
 import os
-
-from controllers.config import Config
+from typing import TYPE_CHECKING
 
 from emulated_hue.controllers.devices import async_get_device
+
+if TYPE_CHECKING:
+    from .config import Config
+else:
+    Config = "Config"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -138,6 +142,8 @@ class EntertainmentAPI:
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
 
+        # Instance checks are ignored here to avoid slowing down entertainment mode
+
         entity_id = light_conf["entity_id"]
         device = await async_get_device(self.cfg, entity_id)
         call = device.new_control_state()
@@ -146,12 +152,12 @@ class EntertainmentAPI:
             red = int((light_data[3] * 256 + light_data[4]) / 256)
             green = int((light_data[5] * 256 + light_data[6]) / 256)
             blue = int((light_data[7] * 256 + light_data[8]) / 256)
-            call.set_rgb(red, green, blue)
-            call.set_brightness(int(sum(call.control_state.rgb_color) / 3))
+            call.set_rgb(red, green, blue) # type: ignore
+            call.set_brightness(int(sum((red, green, blue)) / 3)) # type: ignore
         else:
             x = float((light_data[3] * 256 + light_data[4]) / 65535)
             y = float((light_data[5] * 256 + light_data[6]) / 65535)
-            call.set_xy(x, y)
-            call.set_brightness(int((light_data[7] * 256 + light_data[8]) / 256))
+            call.set_xy(x, y) # type: ignore
+            call.set_brightness(int((light_data[7] * 256 + light_data[8]) / 256)) # type: ignore
         call.set_transition_ms(0, respect_throttle=True)
         await call.async_execute()
