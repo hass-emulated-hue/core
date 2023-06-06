@@ -7,6 +7,7 @@
     "GitHub.copilot",
     "ms-python.python",
     "ms-python.vscode-pylance",
-    "visualstudioexptteam.vscodeintellicode"
+    "visualstudioexptteam.vscodeintellicode",
+    "GitHub.vscode-github-actions"
   ]
 }

@@ -1,4 +1,4 @@
-FROM python:3.11-buster AS dev_base
+FROM mcr.microsoft.com/devcontainers/python:3.11-bullseye
 
 ## Install requirements
 RUN apt update \
@@ -7,4 +7,5 @@ RUN apt update \
     tzdata \
     ca-certificates \
     openssl \
-    sudo
+    sudo \
+    git
