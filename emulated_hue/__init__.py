@@ -21,7 +21,7 @@ class HueEmulator:
         use_default_ports: bool,
     ) -> None:
         """Create an instance of HueEmulator."""
-        self.ctl: controllers.Config | None = None
+        self.cfg: controllers.Config | None = None
         self._config_vars = (data_path, http_port, https_port, use_default_ports)
         self._hass_url = hass_url
         self._hass_token = hass_token
@@ -29,16 +29,16 @@ class HueEmulator:
 
     async def async_start(self) -> None:
         """Start running the Hue emulation."""
-        self.ctl = await controllers.async_start(
+        self.cfg = await controllers.async_start(
             self._hass_url, self._hass_token, *self._config_vars
         )
-        self._web = HueWeb(self.ctl)
+        self._web = HueWeb(self.cfg)
 
         await self._web.async_setup()
-        self.ctl.loop.create_task(async_setup_discovery(self.ctl))
+        self.cfg.loop.create_task(async_setup_discovery(self.cfg))
         # remove legacy light_ids config
-        if await self.ctl.async_get_storage_value("light_ids"):
-            await self.ctl.async_delete_storage_value("light_ids")
+        if await self.cfg.async_get_storage_value("light_ids"):
+            await self.cfg.async_delete_storage_value("light_ids")
 
         # TODO: periodic search for renamed/deleted entities/areas
 
@@ -46,8 +46,8 @@ class HueEmulator:
         """Stop running the Hue emulation."""
         LOGGER.info("Application shutdown")
 
-        if self.ctl:
-            await controllers.async_stop(self.ctl)
-            await self.ctl.async_stop()
+        if self.cfg:
+            await controllers.async_stop(self.cfg)
+            await self.cfg.async_stop()
         if self._web:
             await self._web.async_stop()

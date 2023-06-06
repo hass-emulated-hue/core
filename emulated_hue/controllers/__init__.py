@@ -21,11 +21,11 @@ async def async_start(
     return cfg
 
 
-async def async_stop(ctl: Config) -> None:
+async def async_stop(cfg: Config) -> None:
     """Shutdown all controllers."""
     await scheduler.async_stop()
     try:
-        await ctl.controller_hass.disconnect()
+        await cfg.controller_hass.disconnect()
     except AttributeError:
         # controller_hass is not initialized if home assistant isn't connected
         pass

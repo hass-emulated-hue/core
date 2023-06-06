@@ -25,10 +25,10 @@ class HueWeb:
 
     runner = None
 
-    def __init__(self, ctl: Config):
+    def __init__(self, cfg: Config):
         """Initialize with Hue object."""
-        self.ctl: Config = ctl
-        self.v1_api = HueApiV1Endpoints(ctl)
+        self.cfg: Config = cfg
+        self.v1_api = HueApiV1Endpoints(cfg)
         self.http_site: web.TCPSite | None = None
         self.https_site: web.TCPSite | None = None
 
@@ -43,41 +43,41 @@ class HueWeb:
         await self.runner.setup()
 
         # Create and start the HTTP webserver/api
-        self.http_site = web.TCPSite(self.runner, port=self.ctl.http_port)
+        self.http_site = web.TCPSite(self.runner, port=self.cfg.http_port)
         try:
             await self.http_site.start()
-            LOGGER.info("Started HTTP webserver on port %s", self.ctl.http_port)
+            LOGGER.info("Started HTTP webserver on port %s", self.cfg.http_port)
         except OSError as error:
             LOGGER.error(
                 "Failed to create HTTP server at port %d: %s",
-                self.ctl.http_port,
+                self.cfg.http_port,
                 error,
             )
 
         # create self signed certificate for HTTPS API
-        cert_file = self.ctl.get_path("cert.pem")
-        key_file = self.ctl.get_path("cert_key.pem")
-        if not check_certificate(cert_file, self.ctl):
-            await async_generate_selfsigned_cert(cert_file, key_file, self.ctl)
+        cert_file = self.cfg.get_path("cert.pem")
+        key_file = self.cfg.get_path("cert_key.pem")
+        if not check_certificate(cert_file, self.cfg):
+            await async_generate_selfsigned_cert(cert_file, key_file, self.cfg)
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(cert_file, key_file)
 
         # Create and start the HTTPS webserver/API
         self.https_site = web.TCPSite(
             self.runner,
-            port=self.ctl.https_port,
+            port=self.cfg.https_port,
             ssl_context=ssl_context,
         )
         try:
             await self.https_site.start()
             LOGGER.info(
                 "Started HTTPS webserver on port %s",
-                self.ctl.https_port,
+                self.cfg.https_port,
             )
         except OSError as error:
             LOGGER.error(
                 "Failed to create HTTPS server at port %d: %s",
-                self.ctl.https_port,
+                self.cfg.https_port,
                 error,
             )
 

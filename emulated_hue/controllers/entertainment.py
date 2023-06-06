@@ -32,16 +32,16 @@ def chunked(size, source):
 class EntertainmentAPI:
     """Handle UDP socket for HUE Entertainment (streaming mode)."""
 
-    def __init__(self, ctl: Config, group_details: dict, user_details: dict):
+    def __init__(self, cfg: Config, group_details: dict, user_details: dict):
         """Initialize the class."""
-        self.ctl = ctl
+        self.cfg = cfg
         self.group_details = group_details
         self._interrupted = False
         self._socket_daemon = None
         self._timestamps = {}
         self._prev_data = {}
         self._user_details = user_details
-        self.ctl.loop.create_task(self.async_run())
+        self.cfg.loop.create_task(self.async_run())
 
         self._pkt_header_begin_size = 9  # HueStream
         self._pkt_header_protocol_size = 7  # protocol version, sequence
@@ -63,7 +63,7 @@ class EntertainmentAPI:
         # As a (temporary?) workaround we rely on the OpenSSL executable which is
         # very well supported on all platforms.
         LOGGER.info("Start HUE Entertainment Service on UDP port 2100.")
-        await self.ctl.controller_hass.set_state(
+        await self.cfg.controller_hass.set_state(
             HASS_SENSOR, "on", {"room": self.group_details["name"]}
         )
         args = [
@@ -110,8 +110,8 @@ class EntertainmentAPI:
         self._interrupted = True
         if self._socket_daemon:
             self._socket_daemon.kill()
-        self.ctl.loop.create_task(
-            self.ctl.controller_hass.set_state(HASS_SENSOR, "off")
+        self.cfg.loop.create_task(
+            self.cfg.controller_hass.set_state(HASS_SENSOR, "off")
         )
         LOGGER.info("HUE Entertainment Service stopped.")
 
@@ -132,14 +132,14 @@ class EntertainmentAPI:
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
         light_id = str(light_data[1] + light_data[2])
-        light_conf = await self.ctl.async_get_light_config(light_id)
+        light_conf = await self.cfg.async_get_light_config(light_id)
 
         # TODO: can we send udp messages to supported lights such as esphome or native ZHA ?
         # For now we simply unpack the entertainment packet and forward
         # individual commands to lights by calling hass services.
 
         entity_id = light_conf["entity_id"]
-        device = await async_get_device(self.ctl, entity_id)
+        device = await async_get_device(self.cfg, entity_id)
         call = device.new_control_state()
         call.set_power_state(True)
         if color_space == COLOR_TYPE_RGB:
