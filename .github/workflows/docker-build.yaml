@@ -186,12 +186,6 @@ jobs:
       matrix:
         registry:
           - {
-              url: "https://index.docker.io/v1/",
-              username: DOCKER_USERNAME,
-              password: DOCKER_PASSWORD,
-              repo: hassemulatedhue/core,
-            }
-          - {
               url: ghcr.io/hass-emulated-hue,
               username: GCHR_USERNAME,
               password: GHCR_PAT,
