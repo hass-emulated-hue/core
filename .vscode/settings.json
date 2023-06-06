@@ -1,8 +1,23 @@
 {
-    "python.autoComplete.extraPaths": [
-        "./emulated_hue"
-    ],
-    "python.analysis.extraPaths": [
-        "./emulated_hue"
-    ]
+  "python.autoComplete.extraPaths": ["./emulated_hue"],
+  "python.analysis.extraPaths": ["./emulated_hue"],
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": true,
+      "source.fixAll": true
+    }
+  },
+  "editor.formatOnPaste": false,
+  "editor.formatOnSave": true,
+  "editor.formatOnType": false,
+  "editor.tabSize": 4,
+  "files.autoSave": "afterDelay",
+  "files.trimTrailingWhitespace": true,
+  "git.autofetch": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.formatting.blackPath": "/usr/local/bin/black",
+  "python.formatting.provider": "black",
+  "python.languageServer": "Pylance",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "python.pythonPath": ".venv/bin/python"
 }

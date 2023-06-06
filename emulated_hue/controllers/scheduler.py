@@ -1,7 +1,8 @@
 """Scheduler for emulated_hue."""
 import asyncio
 import inspect
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 _schedules: dict[int : asyncio.Task] = {}
 

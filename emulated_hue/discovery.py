@@ -15,6 +15,7 @@ from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_discovery(config: Config) -> None:
     """Make this Emulated bridge discoverable on the network."""
     # https://developers.meethue.com/develop/application-design-guidance/hue-bridge-discovery/
@@ -142,7 +143,7 @@ USN: {bridge_uuid}
                 else:
                     # most likely the timeout, so check for interrupt
                     continue
-            except socket.error as ex:
+            except OSError as ex:
                 if self._interrupted:
                     clean_socket_close(ssdp_socket)
                     return

@@ -116,14 +116,8 @@ class DockerNames:
             run_number = getenv("GITHUB_RUN_NUMBER")
             github_sha = getenv("GITHUB_SHA")
         else:
-            if args.run_number:
-                run_number = args.run_number
-            else:
-                run_number = ""
-            if args.github_sha:
-                github_sha = args.github_sha
-            else:
-                github_sha = ""
+            run_number = args.run_number if args.run_number else ""
+            github_sha = args.github_sha if args.github_sha else ""
         run_number = f"-{run_number}"
         github_sha = f"-{github_sha}"
 

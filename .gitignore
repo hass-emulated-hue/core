@@ -3,19 +3,13 @@
 
 # Python
 __pycache__
-.venv/
+/.venv
 
-# VsCode
-.vscode
-hass_emulated_hue.code-workspace
+# VSCode
+/.vscode/launch.json
 
-# PyCharm
-.idea
-.run
-
-# Dev containers
-.devcontainer/docker-compose-pycharm.yml
-.devcontainer/docker-compose-vscode.yml
+# Ruff cache
+/.ruff_cache
 
 # Run config
-config
+/config
