@@ -131,12 +131,6 @@ jobs:
         arch: [i386, amd64, armv6, armv7, aarch64]
         registry:
           - {
-              url: "https://index.docker.io/v1/",
-              username: DOCKER_USERNAME,
-              password: DOCKER_PASSWORD,
-              repo: hassemulatedhue/core,
-            }
-          - {
               url: ghcr.io/hass-emulated-hue,
               username: GCHR_USERNAME,
               password: GHCR_PAT,
