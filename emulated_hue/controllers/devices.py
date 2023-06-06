@@ -102,7 +102,7 @@ class OnOffDevice:
         self._config: dict = config
         self._name: str = self._config.get("name", "")
         self._unique_id: str = self._config.get("uniqueid", "")
-        self._enabled: bool = self._config.get("enabled")
+        self._enabled: bool = self._config.get("enabled", True)
 
         # throttling
         self._throttle_ms: int = self._config.get("throttle", 0)

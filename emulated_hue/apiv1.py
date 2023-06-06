@@ -1,5 +1,4 @@
 """Support for a Hue API to control Home Assistant."""
-import contextlib
 import copy
 import datetime
 import functools
@@ -13,8 +12,14 @@ import tzlocal
 from aiohttp import web
 from controllers.config import Config
 
-from emulated_hue import const, controllers
-from emulated_hue.controllers.devices import async_get_device
+from emulated_hue import const
+from emulated_hue.controllers.devices import (
+    BrightnessDevice,
+    CTDevice,
+    OnOffDevice,
+    RGBDevice,
+    async_get_device,
+)
 from emulated_hue.utils import (
     ClassRouteTableDef,
     convert_color_mode,
@@ -571,10 +576,8 @@ class HueApiV1Endpoints:
         else:
             call.set_power_state(True)
 
-            # Don't error if we attempt to set an attribute that doesn't exist
-            if bri := request_data.get(const.HUE_ATTR_BRI):
-                with contextlib.suppress(AttributeError):
-                    call.set_brightness(bri)
+            if (bri := request_data.get(const.HUE_ATTR_BRI)) and isinstance(call, BrightnessDevice.BrightnessControl):
+                call.set_brightness(bri)
 
             sat = request_data.get(const.HUE_ATTR_SAT)
             hue = request_data.get(const.HUE_ATTR_HUE)
@@ -584,31 +587,28 @@ class HueApiV1Endpoints:
                 # Convert hs values to hass hs values
                 hue = int((hue / const.HUE_ATTR_HUE_MAX) * 360)
                 sat = int((sat / const.HUE_ATTR_SAT_MAX) * 100)
-                with contextlib.suppress(AttributeError):
+                if isinstance(call, RGBDevice.RGBControl):
                     call.set_hue_sat(hue, sat)
 
-            if color_temp := request_data.get(const.HUE_ATTR_CT):
+            if (color_temp := request_data.get(const.HUE_ATTR_CT)) and isinstance(call, CTDevice.CTControl):
                 call.set_color_temperature(color_temp)
 
             if (
                 (xy := request_data.get(const.HUE_ATTR_XY))
                 and type(xy) is list
                 and len(xy) == 2
-            ):
-                with contextlib.suppress(AttributeError):
-                    call.set_xy(xy[0], xy[1])
+            ) and isinstance(call, RGBDevice.RGBControl):
+                call.set_xy(xy[0], xy[1])
 
             # effects probably don't work
-            if effect := request_data.get(const.HUE_ATTR_EFFECT):
-                with contextlib.suppress(AttributeError):
-                    call.set_effect(effect)
-            if alert := request_data.get(const.HUE_ATTR_ALERT):
+            if (effect := request_data.get(const.HUE_ATTR_EFFECT)) and isinstance(call, RGBDevice.RGBControl):
+                call.set_effect(effect)
+
+            if (alert := request_data.get(const.HUE_ATTR_ALERT)) and isinstance(call, BrightnessDevice.BrightnessControl):
                 if alert == "select":
-                    with contextlib.suppress(AttributeError):
-                        call.set_flash("short")
+                    call.set_flash("short")
                 elif alert == "lselect":
-                    with contextlib.suppress(AttributeError):
-                        call.set_flash("long")
+                    call.set_flash("long")
 
         await call.async_execute()
 
@@ -645,27 +645,27 @@ class HueApiV1Endpoints:
         def get_device_attrs():
             nonlocal device
             device_type = type(device)
-            if device_type == controllers.devices.OnOffDevice:
+            if device_type == OnOffDevice:
                 # On/off light (Zigbee Device ID: 0x0000)
                 # Supports groups, scenes, on/off control
                 retval.update(self.cfg.definitions["lights"]["On/off light"])
                 return
-            if isinstance(device, controllers.devices.BrightnessDevice):
-                device = cast(controllers.devices.BrightnessDevice, device)
+            if isinstance(device, BrightnessDevice):
+                device = cast(BrightnessDevice, device)
                 current_state[const.HUE_ATTR_BRI] = device.brightness
                 current_state[const.HUE_ATTR_ALERT] = (
                     convert_flash_state(device.flash_state, const.HASS)
                     if device.flash_state
                     else "none"
                 )
-            if device_type == controllers.devices.BrightnessDevice:
+            if device_type == BrightnessDevice:
                 # Dimmable light (Zigbee Device ID: 0x0100)
                 # Supports groups, scenes, on/off and dimming
                 retval["type"] = "Dimmable light"
                 retval.update(self.cfg.definitions["lights"]["Dimmable light"])
                 return
-            if isinstance(device, controllers.devices.CTDevice):
-                device = cast(controllers.devices.CTDevice, device)
+            if isinstance(device, CTDevice):
+                device = cast(CTDevice, device)
                 capabilities = {
                     "capabilities": {
                         "control": {
@@ -678,13 +678,13 @@ class HueApiV1Endpoints:
                 }
                 retval.update(capabilities)
                 current_state[const.HUE_ATTR_CT] = device.color_temp
-            if device_type == controllers.devices.CTDevice:
+            if device_type == CTDevice:
                 # Color temperature light (Zigbee Device ID: 0x0220)
                 # Supports groups, scenes, on/off, dimming, and setting of a color temperature
                 retval.update(self.cfg.definitions["lights"]["Color temperature light"])
                 return
-            if isinstance(device, controllers.devices.RGBDevice):
-                device = cast(controllers.devices.RGBDevice, device)
+            if isinstance(device, RGBDevice):
+                device = cast(RGBDevice, device)
                 current_state[const.HUE_ATTR_EFFECT] = device.effect or "none"
                 current_state[const.HUE_ATTR_XY] = device.xy_color
                 # Convert hass hs values to hue hs values
@@ -694,7 +694,7 @@ class HueApiV1Endpoints:
                 current_state[const.HUE_ATTR_SAT] = int(
                     device.hue_sat[1] / 100 * const.HUE_ATTR_SAT_MAX
                 )
-            if device_type == controllers.devices.RGBDevice:
+            if device_type == RGBDevice:
                 # Color light (Zigbee Device ID: 0x0200)
                 # Supports on/off, dimming and color control (hue/saturation, enhanced hue, color loop and XY)
                 retval.update(self.cfg.definitions["lights"]["Color light"])
@@ -737,10 +737,12 @@ class HueApiV1Endpoints:
         """Create item in storage of given type (scenes etc.)."""
         local_items = await self.cfg.async_get_storage_value(itemtype, default={})
         # get first available id
-        for i in range(1, 1000):
+        i = 0
+        while True:
             item_id = str(i)
             if item_id not in local_items:
                 break
+            i += 1
         if (
             itemtype == "groups"
             and data["type"] in ["LightGroup", "Room", "Zone"]
