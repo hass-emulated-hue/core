@@ -1,6 +1,6 @@
 """Controller for Home Assistant communication."""
 import logging
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from hass_client import HomeAssistantClient
 

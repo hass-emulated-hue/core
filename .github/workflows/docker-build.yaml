@@ -54,7 +54,7 @@ jobs:
           sudo systemctl start docker
 
       - name: Cache Docker layers
-        uses: actions/cache@v3.2.4
+        uses: actions/cache@v3.3.1
         continue-on-error: true
         with:
           path: /tmp/.buildx-cache
@@ -125,16 +125,11 @@ jobs:
     needs: build
     name: Publish Image
     runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.ref, 'refs/pull/') && !startsWith(github.ref, 'refs/heads/dependabot/') }}
     strategy:
       matrix:
         arch: [i386, amd64, armv6, armv7, aarch64]
         registry:
-          - {
-              url: "https://index.docker.io/v1/",
-              username: DOCKER_USERNAME,
-              password: DOCKER_PASSWORD,
-              repo: hassemulatedhue/core,
-            }
           - {
               url: ghcr.io/hass-emulated-hue,
               username: GCHR_USERNAME,
@@ -190,12 +185,6 @@ jobs:
     strategy:
       matrix:
         registry:
-          - {
-              url: "https://index.docker.io/v1/",
-              username: DOCKER_USERNAME,
-              password: DOCKER_PASSWORD,
-              repo: hassemulatedhue/core,
-            }
           - {
               url: ghcr.io/hass-emulated-hue,
               username: GCHR_USERNAME,

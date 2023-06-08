@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "bungcip.better-toml",
+    "charliermarsh.ruff",
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "GitHub.copilot",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "visualstudioexptteam.vscodeintellicode",
+    "GitHub.vscode-github-actions"
+  ]
+}

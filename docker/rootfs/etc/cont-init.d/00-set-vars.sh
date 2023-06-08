@@ -1,8 +1,8 @@
 #!/command/with-contenv bashio
 # ==============================================================================
-# Community Hass.io Add-ons: Emulated Hue
+# Emulated Hue
 # This file defines environment variables based on user specified config options
-# This overrides native environment variables with options.json 
+# This overrides native environment variables with options.json
 # ==============================================================================
 
 

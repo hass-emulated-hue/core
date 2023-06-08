@@ -14,7 +14,6 @@ IS_SUPERVISOR = os.path.isfile("/data/options.json") and os.environ.get("HASSIO_
 
 # pylint: disable=invalid-name
 if __name__ == "__main__":
-
     logger = logging.getLogger()
     logformat = logging.Formatter(
         "%(asctime)-15s %(levelname)-5s %(name)s -- %(message)s"
@@ -99,12 +98,11 @@ if __name__ == "__main__":
 
     def handler(loop, context):
         """Handle exceptions in the loop."""
-        if "exception" in context:
-            if isinstance(context["exception"], CannotConnect):
-                ex = context["exception"]
-                traceback.print_exception(type(ex), ex, ex.__traceback__)
-                logger.error("Cannot connect to Home Assistant! Exiting...")
-                loop.stop()
+        if "exception" in context and isinstance(context["exception"], CannotConnect):
+            ex = context["exception"]
+            traceback.print_exception(type(ex), ex, ex.__traceback__)
+            logger.error("Cannot connect to Home Assistant! Exiting...")
+            loop.stop()
 
     if os.name != "nt":
         import uvloop

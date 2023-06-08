@@ -1,9 +1,10 @@
 """Collection of devices controllable by Hue."""
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from emulated_hue import const
 from emulated_hue.const import ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE
@@ -115,7 +116,7 @@ class OnOffDevice:
 
     def __repr__(self):
         """Return representation of object."""
-        return "<{}({})>".format(self.__class__.__name__, self.entity_id)
+        return f"<{self.__class__.__name__}({self.entity_id})>"
 
     class OnOffControl:
         """Control on/off state."""
@@ -138,9 +139,8 @@ class OnOffDevice:
             self, transition_ms: float, respect_throttle: bool = False
         ) -> None:
             """Set transition in milliseconds."""
-            if respect_throttle:
-                if transition_ms < self._throttle_ms:
-                    transition_ms = self._throttle_ms
+            if respect_throttle and transition_ms < self._throttle_ms:
+                transition_ms = self._throttle_ms
             self._control_state.transition_seconds = transition_ms / 1000
 
         def set_transition_seconds(
@@ -283,12 +283,11 @@ class OnOffDevice:
         """Update EntityState object with Hass state."""
         # prevent entertainment mode updates to avoid lag
         now_timestamp = datetime.now().timestamp()
-        if self.ctl.config_instance.entertainment_active:
-            if (
-                now_timestamp - self._last_state_update
-                < ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE / 1000
-            ):
-                return
+        if self.ctl.config_instance.entertainment_active and (
+            now_timestamp - self._last_state_update
+            < ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE / 1000
+        ):
+            return
 
         if self._enabled or not self._config_state:
             self._last_state_update = now_timestamp

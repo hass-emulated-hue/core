@@ -1,28 +1,42 @@
 {
   "name": "emulated_hue",
-  "dockerComposeFile": ["docker-compose-vscode.yml"],
+  "dockerComposeFile": ["docker-compose.dev.yml"],
   "service": "emulated_hue",
-  "workspaceFolder": "/workspace",
-  "extensions": [
-    "ms-python.python",
-    "visualstudioexptteam.vscodeintellicode",
-    "ms-azuretools.vscode-docker",
-    "GitHub.copilot",
-    "eamodio.gitlens",
-    "esbenp.prettier-vscode"
-  ],
-  "settings": {
-    "python.pythonPath": "/usr/local/bin/python",
-    "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true,
-    "python.formatting.provider": "black",
-    "editor.formatOnPaste": false,
-    "editor.formatOnSave": true,
-    "editor.formatOnType": true,
-    "files.trimTrailingWhitespace": true,
-    "terminal.integrated.profiles.linux": {
-      "bash": {
-        "path": "/bin/bash"
+  "workspaceFolder": "/workspace/hass-emulated-hue",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bungcip.better-toml",
+        "charliermarsh.ruff",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "GitHub.copilot",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "visualstudioexptteam.vscodeintellicode",
+        "GitHub.vscode-github-actions"
+      ],
+      "settings": {
+        "[python]": {
+          "editor.codeActionsOnSave": {
+            "source.fixAll": true
+          }
+        },
+        "editor.formatOnPaste": false,
+        "editor.formatOnSave": true,
+        "editor.formatOnType": false,
+        "editor.tabSize": 4,
+        "files.autoSave": "afterDelay",
+        "files.trimTrailingWhitespace": true,
+        "git.autofetch": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "python.formatting.blackPath": "/usr/local/bin/black",
+        "python.formatting.provider": "black",
+        "python.languageServer": "Pylance",
+        "python.pythonPath": "/usr/local/bin/python",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.autoComplete.extraPaths": ["./emulated_hue"],
+        "python.analysis.extraPaths": ["./emulated_hue"]
       }
     }
   },

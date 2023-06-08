@@ -14,7 +14,6 @@ from emulated_hue.controllers.config import Config
 from .utils import get_ip_pton
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
 
 
 async def async_setup_discovery(config: Config) -> None:
@@ -144,7 +143,7 @@ USN: {bridge_uuid}
                 else:
                     # most likely the timeout, so check for interrupt
                     continue
-            except socket.error as ex:
+            except OSError as ex:
                 if self._interrupted:
                     clean_socket_close(ssdp_socket)
                     return

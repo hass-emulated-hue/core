@@ -4,19 +4,10 @@ services:
   emulated_hue:
     build:
       context: ../
-      dockerfile: ./.devcontainer/Dockerfile
-      target: dev_base
+      dockerfile: ./docker/Dockerfile.dev
     restart: "no"
-    #    environment:
-    #      - DATA_DIR=/config
-    #      - HASS_URL=http://192.168.1.1:8123
-    #      - HASS_TOKEN=yourtokenhere
-    #      - VERBOSE=True
-    # Pass arguments in the IDE to avoid passing token when committing
-    # Example tasks are included in .launchconfigs
     volumes:
-      - ..:/workspace
-      - ../config:/config
+      - ..:/workspace/hass-emulated-hue
     #    network_mode: "host"
     ports:
       - '80:80'

@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:experimental
 ARG HASS_ARCH=amd64
 ARG BUILD_VERSION=latest
-ARG PYTHON_VERSION="3.10"
-ARG BASHIO_VERSION="v0.14.3"
+ARG PYTHON_VERSION="3.11"
+ARG BASHIO_VERSION="v0.15.0"
 
 #####################################################################
 #                                                                   #
@@ -19,13 +19,14 @@ ENV PATH="${PATH}:/root/.cargo/bin"
 RUN set -x \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
-        ca-certificates \
-        curl \
-        gcc \
-        git \
-        libffi-dev \
-        libssl-dev
+    build-essential \
+    ca-certificates \
+    curl \
+    gcc \
+    git \
+    libffi-dev \
+    libssl-dev \
+    pkg-config
 
 RUN set -x \
     \
@@ -101,12 +102,12 @@ ENV DEBIAN_FRONTEND="noninteractive"
 RUN set -x \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        git \
-        jq \
-        openssl \
-        tzdata \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    openssl \
+    tzdata \
     # cleanup
     && rm -rf /tmp/* \
     && rm -rf /var/lib/apt/lists/*

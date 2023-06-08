@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Module",
+            "type": "python",
+            "request": "launch",
+            "module": "emulated_hue",
+            "args": [
+                "--data", "${workspaceFolder}/config",
+                "--url", "http://192.168.1.1:8123",
+                "--token", "YourLongLivedTokenHere",
+                "--verbose"
+            ]
+        }
+    ]
+}

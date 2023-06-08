@@ -8,12 +8,11 @@ import random
 import socket
 import string
 from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
-from typing import Union
 
 import slugify as unicode_slug
 from aiohttp import web
 
-import emulated_hue.const as const
+from emulated_hue import const
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ def clamp(value: float, min_value: float, max_value: float) -> float:
     return min(max(value, min_value), max_value)
 
 
-def is_local(address: Union[IPv4Address, IPv6Address]) -> bool:
+def is_local(address: IPv4Address | IPv6Address) -> bool:
     """Check if an address is local."""
     return address in LOCAL_IPS or any(address in network for network in LOCAL_NETWORKS)
 
@@ -53,7 +52,7 @@ def get_local_ip() -> str:
         sock.connect(("8.8.8.8", 80))
 
         return sock.getsockname()[0]  # type: ignore
-    except socket.error:
+    except OSError:
         try:
             return socket.gethostbyname(socket.gethostname())
         except socket.gaierror:
@@ -131,10 +130,7 @@ def send_error_response(address: str, description: str, type_num: int) -> web.Re
             address = address.replace("/api/", "")
         else:
             address = address.lstrip("/").split("/")
-            if len(address) > 2:
-                address = f"/{address[2]}"
-            else:
-                address = "/"
+            address = f"/{address[2]}" if len(address) > 2 else "/"
     description = description.format(path=address)
     response = [
         {"error": {"type": type_num, "address": address, "description": description}}
@@ -167,7 +163,7 @@ def save_json(filename: str, data: dict):
         json_data = json.dumps(data, sort_keys=True, indent=4, ensure_ascii=False)
         with open(filename, "w") as file_obj:
             file_obj.write(json_data)
-    except IOError:
+    except OSError:
         LOGGER.exception("Failed to serialize to JSON: %s", filename)
 
 
@@ -221,7 +217,7 @@ class ClassRouteTableDef(web.RouteTableDef):
 
     def __repr__(self) -> str:
         """Pretty-print Class."""
-        return "<ClassRouteTableDef count={}>".format(len(self._items))
+        return f"<ClassRouteTableDef count={len(self._items)}>"
 
     def route(self, method: str, path: str, **kwargs):
         """Add route handler."""
