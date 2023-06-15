@@ -20,7 +20,8 @@
         "[python]": {
           "editor.codeActionsOnSave": {
             "source.fixAll": true
-          }
+          },
+          "editor.defaultFormatter": "ms-python.python"
         },
         "editor.formatOnPaste": false,
         "editor.formatOnSave": true,
