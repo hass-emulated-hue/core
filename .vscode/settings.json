@@ -16,7 +16,6 @@
   "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
   "python.analysis.typeCheckingMode": "basic",
-  "python.formatting.blackPath": "/usr/local/bin/black",
   "python.formatting.provider": "black",
   "python.languageServer": "Pylance",
   "terminal.integrated.defaultProfile.linux": "bash",
