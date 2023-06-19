@@ -15,7 +15,7 @@ jobs:
         id: swversionupdate
         uses: hass-emulated-hue/update-swversion-action@master
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5.0.1
+        uses: peter-evans/create-pull-request@v5.0.2
         with:
             committer: GitHub <noreply@github.com>
             author: GitHub <noreply@github.com>
