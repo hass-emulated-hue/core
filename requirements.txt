@@ -4,7 +4,7 @@ aiorun==2022.11.1
 cryptography==41.0.1
 getmac==0.9.4
 netaddr==0.8.0
-pydantic==1.10.9
+pydantic==2.0
 python-slugify==8.0.1
 tzlocal==5.0.1
 uvloop==0.17.0; sys_platform != 'win32'
