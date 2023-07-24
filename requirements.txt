@@ -1,4 +1,4 @@
-aiohttp==3.8.4; sys_platform == 'win32'
+aiohttp==3.8.5; sys_platform == 'win32'
 aiohttp[speedups]==3.8.4; sys_platform != 'win32'
 aiorun==2023.7.2
 cryptography==41.0.1
