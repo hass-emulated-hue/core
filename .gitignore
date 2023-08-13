@@ -8,6 +8,10 @@ __pycache__
 # VSCode
 /.vscode/launch.json
 
+# IntelliJ
+/.idea/
+*.iml
+
 # Ruff cache
 /.ruff_cache
 

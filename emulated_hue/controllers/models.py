@@ -1,7 +1,7 @@
 """Device state model."""
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 from pydantic import BaseModel
 
@@ -31,15 +31,15 @@ class EntityState(BaseModel):
 
     power_state: bool = True
     reachable: bool = True
-    transition_seconds: float | None = None
-    brightness: int | None = None
-    color_temp: int | None = None
-    hue_saturation: tuple[int, int] | None = None
-    xy_color: tuple[float, float] | None = None
-    rgb_color: tuple[int, int, int] | None = None
-    flash_state: str | None = None
-    effect: str | None = None
-    color_mode: str | None = None
+    transition_seconds: Optional[float] = None
+    brightness: Optional[int] = None
+    color_temp: Optional[int] = None
+    hue_saturation: Optional[Tuple[float, float]] = None
+    xy_color: Optional[Tuple[float, float]] = None
+    rgb_color: Optional[Tuple[int, int, int]] = None
+    flash_state: Optional[str] = None
+    effect: Optional[str] = None
+    color_mode: Optional[str] = None
 
     def __eq__(self, other):
         """Compare states."""
@@ -95,10 +95,10 @@ class EntityState(BaseModel):
             return EntityState()
 
         save_state = {}
-        for state in list(vars(cls).get("__fields__")):
+        for state in list(cls.model_fields):
             if state in save_state:
                 save_state[state] = states[state]
         return EntityState(**save_state)
 
 
-ALL_STATES: list = list(vars(EntityState).get("__fields__"))
+ALL_STATES: list = list(EntityState.model_fields)
