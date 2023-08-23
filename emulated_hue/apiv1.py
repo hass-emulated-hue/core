@@ -676,12 +676,10 @@ class HueApiV1Endpoints:
                 "lastinstall": datetime.datetime.now().isoformat().split(".")[0],
             },
             "config": {
-                "config": {
-                    "archetype": "sultanbulb",
-                    "direction": "omnidirectional",
-                    "function": "mixed",
-                    "startup": {"configured": True, "mode": "safety"},
-                }
+                "archetype": "sultanbulb",
+                "direction": "omnidirectional",
+                "function": "mixed",
+                "startup": {"configured": True, "mode": "safety"},
             },
         }
         current_state = {}
