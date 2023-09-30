@@ -2,6 +2,8 @@
 
 # Prevent overloading home assistant / implementation
 # Will not be respected when using udp
+import uuid
+
 DEFAULT_THROTTLE_MS = 150
 BRIGHTNESS_THROTTLE_THRESHOLD = 255 / 4
 ENTERTAINMENT_UPDATE_STATE_UPDATE_RATE = 1000
@@ -58,7 +60,10 @@ HASS_ATTR_BRI_MIN = 1  # Brightness
 # Hue API states
 HUE_ATTR_ON = "on"
 HUE_ATTR_BRI = "bri"
+HUE_ATTR_BRIGHTNESS = "brightness"
+HUE_ATTR_COLOR = "color"
 HUE_ATTR_COLORMODE = "colormode"
+HUE_ATTR_DIMMING = "dimming"
 HUE_ATTR_HUE = "hue"
 HUE_ATTR_SAT = "sat"
 HUE_ATTR_CT = "ct"
@@ -89,3 +94,16 @@ HASS_DOMAIN_HOMEASSISTANT = "homeassistant"
 HASS_DOMAIN_PERSISTENT_NOTIFICATION = "persistent_notification"
 HASS_SERVICE_PERSISTENT_NOTIFICATION_CREATE = "create"
 HASS_SERVICE_PERSISTENT_NOTIFICATION_DISMISS = "dismiss"
+UUID_NAMESPACES = {
+    "bridge": uuid.UUID('6ba7b820-9dad-11d1-80b4-00c04fd430c8'),
+    "bridge_home": uuid.UUID('6ba7b821-9dad-11d1-80b4-00c04fd430c8'),
+    "homekit": uuid.UUID('6ba7b822-9dad-11d1-80b4-00c04fd430c8'),
+    "matter": uuid.UUID('6ba7b823-9dad-11d1-80b4-00c04fd430c8'),
+    "zigbee_connectivity": uuid.UUID('6ba7b824-9dad-11d1-80b4-00c04fd430c8'),
+    "zigbee_device_discovery": uuid.UUID('6ba7b825-9dad-11d1-80b4-00c04fd430c8'),
+    "entertainment": uuid.UUID('6ba7b826-9dad-11d1-80b4-00c04fd430c8'),
+    "room": uuid.UUID('6ba7b827-9dad-11d1-80b4-00c04fd430c8'),
+    "grouped_light": uuid.UUID('6ba7b828-9dad-11d1-80b4-00c04fd430c8'),
+    "device": uuid.UUID('6ba7b830-9dad-11d1-80b4-00c04fd430c8'),
+    "light": uuid.UUID('6ba7b831-9dad-11d1-80b4-00c04fd430c8'),
+}

@@ -131,8 +131,8 @@ class EntertainmentAPI:
 
     async def __async_process_light_packet(self, light_data, color_space):
         """Process an incoming stream message."""
-        light_id = str(light_data[1] + light_data[2])
-        light_conf = await self.ctl.config_instance.async_get_light_config(light_id)
+        light_id_v1 = str(light_data[1] + light_data[2])
+        light_conf = await self.ctl.config_instance.async_get_light_config(light_id_v1)
 
         # TODO: can we send udp messages to supported lights such as esphome or native ZHA ?
         # For now we simply unpack the entertainment packet and forward
