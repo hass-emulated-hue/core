@@ -116,7 +116,7 @@ jobs:
           docker save --output ci-${{ matrix.hass_arch }}-${{ github.run_number }}.tar.gz ci:${{ github.run_number }}
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ci-${{ matrix.hass_arch }}-${{ github.run_number }}
           path: ci-${{ matrix.hass_arch }}-${{ github.run_number }}.tar.gz
