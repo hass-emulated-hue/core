@@ -1,6 +1,9 @@
 """Collection of devices controllable by Hue."""
 import asyncio
 import logging
+import uuid
+import rgbxy
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -31,10 +34,13 @@ TYPE_RGBWW = "rgbww"
 class DeviceProperties:
     """A device controllable by Hue."""
 
+    device_id: str | None
+    parent_device_id: str | None
     manufacturer: str | None
     model: str | None
     name: str | None
     sw_version: str | None
+    mac_address: str | None
     unique_id: str | None
 
     @classmethod
@@ -44,6 +50,17 @@ class DeviceProperties:
         device_attributes: dict = {}
         if device_id:
             device_attributes = ctl.controller_hass.get_device_attributes(device_id)
+
+        mac_address: str | None = None
+        if connections := device_attributes.get("connections"):
+            if isinstance(connections, list):
+                for connection in connections:
+                    if isinstance(connection, list):
+                        mac_address = connection[-1]
+                        break
+                    elif isinstance(connection, str):
+                        mac_address = connection
+                        break
 
         unique_id: str | None = None
         if identifiers := device_attributes.get("identifiers"):
@@ -64,12 +81,16 @@ class DeviceProperties:
                     elif isinstance(identifier, str):
                         unique_id = identifier
                         break
+
         return cls(
+            device_id,
+            device_attributes.get("via_device_id"),
             device_attributes.get("manufacturer"),
             device_attributes.get("model"),
             device_attributes.get("name"),
             device_attributes.get("sw_version"),
-            unique_id,
+            mac_address,
+            unique_id
         )
 
 
@@ -79,14 +100,14 @@ class OnOffDevice:
     def __init__(
         self,
         ctl: Controller,
-        light_id: str,
+        light_id_v1: str,
         entity_id: str,
         config: dict,
         hass_state_dict: dict,
     ):
         """Initialize OnOffDevice."""
         self.ctl: Controller = ctl
-        self._light_id: str = light_id
+        self._light_id_v1: str = light_id_v1
         self._entity_id: str = entity_id
 
         self._device = DeviceProperties.from_hass(
@@ -160,7 +181,7 @@ class OnOffDevice:
     async def _async_save_config(self) -> None:
         """Save config to file."""
         await self.ctl.config_instance.async_set_storage_value(
-            "lights", self._light_id, self._config
+            "lights", self._entity_id, self._config
         )
 
     def _save_config(self) -> None:
@@ -239,6 +260,22 @@ class OnOffDevice:
         return self.device_properties.unique_id or self._unique_id
 
     @property
+    def hue_device_id(self) -> str:
+        return self.hue_id("device")
+
+    @property
+    def hue_light_id(self) -> str:
+        return self.hue_id("light")
+
+    @property
+    def hue_zigbee_connectivity_id(self) -> str:
+        return self.hue_id("zigbee_connectivity")
+
+    @property
+    def hue_entertainment_id(self) -> str:
+        return self.hue_id("entertainment")
+
+    @property
     def name(self) -> str:
         """Return device name, prioritizing local config."""
         return self._name or self._hass_state_dict.get(const.HASS_ATTR, {}).get(
@@ -251,9 +288,9 @@ class OnOffDevice:
         self._save_config()
 
     @property
-    def light_id(self) -> str:
+    def light_id_v1(self) -> str:
         """Return light id."""
-        return self._light_id
+        return self._light_id_v1
 
     @property
     def entity_id(self) -> str:
@@ -278,6 +315,9 @@ class OnOffDevice:
     def new_control_state(self) -> OnOffControl:
         """Return new control state."""
         return self.OnOffControl(self)
+
+    def hue_id(self, namespace: str) -> str:
+        return str(uuid.uuid5(const.UUID_NAMESPACES[namespace], self.device_properties.device_id))
 
     async def async_update_state(self) -> None:
         """Update EntityState object with Hass state."""
@@ -517,6 +557,15 @@ class RGBDevice(BrightnessDevice):
         """Return effect."""
         return self._config_state.effect
 
+    @property
+    def gamut_color(self) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
+        """Return gamut_red_color."""
+        converter = rgbxy.Converter(rgbxy.GamutC) # TODO GET GAMUT
+        red = converter.rgb_to_xy(self.rgb_color[0], 0, 0) if self.rgb_color[0] != 0 else (0, 0)
+        green = converter.rgb_to_xy(0, self.rgb_color[1], 0) if self.rgb_color[1] != 0 else (0, 0)
+        blue = converter.rgb_to_xy(0, 0, self.rgb_color[2]) if self.rgb_color[2] != 0 else (0, 0)
+        return (red, green, blue)
+
 
 class RGBWWDevice(CTDevice, RGBDevice):
     """RGBWWDevice class."""
@@ -560,8 +609,8 @@ async def async_get_device(
     if entity_id in __device_cache:
         return __device_cache[entity_id][0]
 
-    light_id: str = await ctl.config_instance.async_entity_id_to_light_id(entity_id)
-    config: dict = await ctl.config_instance.async_get_light_config(light_id)
+    light_id_v1: str = await ctl.config_instance.async_entity_id_to_light_id_v1(entity_id)
+    config: dict = await ctl.config_instance.async_get_light_config(entity_id)
 
     hass_state_dict = ctl.controller_hass.get_entity_state(entity_id)
     entity_color_modes = hass_state_dict[const.HASS_ATTR].get(
@@ -571,7 +620,7 @@ async def async_get_device(
     def new_device_obj(klass):
         return klass(
             ctl,
-            light_id,
+            light_id_v1,
             entity_id,
             config,
             hass_state_dict,

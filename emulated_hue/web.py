@@ -4,9 +4,10 @@ import os
 import ssl
 from typing import TYPE_CHECKING
 
-from aiohttp import web
+from aiohttp import web, log
 
 from emulated_hue.apiv1 import HueApiV1Endpoints
+from emulated_hue.apiv2 import HueApiV2Endpoints
 from emulated_hue.controllers import Controller
 from emulated_hue.ssl_cert import async_generate_selfsigned_cert, check_certificate
 
@@ -29,14 +30,17 @@ class HueWeb:
         """Initialize with Hue object."""
         self.ctl: Controller = ctl
         self.v1_api = HueApiV1Endpoints(ctl)
+        self.v2_api = HueApiV2Endpoints(ctl)
         self.http_site: web.TCPSite | None = None
         self.https_site: web.TCPSite | None = None
 
     async def async_setup(self):
         """Async set-up of the webserver."""
-        app = web.Application()
+        app = web.Application(middlewares=[access_logging])
+        app["event_streams"] = set()
         # add all routes defined with decorator
         app.add_routes(self.v1_api.route)
+        app.add_routes(self.v2_api.route)
         # static files hosting
         app.router.add_static("/", STATIC_DIR, append_version=True)
         self.runner = web.AppRunner(app, access_log=None)
@@ -92,3 +96,9 @@ class HueWeb:
         await self.http_site.stop()
         await self.https_site.stop()
         await self.v1_api.async_stop()
+
+
+@web.middleware
+async def access_logging(request: web.Request, handler):
+    LOGGER.info("[%s] %s", request.method, request.path)
+    return await handler(request)

@@ -1,9 +1,9 @@
 {
   "bridge": {
     "basic": {
-      "datastoreversion": "113",
+      "datastoreversion": "159",
       "swversion": "1959097030",
-      "apiversion": "1.48.0",
+      "apiversion": "1.59.0",
       "modelid": "BSB002",
       "factorynew": false,
       "replacesbridgeid": null,
@@ -46,14 +46,14 @@
       },
       "swupdate2": {
         "checkforupdate": false,
-        "lastchange": "2020-12-02T05:46:23",
+        "lastchange": "2023-08-12T15:31:38",
         "bridge": {
           "state": "noupdates",
-          "lastinstall": "2020-12-02T05:41:17"
+          "lastinstall": "2023-07-25T02:12:43"
         },
         "state": "noupdates",
         "autoinstall": {
-          "updatetime": "T06:00:00",
+          "updatetime": "T04:00:00",
           "on": true
         }
       }

@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any, cast
 import tzlocal
 from aiohttp import web
 
-from emulated_hue import const, controllers
+from emulated_hue import const, controllers, api
+from emulated_hue.api import HueApiEndpoints, LOGGER
 from emulated_hue.controllers import Controller
 from emulated_hue.controllers.devices import async_get_device
 from emulated_hue.utils import (
@@ -37,7 +38,7 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_stati
 DESCRIPTION_FILE = os.path.join(STATIC_DIR, "description.xml")
 
 
-def check_request(check_user=True, log_request=True):
+def authorize(check_user=True, log_request=True):
     """Run some common logic to log and validate all requests (used as a decorator)."""
 
     def func_wrapper(func):
@@ -49,7 +50,7 @@ def check_request(check_user=True, log_request=True):
             if check_user:
                 username = request.match_info.get("username")
                 if not username or not await cls.ctl.config_instance.async_get_user(
-                    username
+                        username
                 ):
                     path = request.path.replace(username, "")
                     LOGGER.debug("[%s] Invalid username (api key)", request.remote)
@@ -81,12 +82,12 @@ routes = ClassRouteTableDef()
 # pylint: enable=invalid-name
 
 
-class HueApiV1Endpoints:
+class HueApiV1Endpoints(api.HueApiEndpoints):
     """Hue API v1 endpoints."""
 
     def __init__(self, ctl: Controller):
         """Initialize the v1 api."""
-        self.ctl = ctl
+        super().__init__(ctl)
         self._new_lights = {}
         self._timestamps = {}
         self._prev_data = {}
@@ -109,7 +110,7 @@ class HueApiV1Endpoints:
         pass
 
     @routes.post("/api")
-    @check_request(False)
+    @authorize(False)
     async def async_post_auth(self, request: web.Request, request_data: dict):
         """Handle requests to create a username for the emulated hue bridge."""
         if "devicetype" not in request_data:
@@ -139,19 +140,19 @@ class HueApiV1Endpoints:
         return send_json_response(response)
 
     @routes.get("/api/{username}/lights")
-    @check_request()
+    @authorize()
     async def async_get_lights(self, request: web.Request):
         """Handle requests to retrieve the info all lights."""
         return send_json_response(await self.__async_get_all_lights())
 
     @routes.get("/api/{username}/lights/new")
-    @check_request()
+    @authorize()
     async def async_get_new_lights(self, request: web.Request):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
         return send_json_response(self._new_lights)
 
     @routes.post("/api/{username}/lights")
-    @check_request()
+    @authorize()
     async def async_search_new_lights(self, request: web.Request, request_data):
         """Handle requests to retrieve new added lights to the (virtual) bridge."""
         username = request.match_info["username"]
@@ -166,74 +167,74 @@ class HueApiV1Endpoints:
 
         # enable all disabled lights and groups
         for entity_id in self.ctl.controller_hass.get_entities():
-            light_id = await self.ctl.config_instance.async_entity_id_to_light_id(
+            light_id_v1 = await self.ctl.config_instance.async_entity_id_to_light_id_v1(
                 entity_id
             )
             light_config = await self.ctl.config_instance.async_get_light_config(
-                light_id
+                entity_id
             )
             if not light_config["enabled"]:
                 light_config["enabled"] = True
                 await self.ctl.config_instance.async_set_storage_value(
-                    "lights", light_id, light_config
+                    "lights", light_id_v1, light_config
                 )
                 # add to new_lights for the app to show a special badge
-                self._new_lights[light_id] = await self.__async_entity_to_hue(entity_id)
+                self._new_lights[light_id_v1] = await self.__async_entity_to_hue(entity_id)
         groups = await self.ctl.config_instance.async_get_storage_value(
             "groups", default={}
         )
-        for group_id, group_conf in groups.items():
+        for group_id_v1, group_conf in groups.items():
             if "enabled" in group_conf and not group_conf["enabled"]:
                 group_conf["enabled"] = True
                 await self.ctl.config_instance.async_set_storage_value(
-                    "groups", group_id, group_conf
+                    "groups", group_id_v1, group_conf
                 )
         return send_success_response(request.path, {}, username)
 
-    @routes.get("/api/{username}/lights/{light_id}")
-    @check_request()
+    @routes.get("/api/{username}/lights/{light_id_v1}")
+    @authorize()
     async def async_get_light(self, request: web.Request):
         """Handle requests to retrieve the info for a single light."""
-        light_id = request.match_info["light_id"]
-        if light_id == "new":
+        light_id_v1 = request.match_info["light_id_v1"]
+        if light_id_v1 == "new":
             return await self.async_get_new_lights(request)
-        entity_id = await self.ctl.config_instance.async_entity_id_from_light_id(
-            light_id
+        entity_id = await self.ctl.config_instance.async_entity_id_from_light_id_v1(
+            light_id_v1
         )
         result = await self.__async_entity_to_hue(entity_id)
         return send_json_response(result)
 
-    @routes.put("/api/{username}/lights/{light_id}/state")
-    @check_request()
+    @routes.put("/api/{username}/lights/{light_id_v1}/state")
+    @authorize()
     async def async_put_light_state(self, request: web.Request, request_data: dict):
         """Handle requests to perform action on a group of lights/room."""
-        light_id = request.match_info["light_id"]
+        light_id_v1 = request.match_info["light_id_v1"]
         username = request.match_info["username"]
-        entity_id = await self.ctl.config_instance.async_entity_id_from_light_id(
-            light_id
+        entity_id = await self.ctl.config_instance.async_entity_id_from_light_id_v1(
+            light_id_v1
         )
         await self.__async_light_action(entity_id, request_data)
         # Create success responses for all received keys
         return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}/groups")
-    @check_request()
+    @authorize()
     async def async_get_groups(self, request: web.Request):
         """Handle requests to retrieve all rooms/groups."""
         groups = await self.__async_get_all_groups()
         return send_json_response(groups)
 
-    @routes.get("/api/{username}/groups/{group_id}")
-    @check_request()
+    @routes.get("/api/{username}/groups/{group_id_v1}")
+    @authorize()
     async def async_get_group(self, request: web.Request):
         """Handle requests to retrieve info for a single group."""
-        group_id: str = request.match_info["group_id"]
+        group_id_v1: str = request.match_info["group_id_v1"]
         result: dict | None = None
-        if group_id.isdigit():
+        if group_id_v1.isdigit():
             groups = await self.__async_get_all_groups()
-            result = groups.get(group_id)
+            result = groups.get(group_id_v1)
         # else:
-        # TODO: Return group 0 if group_id is not found
+        # TODO: Return group 0 if group_id_v1 is not found
         if result:
             return send_json_response(result)
         else:
@@ -241,26 +242,26 @@ class HueApiV1Endpoints:
                 request.path, "resource, {path}, not available", 3
             )
 
-    @routes.put("/api/{username}/groups/{group_id}/action")
-    @check_request()
+    @routes.put("/api/{username}/groups/{group_id_v1}/action")
+    @authorize()
     async def async_group_action(self, request: web.Request, request_data: dict):
         """Handle requests to perform action on a group of lights/room."""
-        group_id = request.match_info["group_id"]
+        group_id_v1 = request.match_info["group_id_v1"]
         username = request.match_info["username"]
         # instead of directly getting groups should have a property
         # get groups instead so we can easily modify it
         group_conf = await self.ctl.config_instance.async_get_storage_value(
-            "groups", group_id
+            "groups", group_id_v1
         )
-        if group_id == "0" and "scene" in request_data:
+        if group_id_v1 == "0" and "scene" in request_data:
             # scene request
             scene = await self.ctl.config_instance.async_get_storage_value(
                 "scenes", request_data["scene"], default={}
             )
-            for light_id, light_state in scene["lightstates"].items():
+            for light_id_v1, light_state in scene["lightstates"].items():
                 entity_id = (
-                    await self.ctl.config_instance.async_entity_id_from_light_id(
-                        light_id
+                    await self.ctl.config_instance.async_entity_id_from_light_id_v1(
+                        light_id_v1
                     )
                 )
                 await self.__async_light_action(entity_id, light_state)
@@ -268,14 +269,14 @@ class HueApiV1Endpoints:
             # forward request to all group lights
             # may need refactor to make __async_get_group_lights not an
             # async generator to instead return a dict
-            async for entity_id in self.__async_get_group_lights(group_id):
+            async for entity_id in self.__async_get_group_lights(group_id_v1):
                 await self.__async_light_action(entity_id, request_data)
         if group_conf and "stream" in group_conf:
             # Request streaming stop
             # Duplicate code here. Method instead?
             LOGGER.info(
                 "Stop Entertainment mode for group %s - params: %s",
-                group_id,
+                group_id_v1,
                 request_data,
             )
             self.ctl.config_instance.stop_entertainment()
@@ -283,7 +284,7 @@ class HueApiV1Endpoints:
         return send_success_response(request.path, request_data, username)
 
     @routes.post("/api/{username}/groups")
-    @check_request()
+    @authorize()
     async def async_create_group(self, request: web.Request, request_data: dict):
         """Handle requests to create a new group."""
         if "class" not in request_data:
@@ -293,14 +294,14 @@ class HueApiV1Endpoints:
         item_id = await self.__async_create_local_item(request_data, "groups")
         return send_json_response([{"success": {"id": item_id}}])
 
-    @routes.put("/api/{username}/groups/{group_id}")
-    @check_request()
+    @routes.put("/api/{username}/groups/{group_id_v1}")
+    @authorize()
     async def async_update_group(self, request: web.Request, request_data: dict):
         """Handle requests to update a group."""
-        group_id = request.match_info["group_id"]
+        group_id_v1 = request.match_info["group_id_v1"]
         username = request.match_info["username"]
         group_conf = await self.ctl.config_instance.async_get_storage_value(
-            "groups", group_id
+            "groups", group_id_v1
         )
         if not group_conf:
             return send_error_response(request.path, "no group config", 404)
@@ -312,7 +313,7 @@ class HueApiV1Endpoints:
                 # Requested streaming start
                 LOGGER.debug(
                     "Start Entertainment mode for group %s - params: %s",
-                    group_id,
+                    group_id_v1,
                     request_data,
                 )
                 del group_conf["stream"]["active"]
@@ -328,36 +329,37 @@ class HueApiV1Endpoints:
                 # Request streaming stop
                 LOGGER.info(
                     "Stop Entertainment mode for group %s - params: %s",
-                    group_id,
+                    group_id_v1,
                     request_data,
                 )
                 self.ctl.config_instance.stop_entertainment()
 
         await self.ctl.config_instance.async_set_storage_value(
-            "groups", group_id, group_conf
+            "groups", group_id_v1, group_conf
         )
         return send_success_response(request.path, request_data, username)
 
-    @routes.put("/api/{username}/lights/{light_id}")
-    @check_request()
+    @routes.put("/api/{username}/lights/{light_id_v1}")
+    @authorize()
     async def async_update_light(self, request: web.Request, request_data: dict):
         """Handle requests to update a light."""
-        light_id = request.match_info["light_id"]
+        light_id_v1 = request.match_info["light_id_v1"]
+        entity_id = await self.ctl.config_instance.async_entity_id_from_light_id_v1(
+            light_id_v1
+        )
         username = request.match_info["username"]
         light_conf = await self.ctl.config_instance.async_get_storage_value(
-            "lights", light_id
+            "lights", entity_id
         )
         if not light_conf:
             return send_error_response(request.path, "no light config", 404)
         if "name" in request_data:
-            light_conf = await self.ctl.config_instance.async_get_light_config(light_id)
-            entity_id = light_conf["entity_id"]
             device = await async_get_device(self.ctl, entity_id)
             device.name = request_data["name"]
         return send_success_response(request.path, request_data, username)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
-    @check_request()
+    @authorize()
     async def async_get_localitems(self, request: web.Request):
         """Handle requests to retrieve localitems (e.g. scenes)."""
         itemtype = request.match_info["itemtype"]
@@ -367,7 +369,7 @@ class HueApiV1Endpoints:
         return send_json_response(result)
 
     @routes.get("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
-    @check_request()
+    @authorize()
     async def async_get_localitem(self, request: web.Request):
         """Handle requests to retrieve info for a single localitem."""
         item_id = request.match_info["item_id"]
@@ -377,7 +379,7 @@ class HueApiV1Endpoints:
         return send_json_response(result)
 
     @routes.post("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}")
-    @check_request()
+    @authorize()
     async def async_create_localitem(self, request: web.Request, request_data: dict):
         """Handle requests to create a new localitem."""
         itemtype = request.match_info["itemtype"]
@@ -385,7 +387,7 @@ class HueApiV1Endpoints:
         return send_json_response([{"success": {"id": item_id}}])
 
     @routes.put("/api/{username}/{itemtype:(?:scenes|rules|resourcelinks)}/{item_id}")
-    @check_request()
+    @authorize()
     async def async_update_localitem(self, request: web.Request, request_data: dict):
         """Handle requests to update an item in localstorage."""
         item_id = request.match_info["item_id"]
@@ -405,7 +407,7 @@ class HueApiV1Endpoints:
     @routes.delete(
         "/api/{username}/{itemtype:(?:scenes|rules|resourcelinks|groups|lights)}/{item_id}"
     )
-    @check_request()
+    @authorize()
     async def async_delete_localitem(self, request: web.Request):
         """Handle requests to delete a item from localstorage."""
         item_id = request.match_info["item_id"]
@@ -415,10 +417,10 @@ class HueApiV1Endpoints:
         return send_json_response(result)
 
     @routes.get("/api/{username:[^/]+/{0,1}|}config{tail:.*}")
-    @check_request(check_user=False)
+    @authorize(check_user=False)
     async def async_get_bridge_config(self, request: web.Request):
         """Process a request to get (full or partial) config of this emulated bridge."""
-        username = request.match_info.get("username")
+        username = request.match_info.get("username").strip('/')
         valid_user = True
         if not username or not await self.ctl.config_instance.async_get_user(username):
             valid_user = False
@@ -426,7 +428,7 @@ class HueApiV1Endpoints:
         return send_json_response(result)
 
     @routes.put("/api/{username}/config")
-    @check_request()
+    @authorize()
     async def async_change_config(self, request: web.Request, request_data: dict):
         """Process a request to change a config value."""
         username = request.match_info["username"]
@@ -453,11 +455,11 @@ class HueApiV1Endpoints:
             scenes_group = scene_data["group"]
             # Remove lightstates only if existing
             scene_data.pop("lightstates", None)
-            scene_data["lights"] = await self.__async_get_group_id(scenes_group)
+            scene_data["lights"] = await self.__async_get_group_id_v1(scenes_group)
         return scenes
 
     @routes.get("/api/{username}")
-    @check_request()
+    @authorize()
     async def get_full_state(self, request: web.Request):
         """Return full state view of emulated hue."""
         json_response = {
@@ -495,21 +497,21 @@ class HueApiV1Endpoints:
         return send_json_response(json_response)
 
     @routes.get("/api/{username}/sensors")
-    @check_request()
+    @authorize()
     async def async_get_sensors(self, request: web.Request):
         """Return sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
         return send_json_response({})
 
     @routes.get("/api/{username}/sensors/new")
-    @check_request()
+    @authorize()
     async def async_get_new_sensors(self, request: web.Request):
         """Return all new discovered sensors on the (virtual) bridge."""
         # not supported yet but prevent errors
         return send_json_response({})
 
     @routes.get("/description.xml")
-    @check_request(False)
+    @authorize(False)
     async def async_get_description(self, request: web.Request):
         """Serve the service description file."""
         resp_text = self._description_xml.format(
@@ -522,7 +524,7 @@ class HueApiV1Endpoints:
         return web.Response(text=resp_text, content_type="text/xml")
 
     @routes.get("/link/{token}")
-    @check_request(False)
+    @authorize(False)
     async def async_link(self, request: web.Request):
         """Enable link mode on the bridge."""
         token = request.match_info["token"]
@@ -549,53 +551,38 @@ class HueApiV1Endpoints:
         return web.Response(text=html_template, content_type="text/html")
 
     @routes.get("/api/{username}/capabilities")
-    @check_request()
+    @authorize()
     async def async_get_capabilities(self, request: web.Request):
         """Return an overview of the capabilities."""
         json_response = {
-            "lights": {"available": 50},
+            "lights": {"available": 50, "total": 63},
             "sensors": {
                 "available": 60,
-                "clip": {"available": 60},
-                "zll": {"available": 60},
-                "zgp": {"available": 60},
+                "total": 250,
+                "clip": {"available": 60, "total": 250},
+                "zll": {"available": 60, "total": 64},
+                "zgp": {"available": 60, "total": 64},
             },
-            "groups": {"available": 60},
-            "scenes": {"available": 100, "lightstates": {"available": 1500}},
-            "rules": {"available": 100, "lightstates": {"available": 1500}},
-            "schedules": {"available": 100},
-            "resourcelinks": {"available": 100},
-            "whitelists": {"available": 100},
+            "groups": {"available": 60, "total": 64},
+            "scenes": {"available": 100, "total": 200, "lightstates": {"available": 1500, "total": 12600}},
+            "rules": {
+                "available": 100,
+                "total": 250,
+                "conditions": {"available": 1500, "total": 1500},
+                "actions": {"available": 1500, "total": 1500}},
+            "schedules": {"available": 100, "total": 100},
+            "resourcelinks": {"available": 100, "total": 64},
+            "streaming": {"available": 1, "total": 1, "channels": 10},
             "timezones": {"value": self.ctl.config_instance.definitions["timezones"]},
-            "streaming": {"available": 1, "total": 10, "channels": 10},
         }
 
         return send_json_response(json_response)
 
     @routes.get("/api/{username}/info/timezones")
-    @check_request()
+    @authorize()
     async def async_get_timezones(self, request: web.Request):
         """Return all timezones."""
         return send_json_response(self.ctl.config_instance.definitions["timezones"])
-
-    async def async_unknown_request(self, request: web.Request):
-        """Handle unknown requests (catch-all)."""
-        request_data = await request.text()
-        if request_data:
-            LOGGER.warning("Invalid/unknown request: %s --> %s", request, request_data)
-        else:
-            LOGGER.warning("Invalid/unknown request: %s", request)
-        if request.method == "GET":
-            address = request.path.lstrip("/").split("/")
-            # Ensure a resource is requested
-            if len(address) > 2:
-                username = address[1]
-                if not await self.ctl.config_instance.async_get_user(username):
-                    return send_error_response(request.path, "unauthorized user", 1)
-            return send_error_response(
-                request.path, "method, GET, not available for resource, {path}", 4
-            )
-        return send_error_response(request.path, "unknown request", 404)
 
     async def __async_light_action(self, entity_id: str, request_data: dict) -> None:
         """Translate the Hue api request data to actions on a light entity."""
@@ -676,13 +663,11 @@ class HueApiV1Endpoints:
                 "lastinstall": datetime.datetime.now().isoformat().split(".")[0],
             },
             "config": {
-                "config": {
-                    "archetype": "sultanbulb",
-                    "direction": "omnidirectional",
-                    "function": "mixed",
-                    "startup": {"configured": True, "mode": "safety"},
-                }
-            },
+                "archetype": "sultanbulb",
+                "direction": "omnidirectional",
+                "function": "mixed",
+                "startup": {"configured": True, "mode": "safety"},
+            }
         }
         current_state = {}
 
@@ -784,7 +769,7 @@ class HueApiV1Endpoints:
             device = await async_get_device(self.ctl, entity_id)
             if not device.enabled:
                 continue
-            result[device.light_id] = await self.__async_entity_to_hue(entity_id)
+            result[device.light_id_v1] = await self.__async_entity_to_hue(entity_id)
         return result
 
     async def __async_create_local_item(
@@ -816,7 +801,7 @@ class HueApiV1Endpoints:
         groups = await self.ctl.config_instance.async_get_storage_value(
             "groups", default={}
         )
-        for group_id, group_conf in groups.items():
+        for group_id_v1, group_conf in groups.items():
             # no area_id = not hass area
             if "area_id" not in group_conf:
                 if "stream" in group_conf:
@@ -825,63 +810,63 @@ class HueApiV1Endpoints:
                         group_conf["stream"]["active"] = True
                     else:
                         group_conf["stream"]["active"] = False
-                result[group_id] = group_conf
+                result[group_id_v1] = group_conf
 
         # Hass areas/rooms
         areas = await self.ctl.controller_hass.async_get_area_entities()
         for area in areas.values():
             area_id = area["area_id"]
-            group_id = await self.ctl.config_instance.async_area_id_to_group_id(area_id)
-            group_conf = await self.ctl.config_instance.async_get_group_config(group_id)
+            group_conf = await self.ctl.config_instance.async_get_group_config(area_id)
+            group_id_v1 = group_conf["group_id_v1"]
             if not group_conf["enabled"]:
                 continue
-            result[group_id] = group_conf.copy()
-            result[group_id]["lights"] = []
-            result[group_id]["name"] = group_conf["name"] or area["name"]
+            result[group_id_v1] = group_conf.copy()
+            result[group_id_v1]["lights"] = []
+            result[group_id_v1]["name"] = group_conf["name"] or area["name"]
             lights_on = 0
             # get all entities for this device
             for entity_id in area["entities"]:
-                light_id = await self.ctl.config_instance.async_entity_id_to_light_id(
+                light_id_v1 = await self.ctl.config_instance.async_entity_id_to_light_id_v1(
                     entity_id
                 )
-                result[group_id]["lights"].append(light_id)
+                result[group_id_v1]["lights"].append(light_id_v1)
                 device = await async_get_device(self.ctl, entity_id)
                 if device.power_state:
                     lights_on += 1
                     if lights_on == 1:
                         # set state of first light as group state
                         entity_obj = await self.__async_entity_to_hue(entity_id)
-                        result[group_id]["action"] = entity_obj["state"]
-            result[group_id]["state"]["any_on"] = lights_on > 0
-            result[group_id]["state"]["all_on"] = lights_on == len(
-                result[group_id]["lights"]
+                        result[group_id_v1]["action"] = entity_obj["state"]
+            result[group_id_v1]["state"]["any_on"] = lights_on > 0
+            result[group_id_v1]["state"]["all_on"] = lights_on == len(
+                result[group_id_v1]["lights"]
             )
             # do not return empty areas/rooms
-            if len(result[group_id]["lights"]) == 0:
-                result.pop(group_id, None)
+            if len(result[group_id_v1]["lights"]) == 0:
+                result.pop(group_id_v1, None)
 
         return result
 
-    async def __async_get_group_id(self, group_id: str) -> dict:
+    async def __async_get_group_id_v1(self, group_id_v1: str) -> dict:
         """Get group data for a group."""
-        if group_id == "0":
+        if group_id_v1 == "0":
             all_lights = await self.__async_get_all_lights()
             group_conf = {"lights": []}
-            for light_id in all_lights:
-                group_conf["lights"].append(light_id)
+            for light_id_v1 in all_lights:
+                group_conf["lights"].append(light_id_v1)
         else:
             group_conf = await self.ctl.config_instance.async_get_storage_value(
-                "groups", group_id
+                "groups", group_id_v1
             )
         if not group_conf:
-            raise RuntimeError("Invalid group id: %s" % group_id)
+            raise RuntimeError("Invalid group id: %s" % group_id_v1)
         return group_conf
 
     async def __async_get_group_lights(
-        self, group_id: str
+        self, group_id_v1: str
     ) -> AsyncGenerator[str, None]:
         """Get all light entities for a group."""
-        group_conf = await self.__async_get_group_id(group_id)
+        group_conf = await self.__async_get_group_id_v1(group_id_v1)
 
         # Hass group (area)
         if group_area_id := group_conf.get("area_id"):
@@ -894,10 +879,10 @@ class HueApiV1Endpoints:
 
         # Local group
         else:
-            for light_id in group_conf["lights"]:
+            for light_id_v1 in group_conf["lights"]:
                 entity_id = (
-                    await self.ctl.config_instance.async_entity_id_from_light_id(
-                        light_id
+                    await self.ctl.config_instance.async_entity_id_from_light_id_v1(
+                        light_id_v1
                     )
                 )
                 yield entity_id

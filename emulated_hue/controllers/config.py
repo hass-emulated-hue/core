@@ -4,12 +4,13 @@ import datetime
 import hashlib
 import logging
 import os
+import uuid
+
 from pathlib import Path
 from typing import Any
-
 from getmac import get_mac_address
 
-from emulated_hue.const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS
+from emulated_hue.const import CONFIG_WRITE_DELAY_SECONDS, DEFAULT_THROTTLE_MS, UUID_NAMESPACES
 from emulated_hue.utils import (
     async_save_json,
     create_secure_string,
@@ -160,16 +161,24 @@ class Config:
         """Get path to file at data location."""
         return os.path.join(self.data_path, filename)
 
-    async def async_entity_id_to_light_id(self, entity_id: str) -> str:
-        """Get a unique light_id number for the hass entity id."""
-        lights = await self.async_get_storage_value("lights", default={})
-        for key, value in lights.items():
-            if entity_id == value["entity_id"]:
-                return key
+    async def async_entity_id_to_light_id_v1(self, entity_id: str) -> str:
+        """Get a unique light_id_v1 number for the hass entity id."""
+        light_config = await self.async_get_light_config(entity_id)
+        return light_config["light_id_v1"]
+
+    async def async_get_light_config(self, entity_id: str) -> dict:
+        """Return light config for given entity id."""
+        conf = await self.async_get_storage_value("lights", entity_id)
+        if conf:
+            return conf
+
         # light does not yet exist in config, create default config
-        next_light_id = "1"
+        device_id = self.ctl.controller_hass.get_device_id_from_entity_id(entity_id)
+        lights = await self.async_get_storage_value("lights")
         if lights:
-            next_light_id = str(max(int(k) for k in lights) + 1)
+            next_light_id_v1 = str(max(int(k["light_id_v1"]) for k in lights.values()) + 1)
+        else:
+            next_light_id_v1 = "1"
         # generate unique id (fake zigbee address) from entity id
         unique_id = hashlib.md5(entity_id.encode()).hexdigest()
         unique_id = "00:{}:{}:{}:{}:{}:{}:{}-{}".format(
@@ -183,8 +192,9 @@ class Config:
             unique_id[14:16],
         )
         # create default light config
-        light_config = {
-            "entity_id": entity_id,
+        conf = {
+            "light_id": str(uuid.uuid5(UUID_NAMESPACES["light"], device_id)),
+            "light_id_v1": next_light_id_v1,
             "enabled": True,
             "name": "",
             "uniqueid": unique_id,
@@ -198,38 +208,40 @@ class Config:
             },
             "throttle": DEFAULT_THROTTLE_MS,
         }
-        await self.async_set_storage_value("lights", next_light_id, light_config)
-        return next_light_id
-
-    async def async_get_light_config(self, light_id: str) -> dict:
-        """Return light config for given light id."""
-        conf = await self.async_get_storage_value("lights", light_id)
-        if not conf:
-            raise Exception(f"Light {light_id} not found!")
+        await self.async_set_storage_value("lights", entity_id, conf)
         return conf
+
+    async def async_entity_id_from_light_id_v1(self, light_id_v1: str) -> str:
+        """Return the hass entity by supplying a light id v1."""
+        lights = await self.async_get_storage_value("lights", default={})
+        for key, value in lights.items():
+            if light_id_v1 == value["light_id_v1"]:
+                return key
+        raise Exception(f"Entity {light_id_v1} not found!")
 
     async def async_entity_id_from_light_id(self, light_id: str) -> str:
         """Return the hass entity by supplying a light id."""
-        light_config = await self.async_get_light_config(light_id)
-        if not light_config:
-            raise Exception("Invalid light_id provided!")
-        entity_id = light_config["entity_id"]
-        entities = self.ctl.controller_hass.get_entities()
-        if entity_id not in entities:
-            raise Exception(f"Entity {entity_id} not found!")
-        return entity_id
+        lights = await self.async_get_storage_value("lights", default={})
+        for key, value in lights.items():
+            if light_id == value["light_id"]:
+                return key
+        raise Exception(f"Entity {light_id} not found!")
 
-    async def async_area_id_to_group_id(self, area_id: str) -> str:
-        """Get a unique group_id number for the hass area_id."""
+    async def async_area_id_to_group_id_v1(self, area_id: str) -> str:
+        """Get a unique group_id_v1 number for the hass area_id."""
         groups = await self.async_get_storage_value("groups", default={})
         for key, value in groups.items():
             if area_id == value.get("area_id"):
                 return key
         # group does not yet exist in config, create default config
-        next_group_id = "1"
         if groups:
-            next_group_id = str(max(int(k) for k in groups) + 1)
+            next_group_id_v1 = str(max(int(g["group_id_v1"]) for g in groups.values()) + 1)
+        else:
+            next_group_id_v1 = "1"
+
         group_config = {
+            "group_id": str(uuid.uuid5(UUID_NAMESPACES["room"], area_id)),
+            "group_id_v1": next_group_id_v1,
             "area_id": area_id,
             "enabled": True,
             "name": "",
@@ -240,20 +252,21 @@ class Config:
             "action": {"on": False},
             "state": {"any_on": False, "all_on": False},
         }
-        await self.async_set_storage_value("groups", next_group_id, group_config)
-        return next_group_id
+        await self.async_set_storage_value("groups", area_id, group_config)
+        return next_group_id_v1
 
-    async def async_get_group_config(self, group_id: str) -> dict:
+    async def async_get_group_config(self, group_id_v1: str) -> dict:
         """Return group config for given group id."""
-        conf = await self.async_get_storage_value("groups", group_id)
+        conf = await self.async_get_storage_value("groups", group_id_v1)
         if not conf:
-            raise Exception(f"Group {group_id} not found!")
+            raise Exception(f"Group {group_id_v1} not found!")
         return conf
 
     async def async_get_storage_value(
         self, key: str, subkey: str = None, default: Any | None = None
     ) -> Any:
         """Get a value from persistent storage."""
+        LOGGER.debug("get value %s-%s", key, subkey)
         return self.get_storage_value(key, subkey, default)
 
     def get_storage_value(
@@ -271,6 +284,7 @@ class Config:
         self, key: str, subkey: str, value: str or dict
     ) -> None:
         """Set a value in persistent storage."""
+        LOGGER.debug("set value %s-%s: %s", key, subkey, value)
         needs_save = False
         if subkey is None and self._config.get(key) != value:
             # main key changed

@@ -104,8 +104,24 @@ def send_json_response(data) -> web.Response:
     )
 
 
+def send_json_response_v2(data: list) -> web.Response:
+    """Send json response v2."""
+    return web.Response(
+        text=json.dumps({"errors": [], "data": data}, ensure_ascii=False, separators=(",", ":")),
+        content_type="application/json",
+        headers={
+            "server": "nginx",
+            "X-XSS-Protection": "1; mode=block",
+            "X-Frame-Options": "SAMEORIGIN",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'self'",
+            "Referrer-Policy": "no-referrer",
+        },
+    )
+
+
 # TODO: figure out correct response for:
-# PUT: /api/username/lights/light_id
+# PUT: /api/username/lights/light_id_v1
 # {'config': {'startup': {'mode': 'safety'}}}
 def send_success_response(
     request_path: str, request_data: dict, username: str = None

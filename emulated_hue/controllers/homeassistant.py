@@ -113,7 +113,7 @@ class HomeAssistantController(HomeAssistantClient):
             :return: A list of entity IDs.
         """
         return [
-            entity["entity_id"] for entity in self.items_by_domain(domain) if entity
+            entity["entity_id"] for entity in self.items_by_domain(domain) if entity and entity["entity_id"].startswith("light.signify_") # TODO remove and
         ]
 
     async def async_get_area_entities(
