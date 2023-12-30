@@ -1,12 +1,12 @@
-aiohttp==3.8.4; sys_platform == 'win32'
+aiohttp==3.8.5; sys_platform == 'win32'
 aiohttp[speedups]==3.8.4; sys_platform != 'win32'
-aiorun==2022.11.1
-cryptography==41.0.0
-getmac==0.9.3
+aiorun==2023.7.2
+cryptography==41.0.2
+getmac==0.9.4
 netaddr==0.8.0
-pydantic==1.10.8
+pydantic==2.0.3
 python-slugify==8.0.1
 tzlocal==5.0.1
 uvloop==0.17.0; sys_platform != 'win32'
-zeroconf==0.63.0
+zeroconf==0.71.3
 git+https://github.com/hass-emulated-hue/python-hass-client.git@0.1.5#egg=hass-client
