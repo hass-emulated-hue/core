@@ -6,6 +6,7 @@ import functools
 import json
 import logging
 import os
+import re
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any, cast
 
@@ -774,6 +775,19 @@ class HueApiV1Endpoints:
         retval["modelid"] = device.device_properties.model or retval["modelid"]
         retval["productname"] = device.device_properties.name or retval["productname"]
         retval["swversion"] = device.device_properties.sw_version or retval["swversion"]
+
+        # split product name and model if in format: product (model)
+        if "(" in retval["modelid"]:
+            splitmodel = re.match(r'(.*)\((.*)\)$',device.device_properties.model)
+            retval["modelid"] = splitmodel[2]
+            retval["productname"] = splitmodel[1]
+        else: 
+            retval["modelid"] = device.device_properties.model or retval["modelid"]
+            retval["productname"] = device.device_properties.name or retval["productname"]
+
+        # FIXME: Hack to make Hue gen2 bulbs appear as correct model id.
+        if retval["modelid"]=="9290012573A": 
+            retval["modelid"]="LCT007"
 
         return retval
 
