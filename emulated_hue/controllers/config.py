@@ -399,7 +399,7 @@ class Config:
         # create persistent notification in hass
         # user can click the link in the notification to enable linking
 
-        url = f"http://{self.advertise_addr}:{self.http_port}/link/{self._link_mode_discovery_key}"
+        url = f"http://{self.advertise_addr}/link/{self._link_mode_discovery_key}"
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
 
