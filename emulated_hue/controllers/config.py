@@ -53,12 +53,12 @@ class Config:
 
         # Get the IP address that will be passed to during discovery
         self._ip_addr = get_local_ip()
-        self._advertise_addr = self._ip_addr
+        self._advertise_ip = self._ip_addr
         LOGGER.info("Auto detected listen IP address is %s", self.ip_addr)
 
         if advertise_ip:
-            self._advertise_addr = advertise_ip
-            LOGGER.info("Use custom advertisement ip %s", self.advertise_addr)
+            self._advertise_ip = advertise_ip
+            LOGGER.info("Use custom advertisement ip %s", self.advertise_ip)
 
         # Get the ports that the Hue bridge will listen on
         # ports can be overridden but Hue apps expect ports 80/443
@@ -117,9 +117,9 @@ class Config:
         return self._ip_addr
 
     @property
-    def advertise_addr(self) -> str:
-        """Return advertise address of the emulated bridge."""
-        return self._advertise_addr
+    def advertise_ip(self) -> str:
+        """Return advertise ip address of the emulated bridge."""
+        return self._advertise_ip
 
     @property
     def mac_addr(self) -> str:
@@ -399,7 +399,7 @@ class Config:
         # create persistent notification in hass
         # user can click the link in the notification to enable linking
 
-        url = f"http://{self.advertise_addr}/link/{self._link_mode_discovery_key}"
+        url = f"http://{self.advertise_ip}/link/{self._link_mode_discovery_key}"
         msg = "Click the link below to enable pairing mode on the virtual bridge:\n\n"
         msg += f"**[Enable link mode]({url})**"
 

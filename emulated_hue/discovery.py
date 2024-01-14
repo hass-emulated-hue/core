@@ -27,6 +27,7 @@ async def async_setup_discovery(config: Config) -> None:
     upnp_listener = UPNPResponderThread(config)
     upnp_listener.start()
 
+
     # start mdns/zeroconf discovery
     loop.run_in_executor(None, start_zeroconf_discovery, config)
 
@@ -39,13 +40,16 @@ def start_zeroconf_discovery(config: Config):
     info = ServiceInfo(
         zeroconf_type,
         name=f"Philips Hue - {config.bridge_id[-6:]}.{zeroconf_type}",
-        addresses=[get_ip_pton()],
+        addresses=[config.advertise_ip],
         port=443,
         properties={
             "bridgeid": config.bridge_id,
             "modelid": config.definitions["bridge"]["basic"]["modelid"],
         },
     )
+
+    LOGGER.debug("zeroconf config: %s", info)
+
     zeroconf.register_service(info)
 
 
@@ -80,7 +84,7 @@ USN: {bridge_uuid}
             "\n", "\r\n"
         )
         self._resp_format = resp_template.format(
-            ip_addr=config.ip_addr,
+            ip_addr=config.advertise_ip,
             port_num=const.HUE_HTTP_PORT
             if config.use_default_ports
             else config.http_port,
@@ -104,6 +108,8 @@ USN: {bridge_uuid}
         self.upnp_root_response = self._resp_format.format(
             device_type="ST: upnp:rootdevice"
         ).encode("utf-8")
+
+        LOGGER.debug("upnp config: %s", self._resp_format)
 
     def run(self):
         """Run the server."""

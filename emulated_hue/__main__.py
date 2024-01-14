@@ -77,6 +77,7 @@ if __name__ == "__main__":
         action="store_true",
         help=f"Always use HTTP port {const.HUE_HTTP_PORT} and HTTPS port {const.HUE_HTTPS_PORT} for discovery "
         f"regardless of actual exposed ports. Useful with reverse proxy.",
+        default=os.getenv("USE_DEFAULT_PORTS_FOR_DISCOVERY", "false"),
     )
 
     args = parser.parse_args()
