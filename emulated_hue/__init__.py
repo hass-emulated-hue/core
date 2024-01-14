@@ -16,13 +16,14 @@ class HueEmulator:
         data_path: str,
         hass_url: str,
         hass_token: str,
+        advertise_ip: str,
         http_port: int,
         https_port: int,
         use_default_ports: bool,
     ) -> None:
         """Create an instance of HueEmulator."""
         self.ctl: controllers.Controller | None = None
-        self._config_vars = (data_path, http_port, https_port, use_default_ports)
+        self._config_vars = (data_path, advertise_ip, http_port, https_port, use_default_ports)
         self._hass_url = hass_url
         self._hass_token = hass_token
         self._web: HueWeb | None = None

@@ -513,9 +513,9 @@ class HueApiV1Endpoints:
     async def async_get_description(self, request: web.Request):
         """Serve the service description file."""
         resp_text = self._description_xml.format(
-            self.ctl.config_instance.ip_addr,
+            self.ctl.config_instance.advertise_addr,
             self.ctl.config_instance.http_port,
-            f"{self.ctl.config_instance.bridge_name} ({self.ctl.config_instance.ip_addr})",
+            f"{self.ctl.config_instance.bridge_name} ({self.ctl.config_instance.advertise_addr})",
             self.ctl.config_instance.bridge_serial,
             self.ctl.config_instance.bridge_uid,
         )

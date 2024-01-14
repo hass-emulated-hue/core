@@ -9,7 +9,7 @@ from .scheduler import add_scheduler, remove_scheduler  # noqa
 
 
 async def async_start(
-    url, token, data_path, http_port, https_port, use_default_ports
+    url, token, data_path, advertise_ip, http_port, https_port, use_default_ports
 ) -> Controller:
     """Initialize all controllers."""
     ctl = Controller()
@@ -17,7 +17,7 @@ async def async_start(
     # the HA client is initialized in the async_start because it needs a running loop
     ctl.controller_hass = HomeAssistantController(url=url, token=token)
     ctl.config_instance = Config(
-        ctl, data_path, http_port, https_port, use_default_ports
+        ctl, data_path, advertise_ip, http_port, https_port, use_default_ports
     )
     await ctl.controller_hass.connect()
     return ctl

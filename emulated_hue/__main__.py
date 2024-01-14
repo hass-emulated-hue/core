@@ -55,6 +55,12 @@ if __name__ == "__main__":
         "--verbose", action="store_true", help="Enable more verbose logging"
     )
     parser.add_argument(
+        "--advertise-ip",
+        type=str,
+        help="If you need to override the IP address used for UPnP discovery. (For example, using network isolation in Docker)",
+        default=os.getenv("ADVERTISE_IP", ""),
+    )
+    parser.add_argument(
         "--http-port",
         type=int,
         help="Port to run the HTTP server (for use with reverse proxy, use with care)",
@@ -89,7 +95,7 @@ if __name__ == "__main__":
     logging.getLogger("hass_client").setLevel(logging.INFO)
 
     hue = HueEmulator(
-        datapath, url, token, args.http_port, args.https_port, use_default_ports
+        datapath, url, token, args.advertise_ip, args.http_port, args.https_port, use_default_ports
     )
 
     def on_shutdown(loop):
