@@ -65,7 +65,7 @@ class UPNPResponderThread(threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
 
-        self.ip_addr = config.advertise_ip
+        self.ip_addr = config.ip_addr
         self.upnp_bind_multicast = bind_multicast
 
         # Note that the double newline at the end of
