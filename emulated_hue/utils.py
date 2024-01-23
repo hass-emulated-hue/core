@@ -61,12 +61,12 @@ def get_local_ip() -> str:
         sock.close()
 
 
-def get_ip_pton():
+def get_ip_pton(ip_addr: str):
     """Return socket pton for local ip."""
     try:
-        return socket.inet_pton(socket.AF_INET, get_local_ip())
+        return socket.inet_pton(socket.AF_INET, ip_addr)
     except OSError:
-        return socket.inet_pton(socket.AF_INET6, get_local_ip())
+        return socket.inet_pton(socket.AF_INET6, ip_addr)
 
 
 def slugify(text: str) -> str:

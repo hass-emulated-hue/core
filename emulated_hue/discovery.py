@@ -40,7 +40,7 @@ def start_zeroconf_discovery(config: Config):
     info = ServiceInfo(
         zeroconf_type,
         name=f"Philips Hue - {config.bridge_id[-6:]}.{zeroconf_type}",
-        addresses=[config.advertise_ip],
+        addresses=[get_ip_pton(config.advertise_ip)],
         port=443,
         properties={
             "bridgeid": config.bridge_id,

@@ -1,7 +1,7 @@
 """Device state model."""
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
@@ -31,15 +31,15 @@ class EntityState(BaseModel):
 
     power_state: bool = True
     reachable: bool = True
-    transition_seconds: Optional[float] = None
-    brightness: Optional[int] = None
-    color_temp: Optional[int] = None
-    hue_saturation: Optional[Tuple[float, float]] = None
-    xy_color: Optional[Tuple[float, float]] = None
-    rgb_color: Optional[Tuple[int, int, int]] = None
-    flash_state: Optional[str] = None
-    effect: Optional[str] = None
-    color_mode: Optional[str] = None
+    transition_seconds: float | None = None
+    brightness: int | None = None
+    color_temp: int | None = None
+    hue_saturation: tuple[int, int] | None = None
+    xy_color: tuple[float, float] | None = None
+    rgb_color: tuple[int, int, int] | None = None
+    flash_state: str | None = None
+    effect: str | None = None
+    color_mode: str | None = None
 
     def __eq__(self, other):
         """Compare states."""

@@ -58,7 +58,7 @@ class Config:
 
         if advertise_ip:
             self._advertise_ip = advertise_ip
-            LOGGER.info("Use custom advertisement ip %s", self.advertise_ip)
+            LOGGER.info("Using custom advertisement ip %s", self.advertise_ip)
 
         # Get the ports that the Hue bridge will listen on
         # ports can be overridden but Hue apps expect ports 80/443
