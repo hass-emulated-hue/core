@@ -929,8 +929,8 @@ class HueApiV1Endpoints:
             result.update(
                 {
                     "linkbutton": self.ctl.config_instance.link_mode_enabled,
-                    "ipaddress": self.ctl.config_instance.ip_addr,
-                    "gateway": self.ctl.config_instance.ip_addr,
+                    "ipaddress": self.ctl.config_instance.advertise_ip,
+                    "gateway": self.ctl.config_instance.advertise_ip,
                     "UTC": datetime.datetime.utcnow().isoformat().split(".")[0],
                     "localtime": datetime.datetime.now().isoformat().split(".")[0],
                     "timezone": self.ctl.config_instance.get_storage_value(
